@@ -178,6 +178,12 @@ private var snapshotIsLight: Bool {
     ProcessInfo.processInfo.environment["NOOP_SNAPSHOT_APPEARANCE"] == "light"
 }
 
+/// `NOOP_SNAPSHOT_LOCALE=de_DE` (or `en_US`) renders the screens in that locale (default: the app setting).
+private var snapshotLocale: Locale {
+    ProcessInfo.processInfo.environment["NOOP_SNAPSHOT_LOCALE"].map(Locale.init(identifier:))
+        ?? AppLanguage.currentContentLocale
+}
+
 extension PerfEnvironment {
     /// The QA screen list: the perf screens' set plus Smart Alarm, Data Sources and Settings.
     var snapshotScreens: [PerfScreen] {
@@ -186,7 +192,7 @@ extension PerfEnvironment {
                 .environmentObject(repo).environmentObject(live).environmentObject(profile)
                 .environmentObject(behavior).environmentObject(intelligence).environmentObject(coach)
                 .environmentObject(router).environmentObject(UpdateStore.shared)
-                .environment(\.locale, AppLanguage.currentContentLocale)
+                .environment(\.locale, snapshotLocale)
                 .preferredColorScheme(snapshotIsLight ? .light : .dark))
             if let model = AppModel.shared { any = AnyView(any.environmentObject(model)) }
             return any
