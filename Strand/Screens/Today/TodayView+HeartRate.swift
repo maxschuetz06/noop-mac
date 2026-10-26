@@ -111,6 +111,6 @@ extension TodayView {
         guard let strain = displayDay?.strain, let date = hrPoints.last?.date else { return nil }
         return .init(date: date,
                      label: "\(UnitFormatter.effortDisplay(strain, scale: effortScale)) Effort",
-                     color: StrandPalette.effortTint(fraction: strain / StrainScorer.maxStrain), alignment: .trailing)
+                     color: StrandPalette.effortTint(fraction: Repository.effortFraction(strain)), alignment: .trailing)
     }
 }

@@ -92,9 +92,8 @@ extension TodayView {
             hydrationTotalML = nil
             hydrationGoalML = nil
         }
-        if let store = await repo.storeHandle() {
-            let farFuture = Int(Date.distantFuture.timeIntervalSince1970)
-            xiaomiSleeps = ((try? await store.sleepSessions(deviceId: "xiaomi-band", from: 0, to: farFuture, limit: 4000))?.count) ?? 0
+        if let xiaomiSessions = await repo.sleepSessions(source: "xiaomi-band") {
+            xiaomiSleeps = xiaomiSessions.count
         }
 
         // HR trend for the SELECTED day — 5-minute bucket means from that logical day's local midnight.
@@ -131,10 +130,8 @@ extension TodayView {
         // engine will eventually persist. Below StrainScorer.minReadings the scorer returns nil and the
         // gauge falls back to the stored row (never a fabricated value); a navigated past day clears it.
         if selectedDayOffset == 0 {
-            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd)
-            let maxHR = profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil
-            let restHR = displayDay?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
-            liveTodayStrain = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex)
+            liveTodayStrain = await repo.liveStrain(from: windowStart, to: windowEnd, restingHr: displayDay?.restingHr,
+                                                    age: profile.age, sex: profile.sex)
         } else {
             liveTodayStrain = nil
         }

@@ -106,7 +106,7 @@ extension TodayView {
                                              avg: importedDayValues["avg_hr"]?[selectedDayKey])
                        ?? "of \(UnitFormatter.effortScaleMax(effortScale))")
                     : (buildingHint(.effort) ?? "of \(UnitFormatter.effortScaleMax(effortScale))"),
-                accent: d?.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) } ?? StrandPalette.textPrimary,
+                accent: d?.strain.map { StrandPalette.effortTint(fraction: Repository.effortFraction($0)) } ?? StrandPalette.textPrimary,
                 sparkline: sparks["strain"],
                 sparkColor: StrandPalette.strain066,
                 // Inline ⓘ in the tile header (not a corner overlay) so it never sits over the value (#495).
