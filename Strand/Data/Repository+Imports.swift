@@ -2,11 +2,6 @@ import Foundation
 import WhoopStore
 import StrandImport
 
-/// A store-backed Repository operation could not run because the local store is not open.
-enum RepositoryError: Error {
-    case storeUnavailable
-}
-
 // MARK: - Named writes for imports and manual entries
 
 extension Repository {
