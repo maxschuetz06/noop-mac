@@ -10,35 +10,42 @@ final class MacWidgetPublisher {
     static let shared = MacWidgetPublisher()
 
     private var cancellables = Set<AnyCancellable>()
-    private weak var model: AppModel?
+    private weak var repo: Repository?
+    private weak var live: LiveState?
+    private var smoothedBpm: () -> Int? = { nil }
+    private(set) var isStarted = false
     private var lastReload = Date.distantPast
     private var publishing = false
     private let liveReloadInterval: TimeInterval = 300
 
     private init() {}
 
-    func start(model: AppModel) {
-        guard self.model == nil else { return }
-        self.model = model
+    /// Idempotent. `smoothedBpm` is the app's display-ready live heart rate (preferred over the raw value).
+    func start(repo: Repository, live: LiveState, smoothedBpm: @escaping () -> Int?) {
+        guard !isStarted else { return }
+        isStarted = true
+        self.repo = repo
+        self.live = live
+        self.smoothedBpm = smoothedBpm
 
-        model.repo.$days
+        repo.$days
             .debounce(for: .seconds(2), scheduler: RunLoop.main)
             .sink { [weak self] _ in self?.schedule(force: true) }
             .store(in: &cancellables)
 
-        model.live.$lastSyncedAt
+        live.$lastSyncedAt
             .removeDuplicates()
             .sink { [weak self] _ in self?.schedule(force: true) }
             .store(in: &cancellables)
 
-        model.live.$bonded
+        live.$bonded
             .removeDuplicates()
             .sink { [weak self] _ in self?.schedule(force: true) }
             .store(in: &cancellables)
 
         Publishers.Merge(
-            model.live.$heartRate.map { _ in () },
-            model.live.$batteryPct.map { _ in () }
+            live.$heartRate.map { _ in () },
+            live.$batteryPct.map { _ in () }
         )
         .throttle(for: .seconds(60), scheduler: RunLoop.main, latest: true)
         .sink { [weak self] in self?.schedule(force: false) }
@@ -56,27 +63,27 @@ final class MacWidgetPublisher {
     }
 
     private func publish() async {
-        guard let model else { return }
+        guard let repo, let live else { return }
         // Most recent scored day anchors every derived field, matching the iOS widget.
-        let day = model.repo.days.last(where: { $0.recovery != nil })
+        let day = repo.days.last(where: { $0.recovery != nil })
         var restScore: Double?
         if let day {
-            let restSeries = await model.repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+            let restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
             let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
             restScore = restByDay[day.day] ?? restSeries.last?.value
         }
         let now = Date()
         let snap = WidgetSnapshot(
             recovery: day?.recovery.map { Int($0.rounded()) },
-            bpm: model.bpm ?? model.live.heartRate,
-            batteryPct: model.live.batteryPct.map { Int($0.rounded()) },
-            bonded: model.live.bonded,
+            bpm: smoothedBpm() ?? live.heartRate,
+            batteryPct: live.batteryPct.map { Int($0.rounded()) },
+            bonded: live.bonded,
             updated: now,
             effort: day?.strain.map { Int($0.rounded()) },
             rest: restScore.map { Int($0.rounded()) },
             hrv: day?.avgHrv.map { Int($0.rounded()) },
             restingHr: day?.restingHr,
-            lastSync: model.live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) }
+            lastSync: live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) }
         )
         snap.save()
         lastReload = now

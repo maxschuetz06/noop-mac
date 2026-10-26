@@ -1,13 +1,20 @@
 import Foundation
 import ZIPFoundation
 
-// MARK: - Outcome (shared with AppModel)
+// MARK: - Outcome and import target
 
-/// Result of one automatic WHOOP import, reported by `AppModel.importWhoopAwaiting(url:)`.
+/// Result of one automatic WHOOP import, reported by `WhoopImportInboxTarget.importWhoopAwaiting(url:)`.
 enum ImportInboxOutcome: Equatable, Sendable {
     /// `counts` uses the importer's category keys: `cycles`, `sleeps`, `workouts`, `journal`.
     case success(recordCount: Int, counts: [String: Int], summary: String)
     case failure(String)
+}
+
+/// What the inbox needs from the app: whether a user import is writing, and an awaitable WHOOP import.
+@MainActor
+protocol WhoopImportInboxTarget: AnyObject {
+    var hasActiveImport: Bool { get }
+    func importWhoopAwaiting(url: URL) async -> ImportInboxOutcome
 }
 
 // MARK: - Policy (pure, testable)
@@ -329,7 +336,7 @@ final class ImportInboxScheduler {
 
     private let directory: URL
     private var engine: ImportInboxEngine?
-    private var model: AppModel?
+    private weak var importer: (any WhoopImportInboxTarget)?
     private var started = false
     private var isScanning = false
     private var rescanRequested = false
@@ -342,13 +349,13 @@ final class ImportInboxScheduler {
     }
 
     /// Idempotent.
-    func start(model: AppModel) {
+    func start(importer: any WhoopImportInboxTarget) {
         guard !started else { return }
         started = true
-        self.model = model
-        let engine = ImportInboxEngine(directory: directory) { [weak model] url in
-            guard let model else { return .failure("NOOP quit.") }
-            return await model.importWhoopAwaiting(url: url)
+        self.importer = importer
+        let engine = ImportInboxEngine(directory: directory) { [weak importer] url in
+            guard let importer else { return .failure("NOOP quit.") }
+            return await importer.importWhoopAwaiting(url: url)
         }
         do { try engine.prepare() } catch { return }   // folder not reachable (e.g. sandbox without exception)
         self.engine = engine
@@ -377,9 +384,9 @@ final class ImportInboxScheduler {
     }
 
     private func scanNow() async {
-        guard let engine, let model else { return }
+        guard let engine, let importer else { return }
         // Don't start while the user's own import is writing to the store; the next scan retries.
-        if model.hasActiveImport { scheduleFollowUp(); return }
+        if importer.hasActiveImport { scheduleFollowUp(); return }
         if isScanning { rescanRequested = true; return }
         isScanning = true
         let report = await engine.scan()
