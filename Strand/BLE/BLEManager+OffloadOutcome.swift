@@ -328,7 +328,6 @@ extension BLEManager {
                 send(.runHapticsPattern, payload: [2, UInt8(clamping: decision.buzzLoops), 0, 0, 0])
                 let mins = Int((decision.bout?.durationS ?? 0) / 60)
                 log("Inactivity: nudged after a \(mins)-min sedentary stretch.")
-                AppModel.postInactivity(minutes: mins)   // #577 — local notification (iOS-only, self-gated on notif.masterEnabled)
             }
         }
     }

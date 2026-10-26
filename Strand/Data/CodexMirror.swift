@@ -74,18 +74,20 @@ final class CodexMirrorScheduler: ObservableObject {
         self.sourcePath = sourcePath
     }
 
-    /// Idempotent: subscribes to sync completion and backup success.
-    func start(model: AppModel, backups: AutoBackupScheduler = .shared) {
+    /// Idempotent: subscribes to sync completion (`LiveState.lastSyncedAt`), long-offload history
+    /// progress (`LiveState.historyProgressAt`) and backup success.
+    func start(syncs: Published<TimeInterval?>.Publisher, historyProgress: Published<TimeInterval?>.Publisher,
+               backups: AutoBackupScheduler = .shared) {
         guard !started else { return }
         started = true
 
-        model.live.$lastSyncedAt
+        syncs
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] _ in self?.request() }
             .store(in: &cancellables)
 
-        attachHistoryProgress(model.live.$historyProgressAt)
+        attachHistoryProgress(historyProgress)
 
         backups.$lastAutoBackupAt
             .dropFirst()
@@ -102,7 +104,7 @@ final class CodexMirrorScheduler: ObservableObject {
     /// A long offload (multi-day backlog) can run for hours without a HISTORY_COMPLETE, i.e. without a
     /// `lastSyncedAt` change. BLEManager publishes an intermediate, rate-limited progress stamp instead; each
     /// change requests a mirror run (still coalesced and held to `minInterval` by `request()`). Internal so a
-    /// test can drive it with a bare `LiveState` instead of a full `AppModel`.
+    /// test can drive it with a bare `LiveState`.
     func attachHistoryProgress(_ progress: Published<TimeInterval?>.Publisher) {
         progress
             .removeDuplicates()
