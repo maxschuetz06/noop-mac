@@ -118,33 +118,7 @@ struct SleepView: View {
         let resolved: SleepModel? = (key == modelKey) ? model : buildModel()
         ScreenScaffold(title: "Sleep", subtitle: "Understand and improve your rest.",
                        onRefresh: { await repo.refresh() }) {
-            Group {
-                if let resolved {
-                    // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
-                    VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                        #if os(macOS)
-                        softOverview(resolved).staggeredAppear(index: 0)
-                        #else
-                        restHero(resolved).staggeredAppear(index: 0)
-                        #endif
-                        sleepMarkCard.staggeredAppear(index: 1)
-                        hero(resolved).staggeredAppear(index: 2)
-                        metricGrid(resolved).staggeredAppear(index: 3)
-                        sleepDebtLedger(resolved).staggeredAppear(index: 4)
-                        stagesVsTypical(resolved).staggeredAppear(index: 5)
-                        durationTrend(resolved).staggeredAppear(index: 6)
-                        // Imported naps on days that have no night of their own. `napOnlyDaysCard`
-                        // already excludes every day with a night, so this never duplicates the
-                        // per-night naps list above.
-                        napOnlyDaysCard.staggeredAppear(index: 7)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                        emptyState
-                        napOnlyDaysCard
-                    }
-                }
-            }
+            sleepSections(resolved)
             // Animate the Rest hero gauge in once content resolves, and re-draw when the
             // sleep-performance score changes (a sync / re-import). macOS-13-safe single-param onChange.
             .onChangeCompat(of: heroScoreFraction(resolved)) { newFraction in
@@ -182,53 +156,95 @@ struct SleepView: View {
             // whose blocks live under the computed source. Re-runs whenever a sync/import bumps
             // refreshSeq; snaps back to the newest day and rebuilds the model so offset 0 reflects
             // the freshly-loaded blocks. (#170)
-            .task(id: repo.refreshSeq) {
-                allSessions = await repo.allSleepSessions()
-                importedNaps = await repo.napSessions()
-                // Load the learned habitual midsleep the engine used, so the main-night pick aligns to it
-                // (a shift/late sleeper) instead of only the cold-start band. nil under threshold. (#547)
-                habitualMidsleepSec = await repo.habitualMidsleepSec()
-                // Per-epoch motion for every block (#407), keyed by detected start. mergeDay reads only the
-                // already-resolved group's entries — this just pre-fetches them all so the model build is sync.
-                motionByStart = await repo.sessionMotions(starts: allSessions.map { $0.startTs })
-                nightOffset = 0
-                navNight = nil
-                modelKey = dataKey
-                model = buildModel()
-            }
-            .sheet(item: $wakeEdit) { edit in
-                SleepTimeEditor(bedTs: edit.bedTs, wakeTs: edit.wakeTs,
-                                onSave: { newBedTs, newWakeTs in
-                    await repo.editSleepTimes(detectedStartTs: edit.detectedStartTs, oldEndTs: edit.wakeTs,
-                                              storedStagesJSON: edit.stagesJSON,
-                                              newStartTs: newBedTs, newEndTs: newWakeTs)
-                    // Re-score the day so the dashboard aggregates (Rest / recovery) honor the corrected
-                    // sleep window, not just the Sleep tab's session view; then refresh the read cache.
-                    await intelligence.analyzeRecent()
-                    await repo.refresh()
-                }, onDelete: {
-                    // Delete = the edit path minus the re-insert: drop this session so every metric
-                    // recomputes immediately as if the night were never recorded, durably tombstoned so a
-                    // re-detect doesn't bring it back, then re-score + refresh exactly like an edit. (#68)
-                    await repo.deleteSleepSession(detectedStartTs: edit.detectedStartTs, endTs: edit.wakeTs)
-                    await intelligence.analyzeRecent()
-                    await repo.refresh()
-                })
-            }
+            .task(id: repo.refreshSeq) { await loadSleepBlocks() }
+            .sheet(item: $wakeEdit) { edit in wakeEditSheet(edit) }
             // Manually add a missed nap (#508): same picker, but the chosen window is staged from raw and
             // stored as its OWN separate session — never folded into main sleep (which would mislabel the
             // awake daytime gap as light sleep).
-            .sheet(item: $addNap) { seed in
-                SleepTimeEditor(bedTs: seed.bedTs, wakeTs: seed.wakeTs,
-                                title: "Add a nap",
-                                blurb: "Pick when the nap started and ended. NOOP stages it from your data as its own session, separate from the night's sleep.",
-                                bedLabel: "Nap started", wakeLabel: "Nap ended") { startTs, endTs in
-                    await repo.addManualNap(startTs: startTs, endTs: endTs)
-                    // Re-score so the day's aggregates pick up the new session, exactly like an edit.
-                    await intelligence.analyzeRecent()
-                    await repo.refresh()
+            .sheet(item: $addNap) { seed in addNapSheet(seed) }
+        }
+    }
+
+    /// The Sleep column for the resolved night model, or the empty state with nap-only days.
+    @ViewBuilder
+    func sleepSections(_ resolved: SleepModel?) -> some View {
+        Group {
+            if let resolved {
+                // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
+                VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                    #if os(macOS)
+                    softOverview(resolved).staggeredAppear(index: 0)
+                    #else
+                    restHero(resolved).staggeredAppear(index: 0)
+                    #endif
+                    sleepMarkCard.staggeredAppear(index: 1)
+                    hero(resolved).staggeredAppear(index: 2)
+                    metricGrid(resolved).staggeredAppear(index: 3)
+                    sleepDebtLedger(resolved).staggeredAppear(index: 4)
+                    stagesVsTypical(resolved).staggeredAppear(index: 5)
+                    durationTrend(resolved).staggeredAppear(index: 6)
+                    // Imported naps on days that have no night of their own. `napOnlyDaysCard`
+                    // already excludes every day with a night, so this never duplicates the
+                    // per-night naps list above.
+                    napOnlyDaysCard.staggeredAppear(index: 7)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                    emptyState
+                    napOnlyDaysCard
                 }
             }
+        }
+    }
+
+    /// Loads every sleep block, the imported naps, the habitual midsleep and per-block motion, then
+    /// rebuilds the model at the newest night.
+    func loadSleepBlocks() async {
+        allSessions = await repo.allSleepSessions()
+        importedNaps = await repo.napSessions()
+        // Load the learned habitual midsleep the engine used, so the main-night pick aligns to it
+        // (a shift/late sleeper) instead of only the cold-start band. nil under threshold. (#547)
+        habitualMidsleepSec = await repo.habitualMidsleepSec()
+        // Per-epoch motion for every block (#407), keyed by detected start. mergeDay reads only the
+        // already-resolved group's entries — this just pre-fetches them all so the model build is sync.
+        motionByStart = await repo.sessionMotions(starts: allSessions.map { $0.startTs })
+        nightOffset = 0
+        navNight = nil
+        modelKey = dataKey
+        model = buildModel()
+    }
+
+    /// Edit (or delete) the detected night's bed/wake times, then re-score and refresh.
+    func wakeEditSheet(_ edit: WakeEdit) -> some View {
+        SleepTimeEditor(bedTs: edit.bedTs, wakeTs: edit.wakeTs,
+                        onSave: { newBedTs, newWakeTs in
+            await repo.editSleepTimes(detectedStartTs: edit.detectedStartTs, oldEndTs: edit.wakeTs,
+                                      storedStagesJSON: edit.stagesJSON,
+                                      newStartTs: newBedTs, newEndTs: newWakeTs)
+            // Re-score the day so the dashboard aggregates (Rest / recovery) honor the corrected
+            // sleep window, not just the Sleep tab's session view; then refresh the read cache.
+            await intelligence.analyzeRecent()
+            await repo.refresh()
+        }, onDelete: {
+            // Delete = the edit path minus the re-insert: drop this session so every metric
+            // recomputes immediately as if the night were never recorded, durably tombstoned so a
+            // re-detect doesn't bring it back, then re-score + refresh exactly like an edit. (#68)
+            await repo.deleteSleepSession(detectedStartTs: edit.detectedStartTs, endTs: edit.wakeTs)
+            await intelligence.analyzeRecent()
+            await repo.refresh()
+        })
+    }
+
+    /// Add a missed nap as its own staged session, then re-score and refresh.
+    func addNapSheet(_ seed: AddNapSeed) -> some View {
+        SleepTimeEditor(bedTs: seed.bedTs, wakeTs: seed.wakeTs,
+                        title: "Add a nap",
+                        blurb: "Pick when the nap started and ended. NOOP stages it from your data as its own session, separate from the night's sleep.",
+                        bedLabel: "Nap started", wakeLabel: "Nap ended") { startTs, endTs in
+            await repo.addManualNap(startTs: startTs, endTs: endTs)
+            // Re-score so the day's aggregates pick up the new session, exactly like an edit.
+            await intelligence.analyzeRecent()
+            await repo.refresh()
         }
     }
 

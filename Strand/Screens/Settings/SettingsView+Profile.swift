@@ -106,93 +106,112 @@ extension SettingsView {
                     }
                 }
                 rowDivider
-                // Waist (optional). Unlike the rows above it, an empty waist is valid (0 = unset) —
-                // it's the ONE measurement that ADDS the VO₂max estimate alongside Fitness Age. It does
-                // NOT sharpen the Fitness Age itself (the body term cancels in the Nes model), so it sits
-                // apart with an honest "adds your VO₂max estimate" note rather than implying it tunes the age.
-                FormRow(label: "Waist (optional)") {
-                    // Imperial mode steps in whole inches and stores the cm equivalent; metric steps in cm.
-                    if unitSystem == .imperial {
-                        waistInchesField(waistCm: $profile.waistCm)
-                    } else {
-                        waistCentimetresField(waistCm: $profile.waistCm)
-                    }
-                }
-                Text("Optional — adds your VO₂max estimate. The Fitness Age itself doesn't need it. Measure around your middle, at the navel.")
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                waistRow
                 rowDivider
-                FormRow(label: "Max heart rate") {
-                    VStack(alignment: .trailing, spacing: 6) {
-                        HStack(spacing: 8) {
-                            hrMaxField
-                            Text("bpm")
-                                .font(StrandFont.caption)
-                                .foregroundStyle(StrandPalette.textTertiary)
-                        }
-                        Text(profile.hrMaxOverride > 0
-                             ? "Manual override"
-                             : "Auto · \(profile.hrMax) bpm (Tanaka)")
-                            .font(StrandFont.footnote)
-                            .foregroundStyle(profile.hrMaxOverride > 0
-                                             ? StrandPalette.accent
-                                             : StrandPalette.textTertiary)
-                    }
-                }
+                maxHeartRateRow
                 rowDivider
-                // Step calibration (#139/#132): daily steps = @57 counter ticks ÷ this divisor.
-                // 1.0 = raw pass-through until the true 5/MG tick rate is known. The divisor goes
-                // up to 30 because a 5/MG motion counter can overcount by ~24×; the stepper uses a
-                // variable increment (fine near 1.0, coarse up top) so high values stay reachable.
-                FormRow(label: "Step calibration") {
-                    HStack(spacing: 10) {
-                        Text(String(format: "%.1f", profile.stepTicksPerStep))
-                            .font(StrandFont.bodyNumber)
-                            .foregroundStyle(StrandPalette.textPrimary)
-                            .frame(minWidth: 44, alignment: .trailing)
-                        Stepper("Step calibration") {
-                            profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: true)
-                        } onDecrement: {
-                            profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: false)
-                        }
-                            .labelsHidden()
-                            .accessibilityLabel("Step calibration, \(String(format: "%.1f", profile.stepTicksPerStep)) counter ticks per step")
-                    }
-                }
-                Text("Counter ticks per step — leave at 1.0 unless your steps run high. On a WHOOP 5/MG they can run very high (10× or more), so this goes up to 30. Walk a known 1,000 steps and divide NOOP's count by the real count to get your value.")
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                stepCounterDivisorRow
                 rowDivider
-                // Tap-through to the WHOOP 4.0 steps-ESTIMATE calibration (a SEPARATE thing from the
-                // 5/MG @57 counter divisor above): a 4.0 sends no step count, so NOOP estimates steps
-                // from motion and calibrates that to the phone. The sheet explains it, shows the fit +
-                // a recent estimated-vs-phone comparison, and offers a manual coefficient.
-                Button {
-                    showStepsCalibration = true
-                } label: {
-                    FormRow(label: "Steps estimate") {
-                        HStack(spacing: 8) {
-                            Text(stepsCalibrationSummary)
-                                .font(StrandFont.footnote)
-                                .foregroundStyle(profile.stepsManualCoefficient > 0
-                                                 ? StrandPalette.accent : StrandPalette.textTertiary)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(StrandPalette.textTertiary)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Steps estimate calibration. \(stepsCalibrationSummary). Opens the calibration screen.")
-                Text("For a WHOOP 4.0, which sends no step count: NOOP estimates steps from motion, calibrated to your phone. Tap to see how close it is and adjust it.")
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                stepsEstimateCalibrationLink
             }
         }
+    }
+
+    /// Waist (optional). Unlike the rows above it, an empty waist is valid (0 = unset) —
+    /// it's the ONE measurement that ADDS the VO₂max estimate alongside Fitness Age. It does
+    /// NOT sharpen the Fitness Age itself (the body term cancels in the Nes model), so it sits
+    /// apart with an honest "adds your VO₂max estimate" note rather than implying it tunes the age.
+    @ViewBuilder
+    var waistRow: some View {
+        FormRow(label: "Waist (optional)") {
+            // Imperial mode steps in whole inches and stores the cm equivalent; metric steps in cm.
+            if unitSystem == .imperial {
+                waistInchesField(waistCm: $profile.waistCm)
+            } else {
+                waistCentimetresField(waistCm: $profile.waistCm)
+            }
+        }
+        Text("Optional — adds your VO₂max estimate. The Fitness Age itself doesn't need it. Measure around your middle, at the navel.")
+            .font(StrandFont.footnote)
+            .foregroundStyle(StrandPalette.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    var maxHeartRateRow: some View {
+        FormRow(label: "Max heart rate") {
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack(spacing: 8) {
+                    hrMaxField
+                    Text("bpm")
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+                Text(profile.hrMaxOverride > 0
+                     ? "Manual override"
+                     : "Auto · \(profile.hrMax) bpm (Tanaka)")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(profile.hrMaxOverride > 0
+                                     ? StrandPalette.accent
+                                     : StrandPalette.textTertiary)
+            }
+        }
+    }
+
+    /// Step calibration (#139/#132): daily steps = @57 counter ticks ÷ this divisor.
+    /// 1.0 = raw pass-through until the true 5/MG tick rate is known. The divisor goes
+    /// up to 30 because a 5/MG motion counter can overcount by ~24×; the stepper uses a
+    /// variable increment (fine near 1.0, coarse up top) so high values stay reachable.
+    @ViewBuilder
+    var stepCounterDivisorRow: some View {
+        FormRow(label: "Step calibration") {
+            HStack(spacing: 10) {
+                Text(String(format: "%.1f", profile.stepTicksPerStep))
+                    .font(StrandFont.bodyNumber)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .frame(minWidth: 44, alignment: .trailing)
+                Stepper("Step calibration") {
+                    profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: true)
+                } onDecrement: {
+                    profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: false)
+                }
+                    .labelsHidden()
+                    .accessibilityLabel("Step calibration, \(String(format: "%.1f", profile.stepTicksPerStep)) counter ticks per step")
+            }
+        }
+        Text("Counter ticks per step — leave at 1.0 unless your steps run high. On a WHOOP 5/MG they can run very high (10× or more), so this goes up to 30. Walk a known 1,000 steps and divide NOOP's count by the real count to get your value.")
+            .font(StrandFont.footnote)
+            .foregroundStyle(StrandPalette.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Tap-through to the WHOOP 4.0 steps-ESTIMATE calibration (a SEPARATE thing from the
+    /// 5/MG @57 counter divisor above): a 4.0 sends no step count, so NOOP estimates steps
+    /// from motion and calibrates that to the phone. The sheet explains it, shows the fit +
+    /// a recent estimated-vs-phone comparison, and offers a manual coefficient.
+    @ViewBuilder
+    var stepsEstimateCalibrationLink: some View {
+        Button {
+            showStepsCalibration = true
+        } label: {
+            FormRow(label: "Steps estimate") {
+                HStack(spacing: 8) {
+                    Text(stepsCalibrationSummary)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(profile.stepsManualCoefficient > 0
+                                         ? StrandPalette.accent : StrandPalette.textTertiary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Steps estimate calibration. \(stepsCalibrationSummary). Opens the calibration screen.")
+        Text("For a WHOOP 4.0, which sends no step count: NOOP estimates steps from motion, calibrated to your phone. Tap to see how close it is and adjust it.")
+            .font(StrandFont.footnote)
+            .foregroundStyle(StrandPalette.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// One-line state for the "Steps estimate" tap-through row: manual, the auto-fit confidence, or a
