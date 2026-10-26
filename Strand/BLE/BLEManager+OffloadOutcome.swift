@@ -19,7 +19,7 @@ extension BLEManager {
         lastOffloadFrameAt = Date()
         backfillTimeout?.cancel()
         backfillTimeout = nil
-        backfillFrameQueue.removeAll()
+        offloadDrain.discardPending()
         scheduleSyncActivityRelease()
         log("Backfill: session ended — reason=\(reason)")
         logEndedSession(reason: reason)

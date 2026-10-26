@@ -120,39 +120,20 @@ extension BLEManager {
         return true
     }
 
-    /// Feed a frame to the Backfiller preserving exact arrival order. Frames are appended
-    /// synchronously (delegate order) and drained sequentially in small slices, so START /
-    /// data / END chunk assembly is never reordered while the UI still gets time to paint.
+    /// Feed a frame to the Backfiller preserving exact arrival order (see `OffloadFrameDrain`).
     func routeBackfillFrame(_ frame: [UInt8]) {
         // Opt-in raw PPG research capture (v20/v21/v26): fire-and-forget enqueue, independent of the
         // Backfiller's persistence/ack path — it can neither block nor fail a sync.
         RawPPGCapture.shared.submitStreamFrame(frame, family: selectedModel.deviceFamily)
-        backfillFrameQueue.append(frame)
-        guard !backfillDraining else { return }
-        backfillDraining = true
-        Task { @MainActor in await drainBackfillFrames() }
+        offloadDrain.enqueue(frame)
     }
 
-    private func drainBackfillFrames() async {
-        while !backfillFrameQueue.isEmpty {
-            let count = min(Self.backfillDrainBatchSize, backfillFrameQueue.count)
-            let batch = Array(backfillFrameQueue.prefix(count))
-            backfillFrameQueue.removeFirst(count)
-
-            for f in batch {
-                await backfiller?.ingest(f)
-                afterBackfillIngest()
-                if !backfilling {
-                    backfillFrameQueue.removeAll(keepingCapacity: true)
-                    break
-                }
-            }
-
-            if !backfillFrameQueue.isEmpty {
-                await Task.yield()
-            }
-        }
-        backfillDraining = false
+    /// One drain step: ingest the frame, close the session on HISTORY_COMPLETE, and report whether the
+    /// session is still running (false drops the frames still queued).
+    func ingestOffloadFrame(_ frame: [UInt8]) async -> Bool {
+        await backfiller?.ingest(frame)
+        afterBackfillIngest()
+        return backfilling
     }
 
     /// Called after every Backfiller.ingest completes. If the Backfiller has consumed all

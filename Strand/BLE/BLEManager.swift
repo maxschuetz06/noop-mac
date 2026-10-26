@@ -166,12 +166,10 @@ public final class BLEManager: NSObject, ObservableObject {
     /// Re-entrancy guard for captureRawAccel: true while a bounded on-demand window is running.
     /// A second tap is a no-op until the active capture's asyncAfter block fires and clears this.
     var rawCaptureInFlight = false
-    /// Ordered queue of frames awaiting drain through the serial Backfiller task.
-    var backfillFrameQueue: [[UInt8]] = []
-    /// True while the drain task is running (prevents a second drain task from launching).
-    var backfillDraining = false
-    /// Keep each main-actor drain slice small enough that SwiftUI can process input/paint between slices.
-    static let backfillDrainBatchSize = 12
+    /// The single serial drain that feeds offload frames to the Backfiller in arrival order.
+    lazy var offloadDrain = OffloadFrameDrain { [weak self] frame in
+        await self?.ingestOffloadFrame(frame) ?? false
+    }
 
     /// Reference time for the intermediate history-progress signal (see `HistoryProgressPolicy`): the last
     /// signal, the last HISTORY_COMPLETE, or — seeded at the first offload start — "when this drain began".

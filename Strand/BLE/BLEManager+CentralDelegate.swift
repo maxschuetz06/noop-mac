@@ -279,8 +279,7 @@ extension BLEManager {
         state.historySyncExperimental = false
         backfillTimeout?.cancel()
         backfillTimeout = nil
-        backfillFrameQueue.removeAll()
-        backfillDraining = false
+        offloadDrain.reset()
         releaseSyncActivityNow()   // the link is gone — nothing left to keep out of App Nap
         uploadTimer?.cancel()
         uploadTimer = nil
