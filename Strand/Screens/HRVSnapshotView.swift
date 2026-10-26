@@ -437,12 +437,8 @@ struct HRVSnapshotView: View {
         let point = MetricPoint(day: day, key: HRVSnapshot.metricKey, value: rmssd)
         saved = true                    // optimistic — the write is local + idempotent
         Task {
-            guard let store = await model.repo.storeHandle() else {
-                saved = false
-                return
-            }
             do {
-                try await store.upsertMetricSeries([point], deviceId: HRVSnapshot.sourceId)
+                try await model.repo.saveMetricPoints([point], source: HRVSnapshot.sourceId)
                 await model.repo.refresh()
             } catch {
                 saved = false

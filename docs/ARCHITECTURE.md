@@ -103,11 +103,12 @@ Strand/                         macOS SwiftUI app target (the reference implemen
 │   └── RawCaptureWindow.swift  bounded on-demand raw-capture window
 ├── Data/                       Read model + import glue
 │   ├── Repository.swift        @MainActor read model over WhoopStore
+│   ├── Repository+*.swift      named reads/writes by domain (imports, lab markers, raw streams, Effort)
 │   ├── WhoopImporter.swift     CSV result → store rows
 │   ├── AppleHealthImport.swift Apple Health result → store rows
 │   ├── Profile.swift           user profile (age/sex/body/HRmax)
 │   └── BehaviorStore.swift     toggles for automations/coaching
-├── Screens/                    SwiftUI feature screens (Today, Live, Sleep, Trends…)
+├── Screens/                    SwiftUI feature screens; Today/, Sleep/, Settings/ split per section
 ├── MenuBar/                    glanceable menu-bar extra
 └── System/                     macOS integrations (lock screen, Shortcuts)
 
@@ -386,8 +387,10 @@ is the `NavItem` enum (Today, Live, Breathe, Intervals, Explore, Compare, Insigh
 Workouts, Health, Stress, Apple Health, Data Sources, Notifications, Automations, Settings, Support).
 
 Screens bind to `Repository`'s published `days`/`sleeps` caches (refreshed on data change, not on the
-~1 Hz stream) and render with `StrandDesign` components — `RecoveryRing`, `StrainGauge`, `Hypnogram`,
-`TrendChart`, `Sparkline`, `YearHeatStrip` — over the `StrandPalette` tokens. `AppModel` also hosts
+~1 Hz stream) and reach the store only through named `Repository` methods: `Tools/check-architecture.sh`
+(run in CI) fails when `Strand/Screens/` calls `storeHandle()`, `StrainScorer` or `SleepStager`. They
+render with `StrandDesign` components — `RecoveryRing`, `StrainGauge`, `Hypnogram`, `TrendChart`,
+`Sparkline`, `YearHeatStrip` — over the `StrandPalette` tokens. `AppModel` also hosts
 the opt-in, on-device behaviours (HR smoothing, illness/strain early-warning, stress nudges, HR-zone
 haptic coaching, double-tap actions, wrist-wear automation) — all default-off and all
 computed locally.

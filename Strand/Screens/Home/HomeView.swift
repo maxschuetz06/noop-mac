@@ -53,8 +53,8 @@ struct HomeView: View {
     }
     /// The last scored night, carried while today isn't scored yet (same rule as the Control Center).
     private var carried: DailyMetric? {
-        TodayView.lastScoredRecoveryDay(days: repo.days, selectedDayKey: dayKey, isToday: offset == 0,
-                                        todayScored: day?.recovery != nil, isCalibrating: false)
+        TodayDisplayRules.lastScoredRecoveryDay(days: repo.days, selectedDayKey: dayKey, isToday: offset == 0,
+                                                todayScored: day?.recovery != nil, isCalibrating: false)
     }
     /// Today's row, or the carried prior row for the recovery-side vitals.
     private var vitalsDay: DailyMetric? { day?.recovery != nil ? day : (carried ?? day) }
@@ -468,10 +468,7 @@ struct HomeView: View {
         hrPoints = await repo.hrBuckets(from: from, to: to, bucketSeconds: 300)
             .map { TrendPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), value: $0.bpm) }
         if offset == 0 {
-            let samples = await repo.hrSamples(from: from, to: to)
-            let maxHR = profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil
-            let restHR = day?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
-            liveStrain = StrainScorer.strain(samples, maxHR: maxHR, restingHR: restHR, sex: profile.sex)
+            liveStrain = await repo.liveStrain(from: from, to: to, restingHr: day?.restingHr, age: profile.age, sex: profile.sex)
         } else {
             liveStrain = nil
         }

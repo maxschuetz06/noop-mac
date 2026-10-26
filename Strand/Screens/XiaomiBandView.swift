@@ -193,11 +193,7 @@ struct XiaomiBandView: View {
         for key in Self.seriesKeys {
             fetched[key] = await repo.series(key: key, source: Self.source)
         }
-        var loadedSleeps: [CachedSleepSession] = []
-        if let store = await repo.storeHandle() {
-            let far = Int(Date.distantFuture.timeIntervalSince1970)
-            loadedSleeps = (try? await store.sleepSessions(deviceId: Self.source, from: 0, to: far, limit: 4000)) ?? []
-        }
+        let loadedSleeps = await repo.sleepSessions(source: Self.source) ?? []
         await MainActor.run {
             series = fetched
             sleeps = loadedSleeps

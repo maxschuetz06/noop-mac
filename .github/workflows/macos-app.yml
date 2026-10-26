@@ -38,6 +38,12 @@ jobs:
       - name: Lint German UI literals
         run: Tools/lint-german-literals.sh
 
+      - name: Self-test the architecture check
+        run: Tools/tests/check-architecture-test.sh
+
+      - name: Check screen layering (no raw store handle or scorers in views)
+        run: Tools/check-architecture.sh
+
       - name: Build and test Strand
         env:
           # xcodebuild forwards TEST_RUNNER_* variables to the test host without the prefix;
