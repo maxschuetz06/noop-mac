@@ -110,19 +110,35 @@ final class RejectArchiveReplayGateTests: XCTestCase {
         XCTAssertTrue(gate("2").isDue, "the archive is the only copy: a failed replay must retry")
     }
 
-    /// S-9: the archive must be replayed when the DECODER changes, not when the app's marketing version
-    /// does. An install that already replayed for this app version but under an older decoder is due.
+    /// S-9: the archive must be replayed when the DECODER changes, not only when the app version does.
+    /// An install that already replayed for this app version but under an older decoder is due.
     func testTheAppGateReplaysAfterADecoderBumpWithinTheSameAppVersion() {
-        defaults.set(AppChangelog.currentVersion, forKey: "rejectArchiveReplayedAppVersion")
-        defaults.set(String(DecoderVersion.current - 1), forKey: "rejectArchiveReplayedDecoderVersion")
+        defaults.set("1.0", forKey: "rejectArchiveReplayedAppVersion")
+        defaults.set("decoder-\(DecoderVersion.current - 1) app-1.0", forKey: "rejectArchiveReplayedVersion")
 
-        XCTAssertTrue(RejectArchiveReplayGate.production(defaults: defaults).isDue)
+        XCTAssertTrue(RejectArchiveReplayGate.production(defaults: defaults, appVersion: "1.0").isDue)
     }
 
-    func testTheAppGateStaysClosedOnceTheCurrentDecoderVersionReplayed() {
-        defaults.set(String(DecoderVersion.current), forKey: "rejectArchiveReplayedDecoderVersion")
+    func testTheAppGateStaysClosedForTheSameDecoderAndAppVersion() {
+        defaults.set("decoder-\(DecoderVersion.current) app-1.0", forKey: "rejectArchiveReplayedVersion")
 
-        XCTAssertFalse(RejectArchiveReplayGate.production(defaults: defaults).isDue)
+        XCTAssertFalse(RejectArchiveReplayGate.production(defaults: defaults, appVersion: "1.0").isDue)
+    }
+
+    /// A release that maps a new layout but forgets the DecoderVersion bump still replays once: frames
+    /// in the reject archive are undecodable by definition, so no decode fingerprint can flag them.
+    func testANewAppReleaseReplaysOnceWithAnUnchangedDecoder() async throws {
+        let archive = try archiveWithV25Frames()
+        let store = try await tempStore()
+        defaults.set("decoder-\(DecoderVersion.current) app-1.0", forKey: "rejectArchiveReplayedVersion")
+
+        let release = await RejectArchiveReplayGate.production(defaults: defaults, appVersion: "1.1")
+            .runIfDue(archive: archive, store: store, deviceId: Self.deviceId)
+        let nextLaunch = await RejectArchiveReplayGate.production(defaults: defaults, appVersion: "1.1")
+            .runIfDue(archive: archive, store: store, deviceId: Self.deviceId)
+
+        XCTAssertEqual(release, .replayed(rows: 3))
+        XCTAssertEqual(nextLaunch, .notDue)
     }
 
     /// An install updated from a build with the app-version gate replays once, then never again.

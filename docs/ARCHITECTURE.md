@@ -80,7 +80,7 @@ Strand/                         macOS SwiftUI app target (the reference implemen
 │   ├── BLEManager+OffloadOutcome.swift   session end: forensics, sync status, auto-continue
 │   ├── OffloadFrameDrain.swift   the one serial drain from the delegate to Backfiller.ingest
 │   ├── ConnectionHealthDetectors.swift marginal radio, bond loop, empty-sync streak detectors
-│   ├── RejectArchiveReplayGate.swift once-per-DecoderVersion replay of the reject archive
+│   ├── RejectArchiveReplayGate.swift reject-archive replay per decoder version and app release
 │   ├── RawFrameSink.swift        injected sink for the opt-in raw PPG capture
 │   ├── StrapCommandPolicy.swift  which command (and body) may reach which strap family
 │   ├── FrameRouter.swift       pure decode→LiveState router (no CoreBluetooth)
@@ -251,8 +251,9 @@ the periodic **type-47 historical offload is the primary metric source**, not th
    Records that do not decode are first appended to `RawHistoryArchive` (fsynced); a failed archive
    write holds the ack too.
 4. On store bootstrap, `RejectArchiveReplayGate` re-runs that archive through the current decoder once
-   per `WhoopProtocol.DecoderVersion.current` (bump it whenever historical decoding changes;
-   `DecoderVersionTests` fingerprints a fixed corpus as a reminder). Replay inserts are idempotent.
+   per `WhoopProtocol.DecoderVersion.current` and once per app release (bump `DecoderVersion` whenever
+   historical decoding changes; `DecoderVersionTests` fingerprints a fixed corpus as a reminder).
+   Replay inserts are idempotent.
 
 Type-47 records carry their **own real-unix timestamps**, so the historical path does *not* depend on
 `GET_CLOCK`; if the clock correlation hasn't landed yet, `Backfiller` falls back to an identity

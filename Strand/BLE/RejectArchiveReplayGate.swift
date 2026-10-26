@@ -22,13 +22,18 @@ struct RejectArchiveReplayGate {
     let key: String
     let version: String
 
-    /// The gate the app runs at store bootstrap: keyed to the decoder, not the app version, so a decoder
-    /// fix replays the archive even when the app version does not change. Existing installs have no value
-    /// under this key yet and therefore replay once after updating (idempotent, bounded archive).
-    static func production(defaults: UserDefaults = .standard) -> RejectArchiveReplayGate {
-        RejectArchiveReplayGate(defaults: defaults, key: "rejectArchiveReplayedDecoderVersion",
-                                version: String(DecoderVersion.current))
+    /// The gate the app runs at store bootstrap. It opens when the decoder version changes (S-9: a decoder
+    /// fix must replay even within one app version) and on every app release, which also covers a newly
+    /// mapped layout whose `DecoderVersion` bump was forgotten: those frames are undecodable by
+    /// definition, so no decode fingerprint can notice them. Existing installs have no value under this
+    /// key yet and replay once after updating; the replay is idempotent and the archive is bounded.
+    static func production(defaults: UserDefaults = .standard,
+                           appVersion: String = appReleaseVersion) -> RejectArchiveReplayGate {
+        RejectArchiveReplayGate(defaults: defaults, key: "rejectArchiveReplayedVersion",
+                                version: "decoder-\(DecoderVersion.current) app-\(appVersion)")
     }
+
+    static let appReleaseVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
 
     var isDue: Bool { defaults.string(forKey: key) != version }
 
