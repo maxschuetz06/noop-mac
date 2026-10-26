@@ -110,4 +110,36 @@ extension TodayView {
         // Press-down feedback for the tappable card surface.
         .strandPressable()
     }
+
+    /// The "still building" and "new here?" prompts are about getting today's scores going,
+    /// so they stay anchored to today rather than reappearing on every navigated past day.
+    @ViewBuilder
+    var scoresBuildingPrompts: some View {
+        if selectedDayOffset == 0 && repo.today?.recovery == nil {
+            // While the strap is mid-offload, say so — empty tiles read as final otherwise (#77).
+            if live.backfilling { SyncingHistoryNote(chunks: live.syncChunksThisSession) }
+            // Only for a genuinely new install: gone once a WHOOP export is imported (or enough
+            // history exists) and once dismissed (persisted via `scoresBuildingDismissed`).
+            if TodayDisplayRules.showScoresBuildingNote(
+                isToday: selectedDayOffset == 0, todayHasRecovery: repo.today?.recovery != nil,
+                dismissed: scoresBuildingDismissed, importedDays: repo.freshness.importedDays,
+                historyDays: repo.days.count) {
+                DataPendingNote(
+                    title: "Live now. Your scores are building.",
+                    message: "Your live heart rate is working from the strap, and charge, effort and rest build from it over your next few nights of wear, sharpening as it learns your baseline. Want your full history instantly? Import your WHOOP export in Data Sources and it backfills in about a minute."
+                )
+                // A small × dismisses the card INTO the Updates inbox (restorable from there).
+                .overlay(alignment: .topTrailing) {
+                    todayCardDismissButton {
+                        dismissTodayCard(
+                            id: "scoresBuilding",
+                            title: "Live now. Your scores are building.",
+                            message: "Charge, Effort and Rest build over your next few nights of wear."
+                        )
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
+    }
 }

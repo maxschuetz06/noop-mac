@@ -96,66 +96,70 @@ extension TodayView {
 
             Spacer(minLength: 8)
 
-            // Uniform 36pt circular icon set: recording-status light, updates bell, quick-add (+), menu.
-            HStack(spacing: 8) {
-                // Recording status — a colour-coded light (green recording / amber synced / red not
-                // recording), replacing the old full-width banner. Taps to Devices to connect.
-                if let state = recordingState {
-                    Button { StrandHaptic.selection.play(); router.openDevices() } label: {
-                        Circle().fill(StrandPalette.surfaceInset)
-                            .frame(width: 36, height: 36)
-                            .overlay(Circle().fill(recordingHue(state)).frame(width: 10, height: 10))
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(state.accessibilityText)
-                }
-                // Updates bell.
-                Button { showUpdatesInbox = true } label: {
-                    Image(systemName: updateStore.unreadCount > 0 ? "bell.badge" : "bell")
-                        .font(.system(size: 15, weight: .medium))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(StrandPalette.surfaceInset))
-                        .overlay(alignment: .topTrailing) {
-                            if updateStore.unreadCount > 0 {
-                                Text("\(min(updateStore.unreadCount, 99))")
-                                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                                    .monospacedDigit()
-                                    .foregroundStyle(StrandPalette.goldDeepText)
-                                    .padding(.horizontal, 3.5).padding(.vertical, 1)
-                                    .frame(minWidth: 14)
-                                    .background(Capsule().fill(StrandPalette.statusCritical))
-                                    .offset(x: 2, y: -1)
-                            }
-                        }
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Updates")
-                // Quick-action + (the accented primary — gold, same 36 size as the rest).
-                Button { router.requestQuickActions() } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(StrandPalette.goldDeepText)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(StrandPalette.accent))
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Quick actions")
-                .accessibilityHint("Start a workout, log your journal, or breathe")
-                // Menu (Settings) — the avatar, same 36 size.
-                Button { showSettings = true } label: {
-                    ProfileAvatarView(imageData: profile.avatarImageData, size: 36)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Menu and settings")
-            }
+            todayTopBarActions
         }
         .frame(height: 46)
+    }
+
+    /// Uniform 36pt circular icon set: recording-status light, updates bell, quick-add (+), menu.
+    var todayTopBarActions: some View {
+        HStack(spacing: 8) {
+            // Recording status — a colour-coded light (green recording / amber synced / red not
+            // recording), replacing the old full-width banner. Taps to Devices to connect.
+            if let state = recordingState {
+                Button { StrandHaptic.selection.play(); router.openDevices() } label: {
+                    Circle().fill(StrandPalette.surfaceInset)
+                        .frame(width: 36, height: 36)
+                        .overlay(Circle().fill(recordingHue(state)).frame(width: 10, height: 10))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(state.accessibilityText)
+            }
+            // Updates bell.
+            Button { showUpdatesInbox = true } label: {
+                Image(systemName: updateStore.unreadCount > 0 ? "bell.badge" : "bell")
+                    .font(.system(size: 15, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(StrandPalette.surfaceInset))
+                    .overlay(alignment: .topTrailing) {
+                        if updateStore.unreadCount > 0 {
+                            Text("\(min(updateStore.unreadCount, 99))")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(StrandPalette.goldDeepText)
+                                .padding(.horizontal, 3.5).padding(.vertical, 1)
+                                .frame(minWidth: 14)
+                                .background(Capsule().fill(StrandPalette.statusCritical))
+                                .offset(x: 2, y: -1)
+                        }
+                    }
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Updates")
+            // Quick-action + (the accented primary — gold, same 36 size as the rest).
+            Button { router.requestQuickActions() } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(StrandPalette.goldDeepText)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(StrandPalette.accent))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Quick actions")
+            .accessibilityHint("Start a workout, log your journal, or breathe")
+            // Menu (Settings) — the avatar, same 36 size.
+            Button { showSettings = true } label: {
+                ProfileAvatarView(imageData: profile.avatarImageData, size: 36)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Menu and settings")
+        }
     }
 
     /// Colour for the compact recording-status light: green recording, amber last-synced, red not

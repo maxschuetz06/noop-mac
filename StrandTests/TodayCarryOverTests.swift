@@ -25,7 +25,7 @@ final class TodayCarryOverTests: XCTestCase {
     func testCarriesTheFreshestScoredPriorDay_whenTodayUnscoredAndPastCalibration() {
         let days = [day("2026-06-17", recovery: 60), day("2026-06-18", recovery: 72),
                     day("2026-06-19", recovery: nil)]   // today, not scored yet
-        let carried = TodayView.lastScoredRecoveryDay(
+        let carried = TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false)
         XCTAssertEqual(carried?.day, "2026-06-18", "must carry the most recent SCORED prior day")
@@ -35,7 +35,7 @@ final class TodayCarryOverTests: XCTestCase {
     func testNothingCarried_whenTodayIsAlreadyScored() {
         // Today's own value must win — never carry when there's a real today.
         let days = [day("2026-06-18", recovery: 72), day("2026-06-19", recovery: 55)]
-        XCTAssertNil(TodayView.lastScoredRecoveryDay(
+        XCTAssertNil(TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: true, isCalibrating: false))
     }
@@ -43,7 +43,7 @@ final class TodayCarryOverTests: XCTestCase {
     func testNothingCarried_whileCalibrating() {
         // Calibration owns its own "N of 4" copy on the Charge ring — the carry-over must stand down.
         let days = [day("2026-06-18", recovery: 72), day("2026-06-19", recovery: nil)]
-        XCTAssertNil(TodayView.lastScoredRecoveryDay(
+        XCTAssertNil(TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: true))
     }
@@ -51,7 +51,7 @@ final class TodayCarryOverTests: XCTestCase {
     func testNothingCarried_onANavigatedPastDay() {
         // A navigated past day with no score is missing data, not a rollover — never carry.
         let days = [day("2026-06-17", recovery: 60), day("2026-06-18", recovery: 72)]
-        XCTAssertNil(TodayView.lastScoredRecoveryDay(
+        XCTAssertNil(TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-18",
             isToday: false, todayScored: false, isCalibrating: false))
     }
@@ -63,7 +63,7 @@ final class TodayCarryOverTests: XCTestCase {
         // today's partial data as "last night"). The prior scored day is chosen instead.
         let days = [day("2026-06-18", recovery: 72),
                     day("2026-06-19", recovery: nil, hrv: 40)]   // today: vitals but unscored
-        let carried = TodayView.lastScoredRecoveryDay(
+        let carried = TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false)
         XCTAssertEqual(carried?.day, "2026-06-18")
@@ -72,7 +72,7 @@ final class TodayCarryOverTests: XCTestCase {
     func testNil_whenNoPriorDayWasEverScored() {
         // A genuinely-never-scored history carries nothing — the tiles honestly stay "—".
         let days = [day("2026-06-18", recovery: nil), day("2026-06-19", recovery: nil)]
-        XCTAssertNil(TodayView.lastScoredRecoveryDay(
+        XCTAssertNil(TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false))
     }
@@ -85,7 +85,7 @@ final class TodayCarryOverTests: XCTestCase {
         let days = [day("2026-06-17", recovery: 60), day("2026-06-18", recovery: 72),
                     day("2026-06-19", recovery: nil),    // today, not scored yet
                     day("2026-07-12", recovery: 80)]     // STRAY FUTURE row (the "12 Jul" bug)
-        let carried = TodayView.lastScoredRecoveryDay(
+        let carried = TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false)
         XCTAssertEqual(carried?.day, "2026-06-18", "a future-dated row must never be carried as last night")
@@ -97,7 +97,7 @@ final class TodayCarryOverTests: XCTestCase {
         // rather than reaching forward in time.
         let days = [day("2026-06-19", recovery: nil),    // today, unscored
                     day("2026-07-12", recovery: 80)]     // future-only
-        XCTAssertNil(TodayView.lastScoredRecoveryDay(
+        XCTAssertNil(TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false))
     }
@@ -108,7 +108,7 @@ final class TodayCarryOverTests: XCTestCase {
         // up number. The selector returns the row verbatim; the per-tile fallback reads the real fields.
         let days = [day("2026-06-18", recovery: 72, hrv: 55, rhr: 50, spo2: nil, resp: 14.2),
                     day("2026-06-19", recovery: nil)]
-        let carried = TodayView.lastScoredRecoveryDay(
+        let carried = TodayDisplayRules.lastScoredRecoveryDay(
             days: days, selectedDayKey: "2026-06-19",
             isToday: true, todayScored: false, isCalibrating: false)
         XCTAssertEqual(carried?.avgHrv, 55)

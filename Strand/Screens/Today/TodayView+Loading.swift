@@ -8,6 +8,16 @@ extension TodayView {
     // MARK: - Loading
 
     func loadAll() async {
+        await loadSparklines()
+        await loadDayScores()
+        await loadSourcesAndCards()
+        // A one-shot auto-land on the latest day with data re-runs this load for that day (#605).
+        guard await loadDayHeartRate() else { return }
+        announceNewDaysIfNeeded()
+    }
+
+    /// Trailing-window sparkline series for every Key Metric tile.
+    func loadSparklines() async {
         // 14-day sparklines — Whoop.
         sparks["recovery"]        = await sparkValues("recovery", source: "my-whoop", window: 14)
         sparks["strain"]          = await sparkValues("strain", source: "my-whoop", window: 14)
@@ -27,7 +37,10 @@ extension TodayView {
         sparks["weight"]      = await sparkValues("weight", source: "apple-health", window: 90)
         sparks["active_kcal"] = await sparkValues("active_kcal", source: "apple-health", window: 14)
         sparks["energy_kcal"] = await sparkValues("energy_kcal", source: "my-whoop", window: 14)
+    }
 
+    /// Imported per-day series values, the selected day's Rest score, step estimates and score provenance.
+    func loadDayScores() async {
         // Imported-WHOOP per-day energy / max HR / avg HR (series-only fields), keyed by day.
         var imported: [String: [String: Double]] = [:]
         // STRICT imported read: `series` reads only the imported `my-whoop` metricSeries. `exploreSeries` would
@@ -71,7 +84,10 @@ extension TodayView {
             provenance["sleep_performance"] = win
         }
         provenanceByMetric = provenance
+    }
 
+    /// Workouts, Apple Health rows, Mi Band coverage and the pinned "Your cards" values.
+    func loadSourcesAndCards() async {
         workouts = await repo.workoutRows()
         appleDays = await repo.appleDailyRows()
         // Mi Band (Mi Fitness import) — distinct days across its representative metric keys.
@@ -95,7 +111,11 @@ extension TodayView {
         if let xiaomiSessions = await repo.sleepSessions(source: "xiaomi-band") {
             xiaomiSleeps = xiaomiSessions.count
         }
+    }
 
+    /// The selected day's HR trend, live Effort, chart axis and overlapping sleep. Returns false when it
+    /// moved the selection to the latest day with data instead (the reload for that day finishes the job).
+    func loadDayHeartRate() async -> Bool {
         // HR trend for the SELECTED day — 5-minute bucket means from that logical day's local midnight.
         // For today the window runs to now (an in-progress curve); for a navigated past day it runs the
         // full 24h to the next midnight. The logical day rolls at 04:00 (Repository.logicalDayStart), so
@@ -120,7 +140,7 @@ extension TodayView {
             let todayStart = cal.startOfDay(for: Repository.logicalDay(Date()))
             let latestStart = cal.startOfDay(for: latest)
             let back = cal.dateComponents([.day], from: latestStart, to: todayStart).day ?? 0
-            if back > 0 { selectedDayOffset = back; return }
+            if back > 0 { selectedDayOffset = back; return false }
         }
 
         // In-progress Effort for TODAY (#402): score today's strain over the SAME window the HR curve
@@ -148,8 +168,7 @@ extension TodayView {
         sleepToday = await repo.allSleepSessions(days: selectedDayOffset + 2)
             .filter { $0.endTs > windowStart && $0.startTs < windowEnd }
             .max(by: { ($0.endTs - $0.startTs) < ($1.endTs - $1.startTs) })
-
-        announceNewDaysIfNeeded()
+        return true
     }
 
     /// Post a single honest `.reading` update to the inbox when a refresh brought in genuinely NEWER

@@ -53,8 +53,8 @@ struct HomeView: View {
     }
     /// The last scored night, carried while today isn't scored yet (same rule as the Control Center).
     private var carried: DailyMetric? {
-        TodayView.lastScoredRecoveryDay(days: repo.days, selectedDayKey: dayKey, isToday: offset == 0,
-                                        todayScored: day?.recovery != nil, isCalibrating: false)
+        TodayDisplayRules.lastScoredRecoveryDay(days: repo.days, selectedDayKey: dayKey, isToday: offset == 0,
+                                                todayScored: day?.recovery != nil, isCalibrating: false)
     }
     /// Today's row, or the carried prior row for the recovery-side vitals.
     private var vitalsDay: DailyMetric? { day?.recovery != nil ? day : (carried ?? day) }

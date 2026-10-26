@@ -186,90 +186,7 @@ struct TodayView: View {
     var body: some View {
         ScreenScaffold(title: scaffoldTitle, subtitle: scaffoldSubtitle, onRefresh: { await repo.refresh() },
                        topBackground: sceneBackground) {
-            VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                #if os(iOS)
-                // Compact top bar: profile/settings (left) · ‹ Today › day-nav (centre, bold) · strap
-                // battery (right). Replaces the big title + the full-width day-nav pill (WHOOP-style).
-                todayTopBar
-                HealthAlertBanner()
-                #else
-                HealthAlertBanner()
-                // Browse past days — chevrons + a date jump capped at today (no future days).
-                DayNavBar(selectedOffset: selectedDayOffset) { selectedDayOffset = $0 }
-                #endif
-                // The "still building" and "new here?" prompts are about getting today's scores going,
-                // so they stay anchored to today rather than reappearing on every navigated past day.
-                if selectedDayOffset == 0 && repo.today?.recovery == nil {
-                    // While the strap is mid-offload, say so — empty tiles read as final otherwise (#77).
-                    if live.backfilling { SyncingHistoryNote(chunks: live.syncChunksThisSession) }
-                    // Only for a genuinely new install: gone once a WHOOP export is imported (or enough
-                    // history exists) and once dismissed (persisted via `scoresBuildingDismissed`).
-                    if TodayDisplayRules.showScoresBuildingNote(
-                        isToday: selectedDayOffset == 0, todayHasRecovery: repo.today?.recovery != nil,
-                        dismissed: scoresBuildingDismissed, importedDays: repo.freshness.importedDays,
-                        historyDays: repo.days.count) {
-                        DataPendingNote(
-                            title: "Live now. Your scores are building.",
-                            message: "Your live heart rate is working from the strap, and charge, effort and rest build from it over your next few nights of wear, sharpening as it learns your baseline. Want your full history instantly? Import your WHOOP export in Data Sources and it backfills in about a minute."
-                        )
-                        // A small × dismisses the card INTO the Updates inbox (restorable from there).
-                        .overlay(alignment: .topTrailing) {
-                            todayCardDismissButton {
-                                dismissTodayCard(
-                                    id: "scoresBuilding",
-                                    title: "Live now. Your scores are building.",
-                                    message: "Charge, Effort and Rest build over your next few nights of wear."
-                                )
-                            }
-                        }
-                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                    }
-                }
-                // Design Reset: the "New here?" first-run card is off the dashboard for the clean WHOOP
-                // look. The scoring guide stays reachable from the i on each score and in Settings.
-                // The hero rings sit over a WHISPER of time-of-day atmosphere (dawn/day/dusk/night) — the
-                // backdrop is confined to the ring region via `.background`, so it lifts the identity rings
-                // without tinting the rest of the dashboard. The day-cycle scene wash caps at ~0.42 opacity
-                // and fades top-down with a bottom dark scrim, no glow, so the white ring numbers + labels
-                // stay crisp and high-contrast.
-                #if os(iOS)
-                // Pull the rings up under the compact top bar — the full section gap left too much air
-                // above them now the big "Today's Synthesis" header is gone. The hero now sits over the
-                // day-cycle SCENE wash (picked by the local hour), which fades top-down behind the rings;
-                // the scene IS the atmosphere here, replacing the procedural time-of-day backdrop. It caps
-                // at ~0.42 opacity with a bottom dark scrim so the white ring numbers + labels stay crisp.
-                heroSection
-                    .padding(.vertical, NoopMetrics.space4)
-                    .frame(maxWidth: .infinity)
-                    // The dark hero CARD floats over the vivid day-scene so the rings + white numbers stay
-                    // crisp — the card does the contrast work, not a muted scene (Aaron 2026-06-23).
-                    .background(
-                        RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
-                            .fill(StrandPalette.surfaceBase.opacity(0.72))
-                    )
-                    .staggeredAppear(index: 0)
-                #else
-                heroSection
-                    .padding(.vertical, NoopMetrics.space4)
-                    .frame(maxWidth: .infinity)
-                    .frostedCardSurface(cornerRadius: NoopMetrics.cardRadius)
-                    .staggeredAppear(index: 0)
-                #endif
-                heartRateTrendSection.staggeredAppear(index: 1)
-                // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
-                // Synthesis read-out + vitals now sit below the pinned cards instead of crowding the hero.
-                yourCardsSection.staggeredAppear(index: 2)
-                synthesisSection.staggeredAppear(index: 3)
-                if TodayDisplayRules.coachingCardsVisible {
-                    readinessSection.staggeredAppear(index: 4)
-                }
-                metricsSection.staggeredAppear(index: 5)
-                workoutsSection.staggeredAppear(index: 6)
-                // Opt-in "looks like a workout?" suggestion (default OFF). Renders only when the
-                // Settings toggle is on AND the detector finds a recent unsaved, un-dismissed window.
-                AutoWorkoutCard()
-                sourcesSection
-            }
+            dashboard
         }
         // Reload when the data refreshes OR the selected day changes — the HR trend and Rest score are
         // day-scoped, so navigating must re-fetch them for the newly selected window.
@@ -328,6 +245,39 @@ struct TodayView: View {
         }
     }
 
+    /// The Day Details column: day navigation, prompts, the score hero and every section in order.
+    var dashboard: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
+            #if os(iOS)
+            // Compact top bar: profile/settings (left) · ‹ Today › day-nav (centre, bold) · strap
+            // battery (right). Replaces the big title + the full-width day-nav pill (WHOOP-style).
+            todayTopBar
+            HealthAlertBanner()
+            #else
+            HealthAlertBanner()
+            // Browse past days — chevrons + a date jump capped at today (no future days).
+            DayNavBar(selectedOffset: selectedDayOffset) { selectedDayOffset = $0 }
+            #endif
+            scoresBuildingPrompts
+            // Design Reset: the "New here?" first-run card is off the dashboard for the clean WHOOP
+            // look. The scoring guide stays reachable from the i on each score and in Settings.
+            heroCard
+            heartRateTrendSection.staggeredAppear(index: 1)
+            // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
+            // Synthesis read-out + vitals now sit below the pinned cards instead of crowding the hero.
+            yourCardsSection.staggeredAppear(index: 2)
+            synthesisSection.staggeredAppear(index: 3)
+            if TodayDisplayRules.coachingCardsVisible {
+                readinessSection.staggeredAppear(index: 4)
+            }
+            metricsSection.staggeredAppear(index: 5)
+            workoutsSection.staggeredAppear(index: 6)
+            // Opt-in "looks like a workout?" suggestion (default OFF). Renders only when the
+            // Settings toggle is on AND the detector finds a recent unsaved, un-dismissed window.
+            AutoWorkoutCard()
+            sourcesSection
+        }
+    }
 }
 
 // MARK: - Preview
