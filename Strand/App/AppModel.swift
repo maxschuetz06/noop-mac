@@ -1252,7 +1252,8 @@ final class AppModel: ObservableObject {
         return StorageReport(db: db, inbox: inbox, importTemp: temp)
     }
 
-    /// Total bytes in `Documents/Inbox/` (the picker's `asCopy:true` drops). 0 on macOS / when absent.
+    /// Bytes of iOS document-picker drops in `Documents/Inbox/`. The macOS app reads picked files in
+    /// place, so this is always 0.
     nonisolated static func inboxSizeBytes() -> Int64 {
         return 0
     }
@@ -1305,8 +1306,8 @@ final class AppModel: ObservableObject {
     }
 
     /// Remove NOOP's stranded `noop-*` temp scratch (import copies, the multi-GB `noop-health-*`
-    /// export.xml an interrupted import leaves behind — #590, exports, backups, raw captures). Mirrors
-    /// A 60 s in-flight guard keeps a concurrent import/export from being disturbed.
+    /// export.xml an interrupted import leaves behind — #590, exports, backups, raw captures). A 60 s
+    /// in-flight guard keeps a concurrent import/export from being disturbed.
     nonisolated static func purgeImportTemp() {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory

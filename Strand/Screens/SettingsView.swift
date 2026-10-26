@@ -1310,12 +1310,11 @@ struct SettingsView: View {
         }
     }
 
-    // Equal-width, single-line label for the three Backup buttons. iPhone is too narrow to fit
-    // an icon + text three-up, so it goes icon-less there; macOS keeps the SF Symbol. (#188)
+    // Equal-width, single-line label for the three Backup buttons. (#188)
     @ViewBuilder
     private func backupButtonLabel(_ title: String, systemImage: String) -> some View {
         // The NoopButtonStyle (fullWidth) owns the width + padding; the label just supplies the
-        // content and the single-line shrink-to-fit so the 3-up iPhone row never wraps mid-word (#188).
+        // content and the single-line shrink-to-fit so the 3-up row never wraps mid-word (#188).
         Label(title, systemImage: systemImage)
             .lineLimit(1).minimumScaleFactor(0.7)
     }
