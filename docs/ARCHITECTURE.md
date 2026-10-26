@@ -67,7 +67,22 @@ Strand/                         macOS SwiftUI app target (the reference implemen
 │   ├── RootView.swift          NavigationSplitView shell + NavItem routing
 │   └── ContentView.swift
 ├── BLE/                        CoreBluetooth + the live/decode seam
-│   ├── BLEManager.swift        CBCentral/CBPeripheral delegate, scan→bond→stream
+│   ├── BLEManager.swift        state, GATT constants, init, store bootstrap, logging
+│   ├── BLEManager+Connection.swift       connect/disconnect, scan, service discovery
+│   ├── BLEManager+MultiWhoop.swift       strap pinning, re-adoption, Add-a-WHOOP scan
+│   ├── BLEManager+CentralDelegate.swift  CBCentralManagerDelegate (connect/drop/restore)
+│   ├── BLEManager+PeripheralDelegate.swift CBPeripheralDelegate (discovery, bond, handshake)
+│   ├── BLEManager+NotifyRouting.swift    per-family frame routing, data range, clock, 0x2A37
+│   ├── BLEManager+StrapCommands.swift    `send` (the single write gate), clock, alarm, haptics
+│   ├── BLEManager+Whoop5Config.swift     WHOOP 5/MG R22 deep data, broadcast HR, strap name
+│   ├── BLEManager+KeepAlive.swift        realtime wants + keep-alive watchdog
+│   ├── BLEManager+Offload.swift          offload triggers, frame routing, watchdog, App Nap, ack
+│   ├── BLEManager+OffloadOutcome.swift   session end: forensics, sync status, auto-continue
+│   ├── OffloadFrameDrain.swift   the one serial drain from the delegate to Backfiller.ingest
+│   ├── ConnectionHealthDetectors.swift marginal radio, bond loop, empty-sync streak detectors
+│   ├── RejectArchiveReplayGate.swift once-per-DecoderVersion replay of the reject archive
+│   ├── RawFrameSink.swift        injected sink for the opt-in raw PPG capture
+│   ├── StrapCommandPolicy.swift  which command (and body) may reach which strap family
 │   ├── FrameRouter.swift       pure decode→LiveState router (no CoreBluetooth)
 │   ├── LiveState.swift         @MainActor observable connection/biometric snapshot
 │   ├── Commands.swift          WhoopCommand enum (command bytes + frame builders)
@@ -77,6 +92,10 @@ Strand/                         macOS SwiftUI app target (the reference implemen
 ├── Collect/                    Persistence orchestration (BLE → store)
 │   ├── Collector.swift         buffers live frames → decoded-first persistence
 │   ├── Backfiller.swift        historical-offload state machine (safe-trim)
+│   ├── Backfiller+ChunkDecode.swift  pure off-main chunk decode and tallies
+│   ├── Backfiller+SessionLog.swift   strap-log summary lines
+│   ├── OffloadPolicies.swift   auto-continue, progress signal, watchdog, App Nap hold
+│   ├── RawHistoryArchive.swift append-only archive of undecodable history (fsynced before ack)
 │   ├── ClockCorrelation.swift  device-epoch ↔ wall-clock correlation (pure)
 │   ├── ClockPolicy.swift       when to (re)issue SET_CLOCK
 │   ├── StorePaths.swift        on-disk SQLite location (App Support/OpenWhoop)
@@ -157,7 +176,7 @@ Concurrency is deliberately split between two isolation domains plus a serial dr
 |---|---|---|
 | `WhoopStore` | **`actor`** | GRDB's `DatabaseQueue` calls block; the actor moves that blocking off the main thread onto its own serial executor. `DatabaseQueue` (not `DatabasePool`) is kept on purpose — the actor provides serialization. |
 | `AppModel`, `LiveState`, `Repository`, `BLEManager`, `FrameRouter`, `Collector`, `Backfiller` | **`@MainActor`** | These observe/mutate published UI state. CoreBluetooth's central is created on `queue: .main`, so delegate callbacks already arrive on the main actor — no hopping needed to update `LiveState`. |
-| Historical frame drain | **serial Task queue** | `BLEManager.routeBackfillFrame` appends frames synchronously (delegate order) and a single drain `Task` awaits `Backfiller.ingest` one frame at a time, so `HISTORY_START → data → HISTORY_END` chunk assembly can never be reordered. |
+| Historical frame drain | **serial Task queue** | `BLEManager.routeBackfillFrame` hands frames to `OffloadFrameDrain`, which appends them synchronously (delegate order) and runs a single drain `Task` that awaits `Backfiller.ingest` one frame at a time, so `HISTORY_START → data → HISTORY_END` chunk assembly can never be reordered or overlap (`OffloadFrameDrainTests`). |
 
 The key invariant: **frames are buffered synchronously in delegate-callback order**, and only the
 slow work (decode + `await store.insert`) crosses into the store actor. `Collector.flush()` and
@@ -173,19 +192,18 @@ reader never deadlock on contention.
 
 ## 5. Live path vs. historical path
 
-The two BLE data paths diverge at one branch in `BLEManager.peripheral(_:didUpdateValueFor:)`. After
-the `Reassembler` yields a complete frame, `FrameRouter.handle(frame:)` always runs (it drives the
-live UI state), and then:
+The two BLE data paths diverge in `BLEManager.routeWhoop4Frame` / `routeWhoop5Frame`
+(`BLEManager+NotifyRouting.swift`), called from `peripheral(_:didUpdateValueFor:)` for every complete
+frame the `Reassembler` yields:
 
 ```swift
-if backfilling {
-    if BLEManager.isOffloadFrame(frame) {   // types 47/48/49/50 only
-        armBackfillTimeout()
-        routeBackfillFrame(frame)           // serial drain → Backfiller
-    }                                       // live type-40/43 flood is dropped during offload
-} else {
-    collector?.ingest(frame)                // live → Collector
+if backfilling, BLEManager.isOffloadFrame(frame, family: …) {   // types 47/48/49/50/56 only
+    touchBackfillTimeout()
+    routeBackfillFrame(frame)               // serial drain → Backfiller (live gestures still fire)
+    return
 }
+router.handle(frame: frame)                 // live UI state
+if !backfilling { collector?.ingest(frame) } // WHOOP 4 live → Collector
 ```
 
 ### Live path (real-time)
@@ -230,6 +248,11 @@ the periodic **type-47 historical offload is the primary metric source**, not th
    A chunk is forgotten by the strap **only after** decoded data is locally durable and the ack is
    link-layer confirmed. If the watchdog fires (strap went silent), nothing is acked and the durable
    `strap_trim` cursor lets the next session resume exactly where it left off.
+   Records that do not decode are first appended to `RawHistoryArchive` (fsynced); a failed archive
+   write holds the ack too.
+4. On store bootstrap, `RejectArchiveReplayGate` re-runs that archive through the current decoder once
+   per `WhoopProtocol.DecoderVersion.current` (bump it whenever historical decoding changes;
+   `DecoderVersionTests` fingerprints a fixed corpus as a reminder). Replay inserts are idempotent.
 
 Type-47 records carry their **own real-unix timestamps**, so the historical path does *not* depend on
 `GET_CLOCK`; if the clock correlation hasn't landed yet, `Backfiller` falls back to an identity
