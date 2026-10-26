@@ -34,9 +34,13 @@ final class AppModel: ObservableObject {
     let live: LiveState
     /// The strap engine AppModel itself drives; nil in the XCTest host so no hosted screen wakes CoreBluetooth.
     let engine: BLEManager?
-    /// CoreBluetooth engine — scans, connects, bonds, streams. Screens reach it for strap settings. In the
-    /// app this is `engine`; in the XCTest host it is only created if a screen dereferences it.
-    private(set) lazy var ble: BLEManager = engine ?? Self.makeEngine(live: live)
+    /// CoreBluetooth engine — scans, connects, bonds, streams. Screens reach it for strap settings.
+    /// Fails closed in the XCTest host: a hosted screen touching the strap is a test bug, never a reason
+    /// to wake CoreBluetooth or open the user's store.
+    var ble: BLEManager {
+        guard let engine else { preconditionFailure("The XCTest host has no strap engine; drive AppModel instead.") }
+        return engine
+    }
     /// Read model over the on-device store (dashboard + detail screens).
     let repo: Repository
     /// User profile (age/sex/body/HR-max) for zones, calories, baselines.
@@ -84,7 +88,8 @@ final class AppModel: ObservableObject {
         self.isTestHost = isTestHost
         // Built first, as before the split: BLEManager.init restores `live.lastSyncedAt`, which the sync
         // sinks below must see as their initial (dropped) value.
-        let engine = isTestHost ? nil : Self.makeEngine(live: live)
+        let engine = isTestHost
+            ? nil : BLEManager(state: live, deviceId: "my-whoop", rawFrameSink: RawPPGCapture.shared)
         self.engine = engine
         let buzz: (UInt8) -> Void = { loops in engine?.send(.runHapticsPattern, payload: [2, loops, 0, 0, 0]) }
         self.buzzStrap = buzz
@@ -119,10 +124,6 @@ final class AppModel: ObservableObject {
         relayServiceChanges()
         AppModel.shared = self   // publish for App Intents (Shortcuts) — see the static above (#42)
         if isTestHost { isolateFromUserStore() } else { startLaunchWork() }
-    }
-
-    private static func makeEngine(live: LiveState) -> BLEManager {
-        BLEManager(state: live, deviceId: "my-whoop", rawFrameSink: RawPPGCapture.shared)
     }
 
     /// Subscribe the services to the live strap state and the dashboard history.
@@ -250,6 +251,8 @@ final class AppModel: ObservableObject {
                 preconditionFailure("XCTest host could not open its in-memory store: \(error)")
             }
         }
+        #else
+        preconditionFailure("The XCTest host needs a DEBUG build to isolate the store.")
         #endif
     }
 

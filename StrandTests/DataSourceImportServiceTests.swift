@@ -42,5 +42,10 @@ final class DataSourceImportServiceTests: XCTestCase {
         XCTAssertTrue(service.hasActiveImport)
         XCTAssertNil(service.whoopImportSummary)
         XCTAssertFalse(service.whoopImportFailed)
+
+        let deadline = Date().addingTimeInterval(10)
+        while service.hasActiveImport, Date() < deadline { await Task.yield() }
+        XCTAssertFalse(service.hasActiveImport, "the import task must finish within the test")
+        XCTAssertTrue(service.whoopImportFailed)
     }
 }
