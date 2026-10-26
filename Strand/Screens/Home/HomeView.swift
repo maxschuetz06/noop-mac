@@ -73,7 +73,7 @@ struct HomeView: View {
                 .padding(.horizontal, 32).padding(.top, 34).padding(.bottom, 32)
             }
         }
-        .background(Soft.canvas.ignoresSafeArea())
+        .background(StrandPalette.surfaceBase.ignoresSafeArea())
         .task(id: HomeLoadKey(seq: repo.refreshSeq, offset: offset)) { await load() }
         .sheet(isPresented: $showInbox) { UpdatesInboxView(onClose: { showInbox = false }) }
     }
@@ -83,36 +83,33 @@ struct HomeView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Hello,").font(.system(size: 28, weight: .light)).foregroundStyle(Soft.ink2)
+                Text("Hello,").font(.system(size: 28, weight: .light)).foregroundStyle(StrandPalette.textSecondary)
                 (Self.firstName.map { Text(verbatim: "\($0).") } ?? Text("you."))
                     .font(.system(size: 50, weight: .semibold)).tracking(-1.2)
-                    .foregroundStyle(Soft.ink)
+                    .foregroundStyle(StrandPalette.textPrimary)
                 Text(offset == 0 ? "Here's how your body is doing today." : "Looking back at this day.")
-                    .font(.system(size: 17)).foregroundStyle(Soft.ink2)
+                    .font(.system(size: 17)).foregroundStyle(StrandPalette.textSecondary)
                     .padding(.top, 4)
             }
             Spacer(minLength: 16)
             HStack(spacing: 10) {
                 Text(verbatim: format.headerDate(selectedDay))
-                    .font(.system(size: 14)).foregroundStyle(Soft.ink2)
+                    .font(.system(size: 14)).foregroundStyle(StrandPalette.textSecondary)
                     .padding(.trailing, 6)
-                SoftCircleButton(symbol: "chevron.left", label: "Previous day") { offset += 1 }
-                SoftCircleButton(symbol: "chevron.right", label: "Next day", enabled: offset > 0) {
-                    offset = max(0, offset - 1)
-                }
+                CircleIconButton(symbol: "chevron.left", label: "Previous day") { offset += 1 }
+                CircleIconButton(symbol: "chevron.right", label: "Next day", enabled: offset > 0) { offset = max(0, offset - 1) }
                 Button { showInbox = true } label: {
                     Image(systemName: "bell")
-                        .font(.system(size: 19, weight: .regular))
-                        .foregroundStyle(Soft.ink)
+                        .font(.system(size: 19, weight: .regular)).foregroundStyle(StrandPalette.textPrimary)
                         .frame(width: 40, height: 40)
                         .overlay(alignment: .topTrailing) {
                             if updateStore.unreadCount > 0 {
-                                Circle().fill(Soft.rose).frame(width: 8, height: 8).offset(x: -9, y: 9)
+                                Circle().fill(StrandPalette.hueRose).frame(width: 8, height: 8).offset(x: -9, y: 9)
                             }
                         }
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(SoftPressStyle())
+                .buttonStyle(DimPressButtonStyle())
                 .help("Notifications")
                 .accessibilityLabel(updateStore.unreadCount > 0
                                     ? "Notifications, \(updateStore.unreadCount) unread" : "Notifications")
@@ -155,35 +152,36 @@ struct HomeView: View {
     }
 
     /// Big value + unit (+ optional chip) block shared by every metric card.
-    private func valueBlock(_ value: String, unit: Text, chip: SoftChip? = nil) -> some View {
+    private func valueBlock(_ value: String, unit: Text, chip: DeltaChip? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(value).font(Soft.number(42)).tracking(-1).foregroundStyle(Soft.ink)
+            Text(value).font(StrandFont.number(42)).tracking(-1).foregroundStyle(StrandPalette.textPrimary)
                 .lineLimit(1).fixedSize()
-            unit.font(.system(size: 14)).foregroundStyle(Soft.ink2)
+            unit.font(.system(size: 14)).foregroundStyle(StrandPalette.textSecondary)
             if let chip { chip.padding(.top, 6) }
         }
     }
 
     private func footer(_ left: Text, _ right: Text) -> some View {
         HStack {
-            left.font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
+            left.font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
             Spacer()
-            right.font(.system(size: 13).monospacedDigit()).foregroundStyle(Soft.ink2)
+            right.font(.system(size: 13).monospacedDigit()).foregroundStyle(StrandPalette.textSecondary)
         }
     }
 
     private var chargeCard: some View {
         let value = day?.recovery ?? carried?.recovery
         let avg = HomeModel.windowMean(repo.days, dayKey: dayKey, fromDaysBack: 8, toDaysBack: 1, minCount: 3) { $0.recovery }
-        let chip: SoftChip? = (value != nil && avg != nil) ? delta(value! - avg!, unit: " %", invert: false) : nil
-        return SoftCard(wash: SoftWash(color: Soft.greenWash, center: UnitPoint(x: 0.75, y: 0.45))) {
+        let chip: DeltaChip? = (value != nil && avg != nil) ? delta(value! - avg!, unit: " %", invert: false) : nil
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius,
+                          wash: CardWash(color: StrandPalette.washGreen, center: UnitPoint(x: 0.75, y: 0.45))) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Charge") { navigate(.health) }
+                CardHeader(title: "Charge") { navigate(.health) }
                 HStack(alignment: .top, spacing: 0) {
                     valueBlock(value.map { "\(Int($0.rounded()))" } ?? "—", unit: Text(verbatim: "%"), chip: chip)
                         .layoutPriority(1)
                     Spacer(minLength: 4)
-                    SoftRings(fraction: (value ?? 0) / 100, color: Soft.green)
+                    OrbitRings(fraction: (value ?? 0) / 100, color: StrandPalette.hueGreen)
                         .frame(width: 96, height: 96)
                         .accessibilityHidden(true)
                         .padding(.top, 16)
@@ -202,12 +200,12 @@ struct HomeView: View {
         let value = vitalsDay?.avgHrv
         let bars = HomeModel.recentValues(repo.days, upTo: dayKey, count: 16) { $0.avgHrv }
         let base = HomeModel.windowMean(repo.days, dayKey: dayKey, fromDaysBack: 30, toDaysBack: 0, minCount: 5) { $0.avgHrv }
-        return SoftCard {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "HRV") { navigate(.trends) }
+                CardHeader(title: "HRV") { navigate(.trends) }
                 valueBlock(value.map { "\(Int($0.rounded()))" } ?? "—", unit: Text(verbatim: "ms")).padding(.top, 8)
                 Spacer(minLength: 8)
-                SoftBars(values: bars, colors: [Soft.blue.opacity(0.55), Soft.violet])
+                MiniBars(values: bars, colors: [StrandPalette.hueBlue.opacity(0.55), StrandPalette.hueViolet])
                     .frame(height: 56)
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("HRV over the last \(bars.count) nights"), bars,
@@ -223,12 +221,13 @@ struct HomeView: View {
         let value = vitalsDay?.restingHr.map(Double.init)
         let line = HomeModel.recentValues(repo.days, upTo: dayKey, count: 14) { $0.restingHr.map(Double.init) }
         let base = HomeModel.windowMean(repo.days, dayKey: dayKey, fromDaysBack: 30, toDaysBack: 0, minCount: 5) { $0.restingHr.map(Double.init) }
-        return SoftCard(wash: SoftWash(color: Soft.peachWash, center: UnitPoint(x: 0.6, y: 0.75), secondary: Soft.roseWash)) {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius,
+                          wash: CardWash(color: StrandPalette.washPeach, center: .init(x: 0.6, y: 0.75), secondary: StrandPalette.washRose)) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Resting Pulse") { navigate(.health) }
+                CardHeader(title: "Resting Pulse") { navigate(.health) }
                 valueBlock(value.map { "\(Int($0.rounded()))" } ?? "—", unit: Text(verbatim: "bpm")).padding(.top, 8)
                 Spacer(minLength: 8)
-                SoftLine(values: line, color: Soft.peach, lineWidth: 2).frame(height: 50).padding(.bottom, 12)
+                Sparkline.smooth(line, color: StrandPalette.huePeach).frame(height: 50).padding(.bottom, 12)
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Resting pulse over the last \(line.count) nights"), line,
                                                                   unit: Text(verbatim: "bpm")))
@@ -244,12 +243,12 @@ struct HomeView: View {
         let avg = HomeModel.windowMean(repo.days, dayKey: dayKey, fromDaysBack: 8, toDaysBack: 1, minCount: 3) { $0.totalSleepMin }
         let rest = restByDay[dayKey]
         let change = (minutes != nil && avg != nil && avg! > 0) ? (minutes! - avg!) / avg! * 100 : nil
-        return SoftCard {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Sleep") { navigate(.sleep) }
+                CardHeader(title: "Sleep") { navigate(.sleep) }
                 valueBlock(minutes.map { format.decimal($0 / 60, digits: 1) } ?? "—", unit: Text("hours")).padding(.top, 8)
                 Spacer(minLength: 8)
-                SoftLine(values: line, color: Soft.blue, lineWidth: 2, showsHead: false).frame(height: 46).padding(.bottom, 12)
+                Sparkline.smooth(line, color: StrandPalette.hueBlue, showsHead: false).frame(height: 46).padding(.bottom, 12)
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Sleep duration over the last \(line.count) nights"),
                                                                   line.map { $0 / 60 }, unit: Text("hours")))
@@ -264,13 +263,14 @@ struct HomeView: View {
         let value: Double? = offset == 0 ? (liveStrain.map { max($0, stored ?? 0) } ?? stored) : stored
         let avg = HomeModel.windowMean(repo.days, dayKey: dayKey, fromDaysBack: 8, toDaysBack: 1, minCount: 3) { $0.strain }
         let change = (value != nil && avg != nil && avg! > 0) ? (value! - avg!) / avg! * 100 : nil
-        return SoftCard(wash: SoftWash(color: Soft.roseWash, center: UnitPoint(x: 0.5, y: 0.85))) {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius,
+                          wash: CardWash(color: StrandPalette.washRose, center: UnitPoint(x: 0.5, y: 0.85))) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Effort") { navigate(.workouts) }
+                CardHeader(title: "Effort") { navigate(.workouts) }
                 valueBlock(value.map { format.decimal(UnitFormatter.effortValue($0, scale: effortScale), digits: 1) } ?? "—",
                            unit: Text("of \(UnitFormatter.effortScaleMax(effortScale))")).padding(.top, 8)
                 Spacer(minLength: 4)
-                SoftArcGauge(fraction: (value ?? 0) / 100, color: Soft.rose)
+                HalfArcGauge(fraction: (value ?? 0) / 100, color: StrandPalette.hueRose)
                     .accessibilityHidden(true)
                     .frame(height: 58).padding(.horizontal, 18).padding(.bottom, 10)
                     .opacity(value == nil ? 0.4 : 1)
@@ -285,24 +285,25 @@ struct HomeView: View {
         let estimated = day?.steps == nil && stepsEstByDay[dayKey] != nil
         let bars = HomeModel.recentValues(repo.days, upTo: dayKey, count: 7) { $0.steps.map(Double.init) }
         let progress = min(1, (steps ?? 0) / Self.stepGoal)
-        return SoftCard {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Activity") { navigate(.trends) }
+                CardHeader(title: "Activity") { navigate(.trends) }
                 valueBlock(steps.map { format.grouped($0) } ?? "—", unit: Text(estimated ? "steps (estimated)" : "steps")).padding(.top, 8)
                 Spacer(minLength: 6)
                 if bars.count > 1 {
-                    SoftBars(values: bars, colors: [Soft.ink3, Soft.ink2]).frame(height: 40).padding(.horizontal, 30)
+                    MiniBars(values: bars, colors: [StrandPalette.textTertiary, StrandPalette.textSecondary])
+                        .frame(height: 40).padding(.horizontal, 30)
                         .accessibilityElement()
                         .accessibilityLabel(HomeFormat.seriesSummary(Text("Steps over the last \(bars.count) days"), bars,
                                                                       unit: Text("steps")))
                 }
                 Spacer(minLength: 8)
                 (steps == nil ? Text("Goal \(format.grouped(Self.stepGoal))") : Text("\(Int((progress * 100).rounded())) % of goal"))
-                    .font(.system(size: 12)).foregroundStyle(Soft.ink2)
+                    .font(.system(size: 12)).foregroundStyle(StrandPalette.textSecondary)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Soft.fill)
-                        Capsule().fill(Soft.green).frame(width: g.size.width * progress)
+                        Capsule().fill(StrandPalette.surfaceInset)
+                        Capsule().fill(StrandPalette.hueGreen).frame(width: g.size.width * progress)
                     }
                 }
                 .frame(height: 7).padding(.top, 6)
@@ -336,16 +337,16 @@ struct HomeView: View {
     private var timelineCard: some View {
         let items = timelineItems
         let dayStart = Calendar.current.startOfDay(for: selectedDay)
-        return SoftCard(padding: 22) {
+        return StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(offset == 0 ? "Your day" : "Day timeline")
-                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Soft.ink)
+                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
                 HomeTimelineBar(items: items, dayStart: dayStart, now: offset == 0 ? Date() : nil)
                     .frame(height: 70).padding(.top, 26)
                     .accessibilityHidden(true)
                 if items.isEmpty {
                     Text("No sleep or training recorded for this day yet.")
-                        .font(.system(size: 13)).foregroundStyle(Soft.ink3).padding(.top, 22)
+                        .font(.system(size: 13)).foregroundStyle(StrandPalette.textTertiary).padding(.top, 22)
                 } else {
                     VStack(spacing: 12) {
                         ForEach(items.suffix(3)) { item in timelineRow(item) }
@@ -361,29 +362,29 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: 12) {
             Circle().fill(HomeTimelineBar.color(item.kind)).frame(width: 10, height: 10)
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Soft.ink)
+                Text(item.title).font(.system(size: 14, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                 Text(verbatim: "\(format.clock(item.start)) – \(format.clock(item.end))")
-                    .font(.system(size: 12).monospacedDigit()).foregroundStyle(Soft.ink3)
+                    .font(.system(size: 12).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
             }
             Spacer()
             Text(item.status == .running ? "In progress" : "Completed")
                 .font(.system(size: 13))
-                .foregroundStyle(item.status == .running ? Soft.blue : Soft.ink3)
+                .foregroundStyle(item.status == .running ? StrandPalette.hueBlue : StrandPalette.textTertiary)
         }
     }
 
     private var insightsCard: some View {
-        SoftCard(padding: 22) {
+        StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 14) {
-                SoftCardHeader(title: "Findings") { navigate(.trends) }
+                CardHeader(title: "Findings") { navigate(.trends) }
                     .font(.system(size: 17, weight: .semibold))
                 if insights.isEmpty {
                     Text("Findings appear once there's a week of data.")
-                        .font(.system(size: 13)).foregroundStyle(Soft.ink3)
+                        .font(.system(size: 13)).foregroundStyle(StrandPalette.textTertiary)
                 }
                 ForEach(insights.prefix(4)) { insight in
                     Button { navigate(Self.destination(insight.topic)) } label: { insightRow(insight) }
-                        .buttonStyle(SoftPressStyle())
+                        .buttonStyle(DimPressButtonStyle())
                         .accessibilityLabel(Text(insight.title) + Text(verbatim: ". ") + Text(insight.detail))
                         .accessibilityHint("Opens the matching section")
                 }
@@ -402,12 +403,12 @@ struct HomeView: View {
                 .background(tint.opacity(0.13), in: Circle())
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(i.title).font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
+                Text(i.title).font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(i.detail).font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                Text(i.detail).font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
             }
             Spacer(minLength: 4)
-            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Soft.ink3)
+            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(StrandPalette.textTertiary)
         }
         .contentShape(Rectangle())
     }
@@ -418,23 +419,23 @@ struct HomeView: View {
     private var heartRateCard: some View {
         if hrPoints.count > 1 {
             let v = hrPoints.map(\.value)
-            SoftCard(padding: 22) {
+            StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text("Heart rate").font(.system(size: 17, weight: .semibold)).foregroundStyle(Soft.ink)
+                        Text("Heart rate").font(.system(size: 17, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
                         Text(offset == 0 ? "since midnight · 5-minute average" : "whole day · 5-minute average")
-                            .font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                            .font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
                         Spacer()
                         stat("Min", v.min()); stat("Ø", v.reduce(0, +) / Double(v.count)); stat("Max", v.max())
                     }
-                    SoftLine(values: v, color: Soft.rose, lineWidth: 1.6, showsHead: offset == 0, fill: true)
+                    Sparkline.smooth(v, color: StrandPalette.hueRose, lineWidth: 1.6, showsHead: offset == 0, showsArea: true)
                         .frame(height: 130)
                         .accessibilityElement()
                         .accessibilityLabel(HomeFormat.seriesSummary(Text("Heart rate"), v, unit: Text(verbatim: "bpm")))
                     HStack {
                         ForEach(Array(format.axisLabels(hrPoints).enumerated()), id: \.offset) { i, t in
                             if i > 0 { Spacer() }
-                            Text(t).font(.system(size: 11).monospacedDigit()).foregroundStyle(Soft.ink3)
+                            Text(t).font(.system(size: 11).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                         }
                     }
                 }
@@ -444,9 +445,9 @@ struct HomeView: View {
 
     private func stat(_ label: String, _ value: Double?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(label).font(.system(size: 12)).foregroundStyle(Soft.ink3)
+            Text(label).font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
             Text(value.map { "\(Int($0.rounded()))" } ?? "—").font(.system(size: 15, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Soft.ink)
+                .foregroundStyle(StrandPalette.textPrimary)
         }
         .padding(.leading, 14)
     }
@@ -479,10 +480,10 @@ struct HomeView: View {
 
     // MARK: Helpers
 
-    private func delta(_ d: Double, unit: String, invert: Bool) -> SoftChip {
+    private func delta(_ d: Double, unit: String, invert: Bool) -> DeltaChip {
         let up = d >= 0
-        let good = invert ? !up : up
-        return SoftChip(text: "\(up ? "↑" : "↓") \(Int(abs(d).rounded()))\(unit)", tint: good ? Soft.green : Soft.rose)
+        return DeltaChip(text: "\(up ? "↑" : "↓") \(Int(abs(d).rounded()))\(unit)",
+                         tint: up != invert ? StrandPalette.hueGreen : StrandPalette.hueRose)
     }
 
     static func chargeState(_ v: Double) -> LocalizedStringKey { v >= 67 ? "Optimal" : (v >= 34 ? "Medium" : "Low") }
@@ -507,13 +508,13 @@ struct HomeView: View {
 
     static func insightStyle(_ i: HomeInsight) -> (String, Color) {
         switch (i.topic, i.tone) {
-        case (.hrv, .caution): return ("chart.line.downtrend.xyaxis", Soft.rose)
-        case (.hrv, _): return ("chart.line.uptrend.xyaxis", Soft.green)
-        case (.sleep, _): return ("moon", Soft.blue)
-        case (.restingHr, .caution): return ("heart", Soft.rose)
-        case (.restingHr, _): return ("checkmark.shield", Soft.green)
-        case (.bedtime, .caution): return ("sun.max", Soft.amber)
-        case (.bedtime, _): return ("bed.double", Soft.violet)
+        case (.hrv, .caution): return ("chart.line.downtrend.xyaxis", StrandPalette.hueRose)
+        case (.hrv, _): return ("chart.line.uptrend.xyaxis", StrandPalette.hueGreen)
+        case (.sleep, _): return ("moon", StrandPalette.hueBlue)
+        case (.restingHr, .caution): return ("heart", StrandPalette.hueRose)
+        case (.restingHr, _): return ("checkmark.shield", StrandPalette.hueGreen)
+        case (.bedtime, .caution): return ("sun.max", StrandPalette.hueAmber)
+        case (.bedtime, _): return ("bed.double", StrandPalette.hueViolet)
         }
     }
 
@@ -580,10 +581,8 @@ private struct HomeAvatar: View {
     var body: some View {
         ProfileAvatarView(imageData: imageData, size: 44)
             .overlay(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(live.connected ? Soft.green : Soft.ink3)
-                    .frame(width: 11, height: 11)
-                    .overlay(Circle().stroke(Soft.canvas, lineWidth: 2))
+                Circle().fill(live.connected ? StrandPalette.hueGreen : StrandPalette.textTertiary).frame(width: 11, height: 11)
+                    .overlay(Circle().stroke(StrandPalette.surfaceBase, lineWidth: 2))
             }
             .help(live.connected ? "WHOOP connected" : "WHOOP not connected")
     }
@@ -598,9 +597,9 @@ struct HomeTimelineBar: View {
 
     static func color(_ kind: HomeTimelineItem.Kind) -> Color {
         switch kind {
-        case .sleep: return Soft.blue
-        case .nap: return Soft.violet
-        case .workout: return Soft.green
+        case .sleep: return StrandPalette.hueBlue
+        case .nap: return StrandPalette.hueViolet
+        case .workout: return StrandPalette.hueGreen
         }
     }
 
@@ -612,7 +611,7 @@ struct HomeTimelineBar: View {
                 CGFloat(min(max(d.timeIntervalSince(dayStart) / 86_400, 0), 1)) * w
             }
             ZStack(alignment: .topLeading) {
-                Capsule().fill(Soft.fill).frame(width: w, height: 16).offset(y: barY)
+                Capsule().fill(StrandPalette.surfaceInset).frame(width: w, height: 16).offset(y: barY)
                 ForEach(items) { item in
                     let x0 = x(item.start), x1 = max(x(item.end), x0 + 6)
                     Capsule().fill(Self.color(item.kind).opacity(item.kind == .sleep ? 0.75 : 0.9))
@@ -621,18 +620,18 @@ struct HomeTimelineBar: View {
                 }
                 ForEach(Array(stride(from: 0, through: 24, by: 3)), id: \.self) { h in
                     Text(String(format: "%02d:00", h))
-                        .font(.system(size: 10).monospacedDigit()).foregroundStyle(Soft.ink3)
+                        .font(.system(size: 10).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize()
                         .position(x: min(max(w * CGFloat(h) / 24, 16), w - 16), y: barY + 36)
                 }
                 if let now {
                     let nx = x(now)
-                    Rectangle().fill(Soft.ink).frame(width: 1.5, height: 32).offset(x: nx - 0.75, y: barY - 8)
+                    Rectangle().fill(StrandPalette.textPrimary).frame(width: 1.5, height: 32).offset(x: nx - 0.75, y: barY - 8)
                     Text(now, format: .dateTime.hour().minute())
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Soft.card)
+                        .foregroundStyle(StrandPalette.surfaceRaised)
                         .padding(.horizontal, 9).padding(.vertical, 4)
-                        .background(Soft.ink, in: Capsule())
+                        .background(StrandPalette.textPrimary, in: Capsule())
                         .fixedSize()
                         .position(x: min(max(nx, 26), w - 26), y: barY - 18)
                 }
