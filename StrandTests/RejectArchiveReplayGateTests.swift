@@ -109,4 +109,19 @@ final class RejectArchiveReplayGateTests: XCTestCase {
         XCTAssertEqual(outcome, .deferred)
         XCTAssertTrue(gate("2").isDue, "the archive is the only copy: a failed replay must retry")
     }
+
+    /// S-9: the archive must be replayed when the DECODER changes, not when the app's marketing version
+    /// does. An install that already replayed for this app version but under an older decoder is due.
+    func testTheAppGateReplaysAfterADecoderBumpWithinTheSameAppVersion() {
+        defaults.set(AppChangelog.currentVersion, forKey: "rejectArchiveReplayedAppVersion")
+        defaults.set(String(DecoderVersion.current - 1), forKey: "rejectArchiveReplayedDecoderVersion")
+
+        XCTAssertTrue(RejectArchiveReplayGate.production(defaults: defaults).isDue)
+    }
+
+    func testTheAppGateStaysClosedOnceTheCurrentDecoderVersionReplayed() {
+        defaults.set(String(DecoderVersion.current), forKey: "rejectArchiveReplayedDecoderVersion")
+
+        XCTAssertFalse(RejectArchiveReplayGate.production(defaults: defaults).isDue)
+    }
 }
