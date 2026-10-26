@@ -1,5 +1,5 @@
 import XCTest
-@testable import Strand
+import StrandAnalytics
 
 /// Pins the RHR floor-vs-mean strap-log line (#691). The recurring "NOOP's resting HR reads LOWER than
 /// my sleeping-HR app" reports are NOT a bug: NOOP's `restingHr` is the WHOOP-style FLOOR (the lowest
@@ -8,10 +8,9 @@ import XCTest
 /// engine now logs BOTH per scored night so a report carries the proof. `rhrFloorMeanLogLine` is the
 /// pure formatter the loop calls; it's tested directly (no store). Mirrors the Android
 /// `IntelligenceRhrFloorMeanTest` so the two platforms log byte-identical lines.
-@MainActor
 final class IntelligenceRhrFloorMeanTests: XCTestCase {
 
-    private typealias IE = IntelligenceEngine
+    private typealias IE = RecomputePipeline
 
     func testFloorBelowMean_theReportedDiscrepancy() {
         // The exact shape of the reports: an in-bed stretch that dips to a 48 bpm floor but averages 55.

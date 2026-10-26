@@ -161,6 +161,7 @@ public enum Baselines {
     public static var hrvCfg: MetricCfg { metricCfg["hrv"]! }
     public static var restingHRCfg: MetricCfg { metricCfg["resting_hr"]! }
     public static var respCfg: MetricCfg { metricCfg["resp"]! }
+    public static var skinTempCfg: MetricCfg { metricCfg["skin_temp"]! }
 
     /// Convert a half-life in nights to an EWMA smoothing factor.
     static func lambda(halfLife: Double) -> Double {
