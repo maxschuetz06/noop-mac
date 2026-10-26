@@ -124,4 +124,19 @@ final class RejectArchiveReplayGateTests: XCTestCase {
 
         XCTAssertFalse(RejectArchiveReplayGate.production(defaults: defaults).isDue)
     }
+
+    /// An install updated from a build with the app-version gate replays once, then never again.
+    func testAnExistingInstallReplaysOnceAfterTheUpdate() async throws {
+        let archive = try archiveWithV25Frames()
+        let store = try await tempStore()
+        defaults.set(AppChangelog.currentVersion, forKey: "rejectArchiveReplayedAppVersion")
+
+        let afterUpdate = await RejectArchiveReplayGate.production(defaults: defaults)
+            .runIfDue(archive: archive, store: store, deviceId: Self.deviceId)
+        let nextLaunch = await RejectArchiveReplayGate.production(defaults: defaults)
+            .runIfDue(archive: archive, store: store, deviceId: Self.deviceId)
+
+        XCTAssertEqual(afterUpdate, .replayed(rows: 3))
+        XCTAssertEqual(nextLaunch, .notDue)
+    }
 }

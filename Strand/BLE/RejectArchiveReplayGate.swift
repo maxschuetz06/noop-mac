@@ -1,4 +1,5 @@
 import Foundation
+import WhoopProtocol
 
 /// Retro-decode gate for the reject archive (#152). When the decoder learns a historical layout (e.g.
 /// WHOOP 4.0 v25), every archived undecodable frame is re-run through it and whatever now decodes is
@@ -21,10 +22,12 @@ struct RejectArchiveReplayGate {
     let key: String
     let version: String
 
-    /// The gate the app runs at store bootstrap.
+    /// The gate the app runs at store bootstrap: keyed to the decoder, not the app version, so a decoder
+    /// fix replays the archive even when the app version does not change. Existing installs have no value
+    /// under this key yet and therefore replay once after updating (idempotent, bounded archive).
     static func production(defaults: UserDefaults = .standard) -> RejectArchiveReplayGate {
-        RejectArchiveReplayGate(defaults: defaults, key: "rejectArchiveReplayedAppVersion",
-                                version: AppChangelog.currentVersion)
+        RejectArchiveReplayGate(defaults: defaults, key: "rejectArchiveReplayedDecoderVersion",
+                                version: String(DecoderVersion.current))
     }
 
     var isDue: Bool { defaults.string(forKey: key) != version }
