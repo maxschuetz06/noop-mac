@@ -3,7 +3,6 @@ import Combine
 import WhoopProtocol
 import WhoopStore
 import StrandAnalytics
-import UserNotifications
 
 /// Data source currently running an import from the Data Sources screen.
 enum DataSourceImportKind {
@@ -258,11 +257,9 @@ final class AppModel: ObservableObject {
         // Turn the strap's offloaded raw data into dashboard scores on launch and every 15
         // minutes, so recovery / strain / sleep populate from the strap itself with no import.
         // IntelligenceEngine computes, persists under "my-whoop-noop", and refreshes the dashboard.
-        // One-shot reclaim of any stale Documents/Inbox picker drops a previous build left behind
-        // before cleanup() reclaimed the original, PLUS any stranded `noop-*` temp scratch (e.g. the
-        // multi-GB `noop-health-*` export.xml an interrupted import leaves behind — #590). Off the main
-        // actor; no-op on macOS for the Inbox part.
-        Task.detached { AppModel.purgeImportInbox(); AppModel.purgeImportTemp() }
+        // One-shot reclaim of any stranded `noop-*` temp scratch (e.g. the multi-GB `noop-health-*`
+        // export.xml an interrupted import leaves behind — #590). Off the main actor.
+        Task.detached { AppModel.purgeImportTemp() }
 
         Task { [weak self] in
             guard let self else { return }
@@ -717,48 +714,9 @@ final class AppModel: ObservableObject {
         ble.send(.runHapticsPattern, payload: [pattern, loops, 0, 0, 0])
     }
 
-    // MARK: - Wrist-buzz mirror notifications (PR #577 — iOS only)
-    //
-    // iOS can't keep the strap buzz silent in a pocket the way macOS surfaces it on screen, so a wrist
-    // buzz the user might miss (a long sedentary stretch) is ALSO posted as a
-    // local notification. macOS keeps routing to its dedicated Notifications screen and never calls
-    // these — `#if os(iOS)` makes them no-ops there so that path is untouched. The post is gated on the
-    // same `notif.masterEnabled` master switch the iOS Automations "Wrist alerts" toggle (PR #572) and
-    // the SedentaryDetector read, so turning wrist alerts off silences it too.
-
-    /// The master wrist-alerts gate (PR #572). One key, shared with the iOS Automations toggle and the
-    /// SedentaryDetector, so all three honour the same switch.
-    static let wristAlertsMasterKey = "notif.masterEnabled"
-
-    /// Post the local notification mirroring the inactivity (sedentary) wrist nudge. Called right after
-    /// `BLEManager.maybeBuzzInactivity` fires its buzz (see crossLaneNotes). `minutes` = the seated bout
-    /// length the detector reported. No-op on macOS and when wrist alerts are off.
-    static func postInactivity(minutes: Int) {
-        #if os(iOS)
-        let body = minutes > 0
-            ? "You've been seated for about \(minutes) min. Time to move."
-            : "Time to move — you've been seated a while."
-        postWristAlert(identifier: "inactivity-nudge", title: "Move reminder", body: body)
-        #endif
-    }
-
-    #if os(iOS)
-    /// Shared post path: gate on the wrist-alerts master, then deliver only if the OS already authorized
-    /// notifications (no second system prompt — BatteryNotifier-style status-only check). A fresh
-    /// identifier per category means a new alert replaces the old one rather than stacking.
-    private static func postWristAlert(identifier: String, title: String, body: String) {
-        guard UserDefaults.standard.bool(forKey: wristAlertsMasterKey) else { return }
-        let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized else { return }
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = body
-            content.sound = .default
-            center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
-        }
-    }
-    #endif
+    /// Called by `BLEManager.maybeBuzzInactivity` after its sedentary buzz. The local-notification
+    /// mirror existed only on iOS; macOS posts nothing, so this is a no-op until that call is removed.
+    static func postInactivity(minutes: Int) {}
 
     // MARK: - Physical inputs / wear automation
 
@@ -777,10 +735,7 @@ final class AppModel: ObservableObject {
         case .none: break
         case .lockScreen:
             if !MacActions.lockScreen() {
-                #if os(macOS)
                 MacActions.runShortcut("Lock Screen")   // login.framework unavailable — fall back to a Shortcut
-                #endif
-                // iOS can't lock the device and .lockScreen isn't selectable there, so no stray Shortcut launch.
             }
         case .buzzBack: buzz(loops: 1)
         case .markMoment: markMoment()
@@ -842,12 +797,7 @@ final class AppModel: ObservableObject {
         if worn {
             if !behavior.wristOnShortcut.isEmpty { MacActions.runShortcut(behavior.wristOnShortcut) }
         } else {
-            #if os(macOS)
-            // Auto-lock on wrist-off is a macOS-only affordance (the toggle is hidden on iOS, where a
-            // third-party app can't lock the device). Guarding it here also stops a stray "Lock Screen"
-            // Shortcut launch for any iOS user who toggled this on before it was gated off iPhone.
             if behavior.autoLockOnWristOff, !MacActions.lockScreen() { MacActions.runShortcut("Lock Screen") }
-            #endif
             if !behavior.wristOffShortcut.isEmpty { MacActions.runShortcut(behavior.wristOffShortcut) }
         }
     }
@@ -1185,51 +1135,7 @@ final class AppModel: ObservableObject {
     /// Runs off the main actor (nonisolated) so copying a large export never blocks the UI; the
     /// caller holds the security scope (process-wide) for the duration.
     nonisolated static func materializeForImport(_ picked: URL) async throws -> ImportFile {
-        #if os(iOS)
-        let ext = picked.pathExtension.isEmpty ? "dat" : picked.pathExtension
-        let dst = FileManager.default.temporaryDirectory
-            .appendingPathComponent("noop-import-\(UUID().uuidString)")
-            .appendingPathExtension(ext)
-        var coordError: NSError?
-        var ioError: Error?
-        // .forUploading materialises an iCloud placeholder and gives a stable snapshot to copy from.
-        NSFileCoordinator().coordinate(readingItemAt: picked, options: [.forUploading], error: &coordError) { readURL in
-            do {
-                if FileManager.default.fileExists(atPath: dst.path) {
-                    try FileManager.default.removeItem(at: dst)
-                }
-                try FileManager.default.copyItem(at: readURL, to: dst)
-            } catch { ioError = error }
-        }
-        if let coordError { throw coordError }
-        if let ioError { throw ioError }
-        // The picked URL is the picker's own `asCopy:true` duplicate in Documents/Inbox; pass it
-        // through so cleanup() can reclaim it (it's the original of `dst`, not a user file).
-        return ImportFile(url: dst, temp: dst, inboxOriginal: picked)
-        #else
         return ImportFile(url: picked, temp: nil)
-        #endif
-    }
-
-    /// One-shot launch sweep of `Documents/Inbox/`: deletes any stale `asCopy:true` picker drops a
-    /// previous build left behind before `cleanup()` reclaimed them (#590). Best-effort, off-main, and
-    /// safe — `Inbox` only ever holds picker hand-offs, never user data. Skips files newer than 60 s so
-    /// it can't race an import that's mid-flight at launch.
-    nonisolated static func purgeImportInbox() {
-        #if os(iOS)
-        let fm = FileManager.default
-        guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let inbox = docs.appendingPathComponent("Inbox")
-        guard let items = try? fm.contentsOfDirectory(at: inbox,
-                                                      includingPropertiesForKeys: [.contentModificationDateKey],
-                                                      options: []) else { return }
-        let cutoff = Date().addingTimeInterval(-60)
-        for item in items {
-            let modified = (try? item.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-            if let modified, modified > cutoff { continue }   // leave an in-flight hand-off alone
-            try? fm.removeItem(at: item)
-        }
-        #endif
     }
 
     func importWhoop(url: URL) {
@@ -1348,13 +1254,7 @@ final class AppModel: ObservableObject {
 
     /// Total bytes in `Documents/Inbox/` (the picker's `asCopy:true` drops). 0 on macOS / when absent.
     nonisolated static func inboxSizeBytes() -> Int64 {
-        #if os(iOS)
-        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-        else { return 0 }
-        return directorySizeBytes(docs.appendingPathComponent("Inbox"))
-        #else
         return 0
-        #endif
     }
 
     /// True for any scratch file/dir NOOP itself writes into the temp directory — import copies, the
@@ -1394,12 +1294,11 @@ final class AppModel: ObservableObject {
         return total
     }
 
-    /// The Storage screen's "Clean up" action: purge the Inbox + stranded import temps, then truncate
-    /// the WAL so the freed pages return to the OS. Returns a fresh report so the screen updates. Safe —
-    /// Inbox/temp hold only picker hand-offs + this app's own temp copies, never user data or live rows.
+    /// The Storage screen's "Clean up" action: purge stranded import temps, then truncate the WAL so
+    /// the freed pages return to the OS. Returns a fresh report so the screen updates. Safe — temp holds
+    /// only this app's own temp copies, never user data or live rows.
     @discardableResult
     func cleanUpStorage() async -> StorageReport {
-        Self.purgeImportInbox()
         Self.purgeImportTemp()
         if let store = await repo.storeHandle() { try? await store.checkpointWAL() }
         return await storageReport()
@@ -1407,7 +1306,7 @@ final class AppModel: ObservableObject {
 
     /// Remove NOOP's stranded `noop-*` temp scratch (import copies, the multi-GB `noop-health-*`
     /// export.xml an interrupted import leaves behind — #590, exports, backups, raw captures). Mirrors
-    /// `purgeImportInbox`'s 60 s in-flight guard so a concurrent import/export isn't disturbed.
+    /// A 60 s in-flight guard keeps a concurrent import/export from being disturbed.
     nonisolated static func purgeImportTemp() {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory

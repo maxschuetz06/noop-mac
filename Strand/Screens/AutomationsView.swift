@@ -18,20 +18,10 @@ struct AutomationsView: View {
     /// from the BLE offload path (BLEManager.maybeBuzzInactivity → the shipped SedentaryDetector); this
     /// screen only edits the prefs the engine reads.
     @StateObject private var inactivity = InactivityPrefs()
-    #if os(iOS)
-    /// Wrist-alerts master gate (PR #572). On iOS the NotificationSettingsView (and its store) are
-    /// excluded by project.yml, so `notif.masterEnabled` — the key SedentaryDetector + the wrist-buzz
-    /// posting read — has no UI to flip and is stuck at its default OFF. Bind the SAME raw key here so
-    /// iPhone users can actually turn wrist alerts on. Default OFF, matching the store's default.
-    @AppStorage("notif.masterEnabled") private var wristAlertsMaster = false
-    #endif
 
     var body: some View {
         ScreenScaffold(title: "Automations",
                        subtitle: "Make the strap do things — tap to act, walk away to lock, train by feel.") {
-            #if os(iOS)
-            wristAlertsCard
-            #endif
             doubleTapCard
             wearCard
             coachingCard
@@ -41,26 +31,6 @@ struct AutomationsView: View {
             batteryCard
         }
     }
-
-    // MARK: - Wrist alerts master (iOS only — PR #572)
-
-    #if os(iOS)
-    /// The master switch for wrist-buzz notifications. On macOS this lives in its own Notifications
-    /// screen; that screen is excluded from the iOS target, so without this the gate is unreachable on
-    /// iPhone and every wrist alert (inactivity, app notifications) stays silently off. Binds the same
-    /// `notif.masterEnabled` key the SedentaryDetector and the notification posting read.
-    private var wristAlertsCard: some View {
-        Section2(icon: "bell.badge.fill", title: "Wrist alerts",
-                 blurb: "Let NOOP tap your wrist for the things you turn on below, so you can leave your phone and still feel what matters.",
-                 active: wristAlertsMaster) {
-            VStack(spacing: 0) {
-                ToggleRow(label: "Enable wrist alerts",
-                          help: "The master switch for every wrist buzz (inactivity, stress, alerts). Off keeps the strap quiet no matter what else is on.",
-                          isOn: $wristAlertsMaster)
-            }
-        }
-    }
-    #endif
 
     // MARK: - Double tap
 
@@ -73,7 +43,7 @@ struct AutomationsView: View {
                     Text("When I double-tap").font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     Picker("", selection: $behavior.doubleTapAction) {
-                        ForEach(doubleTapOptions) { Text($0.label).tag($0) }
+                        ForEach(MacActionKind.allCases) { Text($0.label).tag($0) }
                     }
                     .labelsHidden().fixedSize()
                 }
@@ -132,12 +102,10 @@ struct AutomationsView: View {
                  blurb: wearBlurb,
                  active: wearActive) {
             VStack(spacing: 0) {
-                #if os(macOS)
                 ToggleRow(label: "Lock the Mac when I take the strap off",
                           help: "Fires the moment the strap leaves your wrist.",
                           isOn: $behavior.autoLockOnWristOff)
                 rowDivider
-                #endif
                 shortcutFieldRow("Run a Shortcut when taken off",
                                  help: "Presence automation — set a Focus, pause media, set away…",
                                  text: $behavior.wristOffShortcut)
@@ -348,35 +316,15 @@ struct AutomationsView: View {
 
     // MARK: - Helpers
 
-    /// Double-tap actions offered in the picker. The "Lock the Mac" action can't work on iPhone
-    /// (a third-party app can't lock iOS), so it's dropped there.
-    private var doubleTapOptions: [MacActionKind] {
-        #if os(iOS)
-        MacActionKind.allCases.filter { $0 != .lockScreen }
-        #else
-        MacActionKind.allCases
-        #endif
-    }
-
-    /// Wear & presence blurb. macOS mentions the auto-lock affordance (and the Apple-Watch unlock
-    /// caveat); iOS, where that toggle is hidden, describes the Shortcut-driven presence reactions.
-    /// Wear & presence is "active" when any of its reactions are configured: a wrist-on/off Shortcut,
-    /// or (macOS) the auto-lock toggle. Presentation-only — drives the card's accent state.
+    /// Wear & presence is "active" when any of its reactions are configured: a wrist-on/off Shortcut
+    /// or the auto-lock toggle. Presentation-only — drives the card's accent state.
     private var wearActive: Bool {
         let shortcuts = !behavior.wristOffShortcut.isEmpty || !behavior.wristOnShortcut.isEmpty
-        #if os(macOS)
         return shortcuts || behavior.autoLockOnWristOff
-        #else
-        return shortcuts
-        #endif
     }
 
     private var wearBlurb: String {
-        #if os(macOS)
         "React when the strap comes off or goes on. Note: macOS reserves true auto-UNLOCK for Apple Watch — this can lock, not unlock."
-        #else
-        "React when the strap comes off or goes on — run a Shortcut to set a Focus, pause media, mark yourself away."
-        #endif
     }
 
     private static func date(fromMinutes m: Int) -> Date {

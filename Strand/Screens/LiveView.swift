@@ -1,7 +1,5 @@
 import SwiftUI
-#if os(macOS)
 import AppKit
-#endif
 import StrandDesign
 import StrandAnalytics
 import WhoopProtocol
@@ -894,26 +892,12 @@ struct LiveView: View {
     }
 
     private var controlButtons: some View {
-        // Three equal thirds can't hold all three labels at a legible size on a phone — the longest
-        // ("Scan & Connect") truncates to "Scan &…" even after shrink-to-fit (#175). So on iOS the
-        // primary action takes a full-width row and the two secondary actions share the row beneath;
-        // macOS keeps the single three-up row, where the window is always wide enough. (#175)
-        #if os(iOS)
-        VStack(spacing: NoopMetrics.rowSpacing) {
-            scanButton
-            HStack(spacing: NoopMetrics.rowSpacing) {
-                buzzButton
-                disconnectButton
-            }
-        }
-        #else
         HStack(spacing: NoopMetrics.rowSpacing) {
             scanButton
             buzzButton
             stopBuzzButton
             disconnectButton
         }
-        #endif
     }
 
     // The connect / buzz / disconnect controls, all routed through the unified NOOP button system:
