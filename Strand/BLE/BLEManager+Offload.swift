@@ -124,7 +124,7 @@ extension BLEManager {
     func routeBackfillFrame(_ frame: [UInt8]) {
         // Opt-in raw PPG research capture (v20/v21/v26): fire-and-forget enqueue, independent of the
         // Backfiller's persistence/ack path — it can neither block nor fail a sync.
-        RawPPGCapture.shared.submitStreamFrame(frame, family: selectedModel.deviceFamily)
+        rawFrameSink.submitStreamFrame(frame, family: selectedModel.deviceFamily)
         offloadDrain.enqueue(frame)
     }
 
@@ -216,7 +216,7 @@ extension BLEManager {
     func archiveRejectedFrames(_ frames: [[UInt8]], trim: UInt32, family: DeviceFamily) -> Bool {
         // Opt-in raw PPG research capture of other unmapped layouts (v20/v21/v26 are taken at the stream
         // hook). Fire-and-forget: NOT part of the result below, so it can never hold or delay the ack.
-        RawPPGCapture.shared.submitRejected(frames, family: family)
+        rawFrameSink.submitRejected(frames, family: family)
         switch rejectedHistoryArchive.archive(frames, trim: trim, family: family) {
         case .written(let count):
             state.rejectedFramesThisSession += count

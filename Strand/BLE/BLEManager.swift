@@ -37,6 +37,8 @@ public final class BLEManager: NSObject, ObservableObject {
     public let state: LiveState
     let router: FrameRouter
     var collector: Collector?
+    /// Opt-in raw PPG research capture; fire-and-forget beside the persistence/ack path.
+    let rawFrameSink: any RawFrameSink
 
     // MARK: Upload / server sync — REMOVED for Strand (standalone, fully on-device).
 
@@ -318,8 +320,11 @@ public final class BLEManager: NSObject, ObservableObject {
         return ref.device + (wallNow - ref.wall)
     }
 
-    public init(state: LiveState, deviceId: String = "my-whoop") {
+    /// `rawFrameSink` receives offload frames for the opt-in raw PPG capture; the app wires it
+    /// (`BLEManager+AppWiring.swift`).
+    init(state: LiveState, deviceId: String, rawFrameSink: any RawFrameSink) {
         self.state = state
+        self.rawFrameSink = rawFrameSink
         self.deviceId = deviceId
         self.router = FrameRouter(state: state)
         // WhoopStore.init is now async, so it can't run here.
