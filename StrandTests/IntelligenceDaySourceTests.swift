@@ -1,4 +1,5 @@
 import XCTest
+import StrandAnalytics
 @testable import Strand
 
 /// Pins the By-Day honesty fix (Sleep overhaul §2.6) + the per-day diagnostic source token (§2.5):
@@ -9,7 +10,7 @@ import XCTest
 /// `IntelligenceDaySourceTest` / `IntelligenceScreenSourceBadge` cases.
 final class IntelligenceDaySourceTests: XCTestCase {
 
-    private typealias DaySource = IntelligenceEngine.DaySource
+    private typealias DaySource = DayProvenance
 
     // MARK: - classify precedence
 

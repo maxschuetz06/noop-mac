@@ -53,9 +53,10 @@ final class NapIsolationTests: XCTestCase {
             nightDays.map { session(startTs: $0 - 3600, hours: 8, isNap: false) }, deviceId: imported)
 
         func habitual() async -> Int? {
-            await IntelligenceEngine.computeHabitualMidsleep(
-                store: store, importedId: imported, computedId: computed,
-                windowStart: 0, windowEnd: Int.max, offsetSec: 0)
+            await RecomputePipeline.habitualMidsleep(
+                store: store,
+                sources: .init(importedId: imported, computedId: computed),
+                window: 0...Int.max, offsetSec: 0)
         }
         let before = await habitual()
         XCTAssertNil(before, "13 distinct nights stay under the habitual threshold")
