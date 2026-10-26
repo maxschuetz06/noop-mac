@@ -2498,27 +2498,26 @@ extension SleepView {
 
     fileprivate func softScoreCard(_ model: SleepModel) -> some View {
         let score = model.performance.latest
-        return SoftCard {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
-                SoftCardHeader(title: "Sleep Score")
+                CardHeader(title: "Sleep Score")
                 HStack(alignment: .center, spacing: 12) {
                     Text(score.map { "\(Int($0.rounded()))" } ?? "—")
-                        .font(Soft.number(46)).tracking(-1).foregroundStyle(Soft.ink)
+                        .font(StrandFont.number(46)).tracking(-1).foregroundStyle(StrandPalette.textPrimary)
                     if let score {
                         Text(Self.softScoreWord(score))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Soft.blue, in: Capsule())
+                            .background(StrandPalette.hueBlue, in: Capsule())
                     }
                 }
                 .padding(.top, 10)
                 Text(model.performanceSource == .whoop ? "Value from the WHOOP export" : "Calculated on this Mac")
-                    .font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                    .font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
                 Spacer(minLength: 10)
-                SoftScoreScale(fraction: (score ?? 0) / 100, active: score != nil)
-                    .frame(height: 44)
-                    .accessibilityHidden(true)
+                SleepScoreScale(fraction: (score ?? 0) / 100, active: score != nil)
+                    .frame(height: 44).accessibilityHidden(true)
             }
         }
         .accessibilityElement(children: .combine)
@@ -2541,29 +2540,29 @@ extension SleepView {
         let nights = Array(repo.days.compactMap(\.totalSleepMin).suffix(16))
         let typical = model.typicalTotalMin
         let change = typical.flatMap { $0 > 0 && asleep > 0 ? (asleep - $0) / $0 * 100 : nil }
-        return SoftCard {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text("Total Sleep").font(.system(size: 14, weight: .medium)).foregroundStyle(Soft.ink)
+                    Text("Total Sleep").font(.system(size: 14, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     if let change {
-                        SoftChip(text: "\(change >= 0 ? "↑" : "↓") \(Int(abs(change).rounded())) %",
-                                 tint: change >= 0 ? Soft.green : Soft.rose)
+                        DeltaChip(text: "\(change >= 0 ? "↑" : "↓") \(Int(abs(change).rounded())) %",
+                                  tint: change >= 0 ? StrandPalette.hueGreen : StrandPalette.hueRose)
                     }
                 }
                 (asleep > 0 ? Text(asleep / 60, format: .number.precision(.fractionLength(1))) : Text(verbatim: "—"))
-                    .font(Soft.number(42)).tracking(-1).foregroundStyle(Soft.ink).padding(.top, 10)
-                Text("hours").font(.system(size: 14)).foregroundStyle(Soft.ink2)
+                    .font(StrandFont.number(42)).tracking(-1).foregroundStyle(StrandPalette.textPrimary).padding(.top, 10)
+                Text("hours").font(.system(size: 14)).foregroundStyle(StrandPalette.textSecondary)
                 Spacer(minLength: 8)
-                SoftBars(values: nights, colors: [Soft.blue.opacity(0.5), Soft.blue])
+                MiniBars(values: nights, colors: [StrandPalette.hueBlue.opacity(0.5), StrandPalette.hueBlue])
                     .frame(height: 54)
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Sleep duration over the last \(nights.count) nights"),
                                                                  nights.map { $0 / 60 }, unit: Text("hours")))
                 HStack {
-                    Text("\(nights.count) nights").font(.system(size: 11)).foregroundStyle(Soft.ink3)
+                    Text("\(nights.count) nights").font(.system(size: 11)).foregroundStyle(StrandPalette.textTertiary)
                     Spacer()
-                    Text("Last night").font(.system(size: 11)).foregroundStyle(Soft.ink3)
+                    Text("Last night").font(.system(size: 11)).foregroundStyle(StrandPalette.textTertiary)
                 }
                 .padding(.top, 6)
             }
@@ -2578,30 +2577,30 @@ extension SleepView {
         let line = Array(rhrDays.suffix(14))
         let base = rhrDays.count >= 5 ? Array(rhrDays.suffix(30)).reduce(0, +) / Double(min(30, rhrDays.count)) : nil
         let change = (value != nil && base != nil && base! > 0) ? (value! - base!) / base! * 100 : nil
-        return SoftCard(wash: SoftWash(color: Soft.peachWash, center: UnitPoint(x: 0.7, y: 0.8))) {
+        return StrandCard(padding: 20, cornerRadius: NoopMetrics.cardRadius,
+                          wash: CardWash(color: StrandPalette.washPeach, center: UnitPoint(x: 0.7, y: 0.8))) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text("Resting Pulse").font(.system(size: 14, weight: .medium)).foregroundStyle(Soft.ink)
+                    Text("Resting Pulse").font(.system(size: 14, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     if let change {
-                        SoftChip(text: "\(change >= 0 ? "↑" : "↓") \(Int(abs(change).rounded())) %",
-                                 tint: change <= 0 ? Soft.green : Soft.rose)
+                        DeltaChip(text: "\(change >= 0 ? "↑" : "↓") \(Int(abs(change).rounded())) %",
+                                  tint: change <= 0 ? StrandPalette.hueGreen : StrandPalette.hueRose)
                     }
                 }
                 Text(value.map { "\(Int($0.rounded()))" } ?? "—")
-                    .font(Soft.number(42)).tracking(-1).foregroundStyle(Soft.ink).padding(.top, 10)
-                Text("bpm").font(.system(size: 14)).foregroundStyle(Soft.ink2)
+                    .font(StrandFont.number(42)).tracking(-1).foregroundStyle(StrandPalette.textPrimary).padding(.top, 10)
+                Text("bpm").font(.system(size: 14)).foregroundStyle(StrandPalette.textSecondary)
                 Spacer(minLength: 8)
-                SoftLine(values: line, color: Soft.peach, lineWidth: 2)
-                    .frame(height: 44)
-                    .accessibilityElement()
+                Sparkline.smooth(line, color: StrandPalette.huePeach)
+                    .frame(height: 44).accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Resting pulse over the last \(line.count) nights"), line, unit: Text(verbatim: "bpm")))
                 HStack {
                     Text(HomeView.relativeState(value, base: base, higherIsBetter: false))
-                        .font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
+                        .font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     (base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
-                        .font(.system(size: 13).monospacedDigit()).foregroundStyle(Soft.ink2)
+                        .font(.system(size: 13).monospacedDigit()).foregroundStyle(StrandPalette.textSecondary)
                 }
                 .padding(.top, 10)
             }
@@ -2616,36 +2615,36 @@ extension SleepView {
         let items: [(SleepStage, LocalizedStringKey, Double)] = [
             (.awake, "Awake", st.awake), (.rem, "REM", st.rem), (.light, "Light", st.light), (.deep, "Deep", st.deep),
         ]
-        return SoftCard(padding: 22) {
+        return StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Sleep Stages").font(.system(size: 17, weight: .semibold)).foregroundStyle(Soft.ink)
+                    Text("Sleep Stages").font(.system(size: 17, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     if !model.isPersistedHypnogram {
                         Text("Timeline estimated from the stage totals")
-                            .font(.system(size: 11)).foregroundStyle(Soft.ink3)
+                            .font(.system(size: 11)).foregroundStyle(StrandPalette.textTertiary)
                     }
                 }
-                SoftStageChart(intervals: model.intervals, onset: model.night.onsetDate)
-                    .padding(.top, 14)
-                    .accessibilityHidden(true)
+                SleepStageLanes(intervals: model.intervals, onset: model.night.onsetDate)
+                    .padding(.top, 14).accessibilityHidden(true)
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(items, id: \.0) { stage, name, minutes in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 7) {
-                                Circle().fill(SoftStageChart.color(stage)).frame(width: 11, height: 11)
-                                Text(name).font(.system(size: 13)).foregroundStyle(Soft.ink)
+                                Circle().fill(SleepStageLanes.color(stage)).frame(width: 11, height: 11)
+                                Text(name).font(.system(size: 13)).foregroundStyle(StrandPalette.textPrimary)
                             }
                             Text(Self.softDuration(minutes))
-                                .font(.system(size: 20, weight: .semibold).monospacedDigit()).foregroundStyle(Soft.ink)
+                                .font(.system(size: 20, weight: .semibold).monospacedDigit()).foregroundStyle(StrandPalette.textPrimary)
                             Text("\(Int((minutes / total * 100).rounded())) %")
-                                .font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                                .font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityElement(children: .combine)
                     }
                 }
                 .padding(.top, 16)
+                Spacer(minLength: 0)
             }
         }
     }
@@ -2669,25 +2668,25 @@ extension SleepView {
             let diff = Int((model.night.stages.deep - typ).rounded())
             let lastNight: LocalizedStringResource = "Last night \(Self.softDuration(model.night.stages.deep))"
             if abs(diff) >= 5 {
-                rows.append(("waveform.path", diff > 0 ? Soft.blue : Soft.amber, diff > 0
+                rows.append(("waveform.path", diff > 0 ? StrandPalette.hueBlue : StrandPalette.hueAmber, diff > 0
                              ? "Deep sleep \(diff) min above your average" : "Deep sleep \(-diff) min below your average", lastNight))
             } else {
-                rows.append(("waveform.path", Soft.blue, "Deep sleep in your usual range", lastNight))
+                rows.append(("waveform.path", StrandPalette.hueBlue, "Deep sleep in your usual range", lastNight))
             }
         }
         if let eff = model.efficiency.latest {
             let pct = Int((eff <= 1 ? eff * 100 : eff).rounded())
-            rows.append(("bed.double", pct >= 85 ? Soft.green : Soft.amber,
+            rows.append(("bed.double", pct >= 85 ? StrandPalette.hueGreen : StrandPalette.hueAmber,
                          "Sleep efficiency \(pct) %",
                          pct >= 85 ? "You're asleep for most of your time in bed" : "A lot of awake time in bed"))
         }
-        return SoftCard(padding: 22) {
+        return StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Findings").font(.system(size: 17, weight: .semibold)).foregroundStyle(Soft.ink)
+                Text("Findings").font(.system(size: 17, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 if rows.isEmpty {
                     Text("Findings appear after a week of sleep data.")
-                        .font(.system(size: 13)).foregroundStyle(Soft.ink3)
+                        .font(.system(size: 13)).foregroundStyle(StrandPalette.textTertiary)
                 }
                 ForEach(Array(rows.prefix(4).enumerated()), id: \.offset) { _, row in
                     HStack(spacing: 14) {
@@ -2697,9 +2696,9 @@ extension SleepView {
                             .background(row.1.opacity(0.13), in: Circle())
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(row.2).font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
+                            Text(row.2).font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Text(row.3).font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                            Text(row.3).font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
                         }
                         Spacer(minLength: 0)
                     }
@@ -2717,34 +2716,34 @@ extension SleepView {
         let deepPeak = night.intervals.filter { $0.stage == .deep }.max(by: { $0.duration < $1.duration })
         let peakTs = deepPeak.map { onset + Int(($0.start + $0.end) / 2) }
         let clock = { (ts: Int) in Text(Date(timeIntervalSince1970: TimeInterval(ts)), format: .dateTime.hour().minute()) }
-        return SoftCard(padding: 22) {
+        return StrandCard(padding: 22, cornerRadius: NoopMetrics.cardRadius) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Sleep Timeline").font(.system(size: 17, weight: .semibold)).foregroundStyle(Soft.ink)
-                SoftNightBar(intervals: night.intervals, span: TimeInterval(max(wake - onset, 1)),
-                             onset: Date(timeIntervalSince1970: TimeInterval(onset)),
-                             marker: peakTs.map { TimeInterval($0 - onset) })
-                    .frame(height: 64).padding(.top, 18)
-                    .accessibilityHidden(true)
+                Text("Sleep Timeline").font(.system(size: 17, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
+                SleepNightBar(intervals: night.intervals, span: TimeInterval(max(wake - onset, 1)),
+                              onset: Date(timeIntervalSince1970: TimeInterval(onset)),
+                              marker: peakTs.map { TimeInterval($0 - onset) })
+                    .frame(height: 64).padding(.top, 18).accessibilityHidden(true)
                 HStack(alignment: .top) {
-                    legend(color: SoftStageChart.color(.awake), title: "Fell asleep", value: clock(onset))
+                    legend(color: SleepStageLanes.color(.awake), title: "Fell asleep", value: clock(onset))
                     Spacer()
-                    if let peakTs { legend(color: SoftStageChart.color(.deep), title: "Deep sleep peak", value: clock(peakTs)) }
+                    if let peakTs { legend(color: SleepStageLanes.color(.deep), title: "Deep sleep peak", value: clock(peakTs)) }
                     Spacer()
-                    legend(color: SoftStageChart.color(.rem), title: "Woke up", value: clock(wake))
+                    legend(color: SleepStageLanes.color(.rem), title: "Woke up", value: clock(wake))
                     Spacer()
                     HStack(spacing: 10) {
-                        Image(systemName: "bed.double").font(.system(size: 14)).foregroundStyle(Soft.ink2)
-                            .frame(width: 34, height: 34).background(Soft.fill, in: Circle())
+                        Image(systemName: "bed.double").font(.system(size: 14)).foregroundStyle(StrandPalette.textSecondary)
+                            .frame(width: 34, height: 34).background(StrandPalette.surfaceInset, in: Circle())
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("In bed").font(.system(size: 12)).foregroundStyle(Soft.ink3)
+                            Text("In bed").font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
                             Text(Self.softDuration(Double(wake - onset) / 60))
-                                .font(.system(size: 16, weight: .semibold).monospacedDigit()).foregroundStyle(Soft.ink)
+                                .font(.system(size: 16, weight: .semibold).monospacedDigit()).foregroundStyle(StrandPalette.textPrimary)
                         }
                     }
                     .accessibilityElement(children: .combine)
                 }
                 .padding(.top, 12)
+                Spacer(minLength: 0)
             }
         }
     }
@@ -2753,8 +2752,8 @@ extension SleepView {
         HStack(alignment: .top, spacing: 9) {
             Circle().fill(color).frame(width: 12, height: 12).padding(.top, 2)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
-                value.font(.system(size: 13).monospacedDigit()).foregroundStyle(Soft.ink3)
+                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
+                value.font(.system(size: 13).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -2762,7 +2761,7 @@ extension SleepView {
 }
 
 /// Gradient scale 0…100 with a knob at the score and tick labels.
-private struct SoftScoreScale: View {
+private struct SleepScoreScale: View {
     let fraction: Double
     let active: Bool
     var body: some View {
@@ -2770,14 +2769,14 @@ private struct SoftScoreScale: View {
             GeometryReader { geo in
                 let f = CGFloat(min(max(fraction, 0), 1))
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Soft.fill).frame(height: 12)
+                    Capsule().fill(StrandPalette.surfaceInset).frame(height: 12)
                     Capsule()
-                        .fill(LinearGradient(colors: [Soft.blue.opacity(0.55), Soft.violet, Soft.green],
+                        .fill(LinearGradient(colors: [StrandPalette.hueBlue.opacity(0.55), StrandPalette.hueViolet, StrandPalette.hueGreen],
                                              startPoint: .leading, endPoint: .trailing))
                         .frame(width: max(12, geo.size.width * f), height: 12)
                         .opacity(active ? 1 : 0)
                     if active {
-                        Circle().fill(Soft.green).frame(width: 22, height: 22)
+                        Circle().fill(StrandPalette.hueGreen).frame(width: 22, height: 22)
                             .overlay(Circle().stroke(Color.white, lineWidth: 3))
                             .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
                             .offset(x: geo.size.width * f - 11)
@@ -2788,7 +2787,7 @@ private struct SoftScoreScale: View {
             .frame(height: 22)
             HStack {
                 ForEach([0, 20, 40, 60, 80, 100], id: \.self) { t in
-                    Text("\(t)").font(.system(size: 11).monospacedDigit()).foregroundStyle(Soft.ink3)
+                    Text("\(t)").font(.system(size: 11).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                     if t != 100 { Spacer() }
                 }
             }
@@ -2797,16 +2796,16 @@ private struct SoftScoreScale: View {
 }
 
 /// Four-lane hypnogram: Awake / REM / Light / Deep as soft rounded blocks.
-private struct SoftStageChart: View {
+private struct SleepStageLanes: View {
     let intervals: [SleepInterval]
     let onset: Date
 
     static func color(_ stage: SleepStage) -> Color {
         switch stage {
-        case .awake: return Soft.rose
-        case .rem: return Soft.violet.opacity(0.55)
-        case .light: return Soft.blue.opacity(0.45)
-        case .deep: return Soft.blue
+        case .awake: return StrandPalette.hueRose
+        case .rem: return StrandPalette.hueViolet.opacity(0.55)
+        case .light: return StrandPalette.hueBlue.opacity(0.45)
+        case .deep: return StrandPalette.hueBlue
         }
     }
     private static let lanes: [(SleepStage, LocalizedStringKey)] = [(.awake, "Awake"), (.rem, "REM"), (.light, "Light"), (.deep, "Deep")]
@@ -2817,7 +2816,7 @@ private struct SoftStageChart: View {
             HStack(spacing: 10) {
                 VStack(alignment: .trailing, spacing: 0) {
                     ForEach(Self.lanes, id: \.0) { _, name in
-                        Text(name).font(.system(size: 12)).foregroundStyle(Soft.ink2)
+                        Text(name).font(.system(size: 12)).foregroundStyle(StrandPalette.textSecondary)
                             .frame(maxHeight: .infinity)
                     }
                 }
@@ -2826,10 +2825,10 @@ private struct SoftStageChart: View {
                     let laneH = geo.size.height / 4
                     ZStack(alignment: .topLeading) {
                         ForEach(0..<4, id: \.self) { i in
-                            Rectangle().fill(Soft.fill.opacity(0.6)).frame(height: 1)
+                            Rectangle().fill(StrandPalette.surfaceInset.opacity(0.6)).frame(height: 1)
                                 .offset(y: laneH * (CGFloat(i) + 0.5))
                         }
-                        Rectangle().fill(Soft.cardEdge).frame(width: 1, height: geo.size.height)
+                        Rectangle().fill(StrandPalette.hairline).frame(width: 1, height: geo.size.height)
                         ForEach(Array(intervals.enumerated()), id: \.offset) { _, iv in
                             let lane = Self.lanes.firstIndex { $0.0 == iv.stage } ?? 2
                             let x0 = geo.size.width * CGFloat(iv.start / span)
@@ -2846,7 +2845,7 @@ private struct SoftStageChart: View {
             HStack {
                 ForEach(0..<5, id: \.self) { i in
                     Text(onset.addingTimeInterval(span * Double(i) / 4), format: .dateTime.hour().minute())
-                        .font(.system(size: 11).monospacedDigit()).foregroundStyle(Soft.ink3)
+                        .font(.system(size: 11).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                     if i < 4 { Spacer() }
                 }
             }
@@ -2856,7 +2855,7 @@ private struct SoftStageChart: View {
 }
 
 /// The night as one capsule coloured by stage, with a clock marker (deep-sleep peak).
-private struct SoftNightBar: View {
+private struct SleepNightBar: View {
     let intervals: [SleepInterval]
     let span: TimeInterval
     let onset: Date
@@ -2868,9 +2867,9 @@ private struct SoftNightBar: View {
             let barY: CGFloat = 28
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .leading) {
-                    Soft.fill
+                    StrandPalette.surfaceInset
                     ForEach(Array(intervals.enumerated()), id: \.offset) { _, iv in
-                        Rectangle().fill(SoftStageChart.color(iv.stage))
+                        Rectangle().fill(SleepStageLanes.color(iv.stage))
                             .frame(width: max(1, w * CGFloat(iv.duration / span)), height: 14)
                             .offset(x: w * CGFloat(iv.start / span))
                     }
@@ -2880,18 +2879,18 @@ private struct SoftNightBar: View {
                 .offset(y: barY)
                 ForEach(0..<7, id: \.self) { i in
                     Text(onset.addingTimeInterval(span * Double(i) / 6), format: .dateTime.hour().minute())
-                        .font(.system(size: 10).monospacedDigit()).foregroundStyle(Soft.ink3)
+                        .font(.system(size: 10).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize()
                         .position(x: min(max(w * CGFloat(i) / 6, 16), w - 16), y: barY + 32)
                 }
                 if let marker {
                     let mx = w * CGFloat(marker / span)
-                    Rectangle().fill(Soft.ink).frame(width: 1.5, height: 30).offset(x: mx - 0.75, y: barY - 8)
+                    Rectangle().fill(StrandPalette.textPrimary).frame(width: 1.5, height: 30).offset(x: mx - 0.75, y: barY - 8)
                     Text(onset.addingTimeInterval(marker), format: .dateTime.hour().minute())
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Soft.card)
+                        .foregroundStyle(StrandPalette.surfaceRaised)
                         .padding(.horizontal, 9).padding(.vertical, 4)
-                        .background(Soft.ink, in: Capsule())
+                        .background(StrandPalette.textPrimary, in: Capsule())
                         .fixedSize()
                         .position(x: min(max(mx, 26), w - 26), y: barY - 18)
                 }
