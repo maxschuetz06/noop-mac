@@ -420,27 +420,6 @@ public final class BLEManager: NSObject, ObservableObject {
         }
     }
 
-    /// Designated initializer for testing and preview use: accepts a pre-built Collector.
-    init(state: LiveState, deviceId: String = "my-whoop", collector: Collector?) {
-        self.state = state
-        self.deviceId = deviceId
-        self.router = FrameRouter(state: state)
-        self.collector = collector
-        super.init()
-        state.lastSyncedAt = UserDefaults.standard.object(forKey: "lastSyncedAt") as? Double
-        // Restore identifier + background-capable central (mirrors the production initializer
-        // so a restored manager matches by identifier; only exercised by tests/previews).
-        #if os(iOS)
-        central = CBCentralManager(delegate: self, queue: .main,
-                                   options: [CBCentralManagerOptionRestoreIdentifierKey: BLEManager.restoreID])
-        #else
-        // Strand (macOS desktop): no state-restoration identifier (iOS background feature).
-        central = CBCentralManager(delegate: self, queue: .main)
-        #endif
-        // Strap-as-clock: an incoming EVENT packet kicks a rate-limited catch-up sync.
-        router.onSyncTrigger = { [weak self] in self?.requestSync(.strap) }
-    }
-
     // MARK: Store maintenance
 
     /// Apply the raw-outbox retention policy (24h synced window / 50MB unsynced cap).
