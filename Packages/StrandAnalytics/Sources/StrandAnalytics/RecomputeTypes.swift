@@ -29,16 +29,14 @@ public struct RecomputeRequest: Sendable {
     public var maxDays: Int
     public var profile: RecomputeProfile
     /// Manual "Recalibrate" epochs (unix seconds, 0 = none) for the HRV and the wider Charge baselines.
-    public var hrvBaselineEpoch: Double
-    public var recoveryBaselineEpoch: Double
+    public var hrvBaselineEpoch: Double = 0
+    public var recoveryBaselineEpoch: Double = 0
     /// Experimental sleep stager V2 for the normal detected-night staging path (#690).
-    public var useSleepStagerV2: Bool
+    public var useSleepStagerV2 = false
 
-    public init(deviceId: String, now: Int, timeZone: TimeZone, maxDays: Int, profile: RecomputeProfile,
-                hrvBaselineEpoch: Double, recoveryBaselineEpoch: Double, useSleepStagerV2: Bool) {
+    public init(deviceId: String, now: Int, timeZone: TimeZone, maxDays: Int, profile: RecomputeProfile) {
         self.deviceId = deviceId; self.now = now; self.timeZone = timeZone; self.maxDays = maxDays
-        self.profile = profile; self.hrvBaselineEpoch = hrvBaselineEpoch
-        self.recoveryBaselineEpoch = recoveryBaselineEpoch; self.useSleepStagerV2 = useSleepStagerV2
+        self.profile = profile
     }
 
     public var computedId: String { deviceId + "-noop" }

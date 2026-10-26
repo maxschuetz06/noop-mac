@@ -21,8 +21,7 @@ enum RecomputeGoldenFixture {
     static let request = RecomputeRequest(
         deviceId: deviceId, now: now, timeZone: timeZone, maxDays: maxDays,
         profile: RecomputeProfile(user: UserProfile(weightKg: 78, heightCm: 180, age: 34, sex: "male"),
-                                  waistCm: 84, hrMaxOverride: 0, hrMax: 184, stepsManualOverride: nil),
-        hrvBaselineEpoch: 0, recoveryBaselineEpoch: 0, useSleepStagerV2: false)
+                                  waistCm: 84, hrMaxOverride: 0, hrMax: 184, stepsManualOverride: nil))
 
     struct LCG {
         var s: UInt64

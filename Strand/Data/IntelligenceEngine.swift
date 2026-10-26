@@ -154,12 +154,14 @@ final class IntelligenceEngine: ObservableObject {
         let user = UserProfile(weightKg: profile.weightKg, heightCm: profile.heightCm,
                                age: Double(profile.age), sex: profile.sex,
                                stepTicksPerStep: profile.stepTicksPerStep)
-        return RecomputeRequest(
+        var request = RecomputeRequest(
             deviceId: deviceId, now: Int(Date().timeIntervalSince1970), timeZone: .current, maxDays: maxDays,
             profile: RecomputeProfile(user: user, waistCm: profile.waistCm, hrMaxOverride: profile.hrMaxOverride,
-                                      hrMax: profile.hrMax, stepsManualOverride: profile.stepsManualOverride),
-            hrvBaselineEpoch: Baselines.hrvBaselineEpoch(), recoveryBaselineEpoch: Baselines.recoveryBaselineEpoch(),
-            useSleepStagerV2: PuffinExperiment.experimentalSleepV2Enabled)
+                                      hrMax: profile.hrMax, stepsManualOverride: profile.stepsManualOverride))
+        request.hrvBaselineEpoch = Baselines.hrvBaselineEpoch()
+        request.recoveryBaselineEpoch = Baselines.recoveryBaselineEpoch()
+        request.useSleepStagerV2 = PuffinExperiment.experimentalSleepV2Enabled
+        return request
     }
 }
 
