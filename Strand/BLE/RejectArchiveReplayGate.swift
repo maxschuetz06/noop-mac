@@ -28,9 +28,10 @@ struct RejectArchiveReplayGate {
     /// definition, so no decode fingerprint can notice them. Existing installs have no value under this
     /// key yet and replay once after updating; the replay is idempotent and the archive is bounded.
     static func production(defaults: UserDefaults = .standard,
+                           decoderVersion: Int = DecoderVersion.current,
                            appVersion: String = appReleaseVersion) -> RejectArchiveReplayGate {
         RejectArchiveReplayGate(defaults: defaults, key: "rejectArchiveReplayedVersion",
-                                version: "decoder-\(DecoderVersion.current) app-\(appVersion)")
+                                version: "decoder-\(decoderVersion) app-\(appVersion)")
     }
 
     static let appReleaseVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
