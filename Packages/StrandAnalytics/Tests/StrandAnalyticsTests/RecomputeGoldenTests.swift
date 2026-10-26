@@ -1,13 +1,21 @@
 import XCTest
 import WhoopStore
-@testable import Strand
+@testable import StrandAnalytics
 
-/// Pins the full on-device recompute (`IntelligenceEngine.analyzeRecent`) on a deterministic 21-day
-/// dataset: every persisted computed row, the published By-Day results, the per-day diagnostics and the
-/// steps-calibration mirror must stay byte-identical across refactors.
-@MainActor
+/// Pins the full on-device recompute (`RecomputePipeline.run`) on a deterministic 21-day dataset: every
+/// persisted computed row, the scored By-Day results, the per-day diagnostics and the steps-calibration
+/// state must stay byte-identical across refactors. The golden was captured from the pre-extraction
+/// `IntelligenceEngine.analyzeRecent`.
 final class RecomputeGoldenTests: XCTestCase {
     typealias F = RecomputeGoldenFixture
+
+    /// No edited or dismissed sleep (the self-heal path is a no-op); records the strap-log lines.
+    private actor RecordingHost: RecomputeHost {
+        var lines: [String] = []
+        func selfHealEditedStages(from: Int, to: Int) async -> [CachedSleepSession] { [] }
+        func dismissedSleepWindows() async -> [(start: Int, end: Int)] { [] }
+        func log(_ line: String) async { lines.append(line) }
+    }
 
     func testTwentyOneDayRecomputeIsByteIdentical() async throws {
         let dir = FileManager.default.temporaryDirectory
@@ -16,32 +24,20 @@ final class RecomputeGoldenTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: dir) }
         let store = try await WhoopStore(path: dir.appendingPathComponent("whoop.sqlite").path)
         try await F.populate(store)
+        let host = RecordingHost()
 
-        let suite = "RecomputeGoldenTests-\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let profile = ProfileStore(defaults: defaults)
-        profile.age = 34; profile.sex = "male"; profile.weightKg = 78; profile.heightCm = 180; profile.waistCm = 84
-        let repo = Repository(deviceId: F.deviceId)
-        repo.setStoreForTesting(store)
-        let engine = IntelligenceEngine(repo: repo, profile: profile, deviceId: F.deviceId,
-                                        clock: { Date(timeIntervalSince1970: TimeInterval(F.now)) },
-                                        timeZone: { F.timeZone }, defaults: defaults)
-        var log: [String] = []
-        engine.diagnosticSink = { log.append($0) }
+        let outcome = await RecomputePipeline.run(F.request, store: store, host: host)
 
-        await engine.analyzeRecent(maxDays: F.maxDays)
-
-        var lines = engine.results.map { r in
+        var lines = outcome.days.map { r in
             "result \(r.day) rec=\(F.n(r.recovery)) strain=\(F.n(r.strain)) sleep=\(F.n(r.sleepMin)) "
                 + "hrv=\(F.n(r.hrv)) rhr=\(F.n(r.rhr)) source=\(r.source.logToken)"
         }
-        lines += log.map { "log \($0)" }
-        lines.append("steps coeff=\(profile.stepsCalibrationCoefficient) days=\(profile.stepsCalibrationSampleDays) "
-                     + "conf=\(profile.stepsCalibrationConfidence) manual=\(profile.stepsCalibrationManual)")
+        lines += await host.lines.map { "log \($0)" }
+        let steps = try XCTUnwrap(outcome.stepsCalibration)
+        lines.append("steps coeff=\(steps.coefficient) days=\(steps.sampleDays) "
+                     + "conf=\(steps.confidence) manual=\(steps.manual)")
         lines += try await F.persistedFingerprint(store)
-        let actual = lines.joined(separator: "\n")
-        XCTAssertEqual(actual, Self.golden)
+        XCTAssertEqual(lines.joined(separator: "\n"), Self.golden)
     }
 
     static let golden = """

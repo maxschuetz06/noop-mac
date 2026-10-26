@@ -16,9 +16,6 @@ final class IntelligenceEngine: ObservableObject {
     private let repo: Repository
     private let profile: ProfileStore
     private let deviceId: String
-    private let clock: () -> Date
-    private let timeZone: () -> TimeZone
-    private let defaults: UserDefaults
 
     @Published var results: [Computed] = []      // newest first
     @Published var computing = false
@@ -30,15 +27,12 @@ final class IntelligenceEngine: ObservableObject {
     /// log the user already exports (PII-scrubbed by `LiveState.append(log:)`). Defaults to nil so the
     /// engine stays testable with no UI; `AppModel` wires it to `live.append(log:)`. Each line is a
     /// concise, counts-only summary ("sleep day=… totalSleepMin=… matched=… source=…") so the next bug
-    /// report ships proof of what was computed per day. (Sleep overhaul §2.5.)
+    /// report ships proof of what was computed per day — addressing the project's log-failures-not-
+    /// successes blind spot and the data needed to settle "Rest repeats across days". (Sleep overhaul §2.5.)
     var diagnosticSink: ((String) -> Void)?
 
-    init(repo: Repository, profile: ProfileStore, deviceId: String,
-         clock: @escaping () -> Date = Date.init,
-         timeZone: @escaping () -> TimeZone = { TimeZone.current },
-         defaults: UserDefaults = .standard) {
+    init(repo: Repository, profile: ProfileStore, deviceId: String) {
         self.repo = repo; self.profile = profile; self.deviceId = deviceId
-        self.clock = clock; self.timeZone = timeZone; self.defaults = defaults
     }
 
     /// Median of a list (0 when empty) — used to denoise the 7-day resting-HR for Fitness Age.
@@ -161,12 +155,11 @@ final class IntelligenceEngine: ObservableObject {
                                age: Double(profile.age), sex: profile.sex,
                                stepTicksPerStep: profile.stepTicksPerStep)
         return RecomputeRequest(
-            deviceId: deviceId, now: Int(clock().timeIntervalSince1970), timeZone: timeZone(), maxDays: maxDays,
+            deviceId: deviceId, now: Int(Date().timeIntervalSince1970), timeZone: .current, maxDays: maxDays,
             profile: RecomputeProfile(user: user, waistCm: profile.waistCm, hrMaxOverride: profile.hrMaxOverride,
                                       hrMax: profile.hrMax, stepsManualOverride: profile.stepsManualOverride),
-            hrvBaselineEpoch: Baselines.hrvBaselineEpoch(defaults),
-            recoveryBaselineEpoch: Baselines.recoveryBaselineEpoch(defaults),
-            useSleepStagerV2: defaults.bool(forKey: PuffinExperiment.experimentalSleepV2Key))
+            hrvBaselineEpoch: Baselines.hrvBaselineEpoch(), recoveryBaselineEpoch: Baselines.recoveryBaselineEpoch(),
+            useSleepStagerV2: PuffinExperiment.experimentalSleepV2Enabled)
     }
 }
 

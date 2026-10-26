@@ -1,12 +1,12 @@
 import Foundation
+import StrandAnalytics
 import WhoopProtocol
 import WhoopStore
 
 /// Deterministic 21-day dataset for the recompute golden test: a fixed "now", a fixed non-UTC time zone
 /// and LCG-generated raw strap streams (sleep, daytime wear, workouts, skin temp, steps) plus the
 /// imported rows that feed baselines, provenance, steps calibration, workout de-duplication and the
-/// manual-workout rescore. Uses only WhoopStore/WhoopProtocol APIs so the pipeline can be pinned from
-/// any layer.
+/// manual-workout rescore.
 enum RecomputeGoldenFixture {
     static let deviceId = "my-whoop"
     static let computedId = "my-whoop-noop"
@@ -17,6 +17,12 @@ enum RecomputeGoldenFixture {
     static let timeZone = TimeZone(identifier: "Europe/Berlin")!
     /// Berlin local midnight of 2024-03-20 (UTC+1).
     static let todayMidnight = 1_710_889_200
+    /// A 34-year-old male, 180 cm / 78 kg / 84 cm waist, no HR-max or steps override, no recalibration.
+    static let request = RecomputeRequest(
+        deviceId: deviceId, now: now, timeZone: timeZone, maxDays: maxDays,
+        profile: RecomputeProfile(user: UserProfile(weightKg: 78, heightCm: 180, age: 34, sex: "male"),
+                                  waistCm: 84, hrMaxOverride: 0, hrMax: 184, stepsManualOverride: nil),
+        hrvBaselineEpoch: 0, recoveryBaselineEpoch: 0, useSleepStagerV2: false)
 
     struct LCG {
         var s: UInt64
