@@ -450,11 +450,6 @@ React when the strap comes off or goes on:
   rate is calm — a cue to take a paced breath. Conservative, rate-limited to **once every
   15 minutes**, off by default.
 
-### Smart alarm
-Wake to a wrist buzz. This arms the strap's **own firmware alarm**, so it still fires even if the
-Mac is asleep or NOOP is closed. Set your wake time — the strap buzzes at exactly that time.
-NOOP does not currently do light-sleep early wake.
-
 Mac side-effects are sandbox-friendly: screen lock uses macOS's own lock entry point, and
 Shortcuts run via the `shortcuts://` URL scheme — anything you can build in Shortcuts is reachable.
 

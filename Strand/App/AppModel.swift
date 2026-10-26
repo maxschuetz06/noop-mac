@@ -41,7 +41,7 @@ final class AppModel: ObservableObject {
     let repo: Repository
     /// User profile (age/sex/body/HR-max) for zones, calories, baselines.
     let profile = ProfileStore()
-    /// Behaviour settings: double-tap action, wear automation, zone coaching, smart alarm, illness watch.
+    /// Behaviour settings: double-tap action, wear automation, zone coaching, illness watch.
     let behavior = BehaviorStore()
     /// On-device WHOOP-style recovery/strain/sleep computation from raw strap streams.
     let intelligence: IntelligenceEngine
@@ -171,38 +171,6 @@ final class AppModel: ObservableObject {
     @Published var bpm: Int?
     private var hrWindow: [(t: Date, v: Double)] = []
     private var hrCancellables = Set<AnyCancellable>()
-    /// Daily re-arm timer for the single-instant firmware smart alarm (see scheduleDailySmartAlarmRearm).
-    private var smartAlarmRearmTimer: Timer?
-
-    // MARK: Mac-driven wake alarm fallback (see WakeAlarmPolicy)
-    /// One-shot timer for the next alarm instant; rescheduled by `applySmartAlarm()`, on wake from sleep
-    /// and on clock/zone changes.
-    private var wakeAlarmTimer: Timer?
-    /// The instant `wakeAlarmTimer` is armed for (nil when no timer is pending).
-    private var wakeAlarmScheduledFor: Date?
-    /// The running haptic wake pattern, if any.
-    private var wakeAlarmTask: Task<Void, Never>?
-    /// Last time the strap's firmware reported its alarm as executed.
-    private var lastFirmwareAlarmFiredAt: Date?
-    private var wakeAlarmIsTest = false
-    /// The scheduled alarm instant T of the running real (non-test) pattern; nil for a test / when idle.
-    private var wakeAlarmRingingFor: Date?
-    /// The last alarm instant the fallback timer already handled (fired, skipped or judged too late), so a
-    /// re-schedule shortly after T never fires it twice.
-    private var wakeAlarmLastHandledFor: Date?
-    private var wakeAlarmObservers: [NSObjectProtocol] = []
-    /// True while the Mac's haptic wake pattern is playing (UI shows "Stop").
-    @Published private(set) var wakeAlarmRinging = false
-    /// Number of buzzes sent so far in the current run (3 per round).
-    @Published private(set) var wakeAlarmBuzzCount = 0
-    /// Round (1-based) the current run is playing; 0 when idle.
-    @Published private(set) var wakeAlarmRound = 0
-    /// Rounds the current run will play (1 for a test, `WakeAlarmPolicy.maxRounds` for a real alarm).
-    @Published private(set) var wakeAlarmTotalRounds = WakeAlarmPolicy.maxRounds
-    /// The next instant the Mac fallback will fire; nil when the alarm is off.
-    @Published private(set) var wakeAlarmNextFire: Date?
-    /// Outcome of the most recent alarm/test run, for the Smart Alarm screen.
-    @Published private(set) var wakeAlarmLastResult: WakeAlarmPolicy.Record?
 
     init() {
         let live = LiveState()
@@ -219,40 +187,9 @@ final class AppModel: ObservableObject {
         live.$heartRate.sink { [weak self] _ in self?.ingestHR() }.store(in: &hrCancellables)
         live.$rr.sink { [weak self] _ in self?.ingestHR() }.store(in: &hrCancellables)
 
-        // The wake alarm is removed on macOS: drop a stale persisted "enabled" so nothing arms or rings.
-        if WakeAlarmPolicy.removedOnThisPlatform, behavior.smartAlarmEnabled {
-            behavior.smartAlarmEnabled = false
-        }
-
         // Physical-input + wear hooks (fired live by FrameRouter).
         live.onDoubleTap = { [weak self] in self?.handleDoubleTap() }
         live.onWristChange = { [weak self] worn in self?.handleWristChange(worn) }
-        // Re-arm the next day's firmware alarm the moment the strap reports it fired (if/when the
-        // firmware pushes STRAP_DRIVEN_ALARM_EXECUTED). Gated on enabled inside applySmartAlarm.
-        live.onSmartAlarmFired = { [weak self] in
-            guard let self, WakeAlarmPolicy.effectiveEnabled(stored: self.behavior.smartAlarmEnabled) else { return }
-            // Remember the firmware fire so the Mac fallback (same instant) stays quiet.
-            let now = Date()
-            self.lastFirmwareAlarmFiredAt = now
-            switch WakeAlarmPolicy.firmwareEventAction(macPatternRinging: self.wakeAlarmRinging,
-                                                       isTest: self.wakeAlarmIsTest,
-                                                       ringingInstant: self.wakeAlarmRingingFor,
-                                                       now: now) {
-            case .nothingRinging:
-                self.wakeAlarmLastResult = WakeAlarmPolicy.Record(date: now, outcome: .firmwareHandled, isTest: false)
-            case .stopMacPattern:
-                // The strap woke the user already — don't wake them a second time from the Mac.
-                self.live.append(log: "Wake alarm: firmware alarm fired while Mac fallback was buzzing — stopping the Mac")
-                self.stopWakeAlarm(by: .firmware)
-            case .keepRinging:
-                break
-            }
-            self.live.append(log: "Wake alarm: strap reported its firmware alarm as executed")
-            // PR #577 (iOS): mirror the strap's wake buzz to a local notification so a phone-in-pocket
-            // user still gets woken; no-op on macOS / when wrist alerts are off.
-            AppModel.postSmartAlarm()
-            self.applySmartAlarm()
-        }
         // Strap battery alerts (#368): low-battery warning + full-charge note. The notifier self-gates
         // on the user's setting and the OS authorization, and carries its own persisted once-per-
         // crossing state, so feeding it every battery reading is safe.
@@ -266,28 +203,12 @@ final class AppModel: ObservableObject {
         $bpm.sink { [weak self] hr in self?.coachZone(hr) }.store(in: &hrCancellables)
         // Illness/strain early-warning recomputes when the daily history changes.
         repo.$days.sink { [weak self] days in self?.evaluateIllness(days) }.store(in: &hrCancellables)
-        // Re-arm the strap's firmware alarm whenever it (re)bonds. A smart-alarm time changed while the
-        // strap was away never reached it — the send is gated on bond — so the strap kept the OLD time
-        // and fired at it (#59). removeDuplicates() fires once per bond; gated on enabled so a disabled
-        // alarm doesn't disarm on every reconnect.
+        // The macOS app arms no strap alarm, but an earlier build may have left one on the strap. Clear
+        // it on every (re)bond so that alarm can never fire.
         live.$bonded.removeDuplicates().sink { [weak self] bonded in
             guard let self, bonded else { return }
-            // Where the alarm is removed (macOS), still clear any alarm a previous build armed on the strap.
-            guard WakeAlarmPolicy.effectiveEnabled(stored: self.behavior.smartAlarmEnabled)
-                    || WakeAlarmPolicy.removedOnThisPlatform else { return }
-            self.applySmartAlarm()
+            self.ble.disableStrapAlarm()
         }.store(in: &hrCancellables)
-        // The firmware alarm is a single absolute instant with no recurrence, and was re-armed ONLY on
-        // a (re)bond or a settings change. A strap that stays continuously bonded (a Mac in range) would
-        // fire once and never re-arm — silent from day two. Re-arm daily so an always-on session keeps
-        // waking the user.
-        scheduleDailySmartAlarmRearm()
-        // Mac-driven fallback for the same instant (macOS stays running overnight). Also schedules at
-        // launch, before any bond, so a Mac that boots into the alarm window still has its timer.
-        scheduleWakeAlarmFallback()
-        #if os(macOS)
-        installWakeAlarmObservers()
-        #endif
         // Re-apply "Continuous HRV capture" on every (re)bond: if on, the strap should hold the dense
         // realtime stream armed even with no Live screen open, so it banks beat-to-beat R-R 24/7 for
         // better overnight HRV/recovery/sleep. The BLE reconciler arms it on the off→on edge; pushing it
@@ -799,11 +720,11 @@ final class AppModel: ObservableObject {
     // MARK: - Wrist-buzz mirror notifications (PR #577 — iOS only)
     //
     // iOS can't keep the strap buzz silent in a pocket the way macOS surfaces it on screen, so a wrist
-    // buzz the user might miss (a long sedentary stretch, the smart-alarm wake) is ALSO posted as a
+    // buzz the user might miss (a long sedentary stretch) is ALSO posted as a
     // local notification. macOS keeps routing to its dedicated Notifications screen and never calls
-    // these — `#if os(iOS)` makes them no-ops there so that path is untouched. Both are gated on the
+    // these — `#if os(iOS)` makes them no-ops there so that path is untouched. The post is gated on the
     // same `notif.masterEnabled` master switch the iOS Automations "Wrist alerts" toggle (PR #572) and
-    // the SedentaryDetector read, so turning wrist alerts off silences these too.
+    // the SedentaryDetector read, so turning wrist alerts off silences it too.
 
     /// The master wrist-alerts gate (PR #572). One key, shared with the iOS Automations toggle and the
     /// SedentaryDetector, so all three honour the same switch.
@@ -818,15 +739,6 @@ final class AppModel: ObservableObject {
             ? "You've been seated for about \(minutes) min. Time to move."
             : "Time to move — you've been seated a while."
         postWristAlert(identifier: "inactivity-nudge", title: "Move reminder", body: body)
-        #endif
-    }
-
-    /// Post the local notification mirroring the smart-alarm wake buzz. Called from the
-    /// `onSmartAlarmFired` hook. No-op on macOS and when wrist alerts are off.
-    static func postSmartAlarm() {
-        #if os(iOS)
-        postWristAlert(identifier: "smart-alarm-wake", title: "Smart alarm",
-                       body: "Good morning — your smart alarm just woke you.")
         #endif
     }
 
@@ -848,272 +760,12 @@ final class AppModel: ObservableObject {
     }
     #endif
 
-    /// Arm (or clear) the strap's firmware alarm from the smart-alarm settings. The firmware alarm
-    /// fires even if the Mac is asleep / NOOP is closed. No-op until bonded (send is gated on bond).
-    func applySmartAlarm() {
-        // Keep the Mac-driven fallback in lockstep with the firmware arm (same instant, same enabled gate).
-        scheduleWakeAlarmFallback()
-        guard WakeAlarmPolicy.effectiveEnabled(stored: behavior.smartAlarmEnabled) else { ble.disableStrapAlarm(); return }
-        guard let next = Self.nextSmartAlarmDate(minutes: behavior.smartAlarmMinutes,
-                                                 weekdays: behavior.smartAlarmWeekdays) else {
-            // No enabled weekday in the next week (only possible from a corrupted set) — disarm rather
-            // than arm a misleading time the user never asked for.
-            ble.disableStrapAlarm(); return
-        }
-        ble.armStrapAlarm(at: next)
-    }
-
-    /// Compute the next fire date for the smart alarm, honouring the weekday selection.
-    /// - `minutes`: target wake time, minutes since local midnight.
-    /// - `weekdays`: Calendar weekday numbers (1 = Sun … 7 = Sat) the alarm may fire on. Empty = every
-    ///   day. Days outside 1…7 are ignored.
-    /// Returns the next strictly-future date matching the time on an enabled weekday, scanning today
-    /// plus the next 7 days, or nil if no enabled weekday falls in that range. Pure + side-effect-free
-    /// so it can be unit-tested against a fixed clock.
-    nonisolated static func nextSmartAlarmDate(minutes: Int,
-                                               weekdays: Set<Int>,
-                                               from now: Date = Date(),
-                                               calendar cal: Calendar = .current) -> Date? {
-        let valid = weekdays.filter { (1...7).contains($0) }
-        // An empty input means "every day" (backward compatible). A non-empty selection that filters to
-        // nothing (only out-of-range numbers) has no valid day to fire on, so it's nil, not a daily alarm.
-        if !weekdays.isEmpty && valid.isEmpty { return nil }
-        let hour = minutes / 60
-        let minute = minutes % 60
-        // Scan today (offset 0) through +7 days so a once-a-week alarm picked for "today, already
-        // passed" still resolves to the same weekday next week.
-        for offset in 0...7 {
-            guard let day = cal.date(byAdding: .day, value: offset, to: now),
-                  let fire = cal.date(bySettingHour: hour, minute: minute, second: 0, of: day)
-            else { continue }
-            if fire <= now { continue }
-            if weekdays.isEmpty { return fire }
-            if valid.contains(cal.component(.weekday, from: fire)) { return fire }
-        }
-        return nil
-    }
-
-    /// Re-arms the single-instant firmware alarm once per day (just after local midnight) so a
-    /// continuously-bonded strap keeps waking the user past the first fire. macOS stays running so this
-    /// fires reliably; iOS additionally re-arms on foreground (it can't run timers while suspended).
-    /// `applySmartAlarm` self-gates on `smartAlarmEnabled`, so this is a no-op when the alarm is off.
-    private func scheduleDailySmartAlarmRearm() {
-        smartAlarmRearmTimer?.invalidate()
-        let cal = Calendar.current
-        guard let firstFire = cal.nextDate(after: Date(),
-                                           matching: DateComponents(hour: 0, minute: 1, second: 0),
-                                           matchingPolicy: .nextTime) else { return }
-        let timer = Timer(fire: firstFire, interval: 24 * 60 * 60, repeats: true) { [weak self] _ in
-            // Timer fires on the main run loop; hop to the main actor for the @MainActor model.
-            // applySmartAlarm self-gates on smartAlarmEnabled (and re-asserts the disarmed state if off).
-            Task { @MainActor in self?.applySmartAlarm() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        smartAlarmRearmTimer = timer
-    }
-
-    // MARK: - Mac-driven wake alarm fallback
-
-    #if os(macOS)
-    /// Re-evaluate the fallback timer after sleep and after clock/time-zone changes (a `Timer` armed for a
-    /// wall-clock instant does not track either).
-    private func installWakeAlarmObservers() {
-        let ws = NSWorkspace.shared.notificationCenter
-        wakeAlarmObservers.append(ws.addObserver(forName: NSWorkspace.didWakeNotification,
-                                                 object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.handleSystemDidWake() }
-        })
-        let nc = NotificationCenter.default
-        for name in [Notification.Name.NSSystemClockDidChange, .NSSystemTimeZoneDidChange] {
-            wakeAlarmObservers.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.scheduleWakeAlarmFallback() }
-            })
-        }
-    }
-    #endif
-
-    /// After sleep: an alarm instant that passed while asleep is handled right away (the lateness limit in
-    /// `WakeAlarmPolicy` decides whether it still rings); otherwise the timer is simply re-armed.
-    private func handleSystemDidWake() {
-        if let due = wakeAlarmScheduledFor, due <= Date() {
-            wakeAlarmTimerFired(scheduledFor: due)
-        } else {
-            scheduleWakeAlarmFallback()
-        }
-    }
-
-    /// (Re)arm the one-shot fallback timer for the next alarm instant, or cancel it when the alarm is off.
-    func scheduleWakeAlarmFallback() {
-        wakeAlarmTimer?.invalidate()
-        wakeAlarmTimer = nil
-        let decision = WakeAlarmPolicy.scheduleDecision(pendingInstant: wakeAlarmScheduledFor,
-                                                        handledInstant: wakeAlarmLastHandledFor,
-                                                        enabled: WakeAlarmPolicy.effectiveEnabled(stored: behavior.smartAlarmEnabled),
-                                                        minutes: behavior.smartAlarmMinutes,
-                                                        weekdays: behavior.smartAlarmWeekdays,
-                                                        now: Date())
-        let next: Date
-        switch decision {
-        case .none:
-            wakeAlarmScheduledFor = nil
-            wakeAlarmNextFire = nil
-            // Turning the alarm off silences a real run (a manual test is left alone).
-            if wakeAlarmRinging && !wakeAlarmIsTest { stopWakeAlarm(by: .app) }
-            return
-        case .fireNow(let pending):
-            // A re-schedule (e.g. strap re-bond) landed between T and the timer's fire: keep today's
-            // alarm instead of skipping to tomorrow.
-            live.append(log: "Wake alarm: instant just passed and still pending — firing now instead of skipping")
-            wakeAlarmTimerFired(scheduledFor: pending)
-            return
-        case .arm(let date):
-            next = date
-        }
-        wakeAlarmScheduledFor = next
-        wakeAlarmNextFire = next
-        let timer = Timer(fire: next, interval: 0, repeats: false) { [weak self] _ in
-            Task { @MainActor in self?.wakeAlarmTimerFired(scheduledFor: next) }
-        }
-        timer.tolerance = WakeAlarmPolicy.timerTolerance
-        RunLoop.main.add(timer, forMode: .common)
-        wakeAlarmTimer = timer
-    }
-
-    private func wakeAlarmTimerFired(scheduledFor: Date) {
-        // Dedupe: the timer and the wake-from-sleep path can both reach here for the same instant.
-        guard wakeAlarmScheduledFor == scheduledFor, wakeAlarmLastHandledFor != scheduledFor else { return }
-        wakeAlarmLastHandledFor = scheduledFor
-        let now = Date()
-        let decision = WakeAlarmPolicy.decideFallback(scheduledFor: scheduledFor, now: now,
-                                                      lastFirmwareFiredAt: lastFirmwareAlarmFiredAt)
-        // Re-arm for the next occurrence first, so nothing below can leave the alarm unscheduled.
-        scheduleWakeAlarmFallback()
-        switch decision {
-        case .firmwareAlreadyFired:
-            live.append(log: "Wake alarm: firmware alarm already fired — Mac fallback stays quiet")
-        case .tooLate:
-            live.append(log: "Wake alarm: Mac missed the alarm time (asleep) — not buzzing late")
-            wakeAlarmLastResult = WakeAlarmPolicy.Record(date: now, outcome: .missedWhileAsleep, isTest: false)
-        case .fire:
-            live.append(log: "Wake alarm: firmware alarm not observed — Mac fallback buzzing")
-            startWakePattern(isTest: false, scheduledFor: scheduledFor)
-        }
-    }
-
-    /// Run the haptic wake pattern: rounds of `burstBuzzCount` buzzes `burstSpacing` apart, a round every
-    /// `roundInterval`, up to `WakeAlarmPolicy.rounds(isTest:)` rounds, until it completes, the strap is
-    /// double-tapped, or `stopWakeAlarm` is called. `isTest` marks the manual "Test" run (ONE round, no
-    /// notification, not touched by disabling the alarm). `scheduledFor` is the alarm instant T of a real run.
-    func startWakePattern(isTest: Bool, scheduledFor: Date? = nil) {
-        guard !WakeAlarmPolicy.removedOnThisPlatform else {
-            live.append(log: "Wake alarm: removed on this platform — not buzzing")
-            return
-        }
-        guard !wakeAlarmRinging else { return }
-        guard live.bonded else {
-            wakeAlarmLastResult = WakeAlarmPolicy.Record(date: Date(), outcome: .strapNotConnected, isTest: isTest)
-            live.append(log: "Wake alarm: strap not connected — cannot buzz")
-            if !isTest { Self.postWakeAlarmNotification(connected: false) }
-            return
-        }
-        let totalRounds = WakeAlarmPolicy.rounds(isTest: isTest)
-        wakeAlarmRinging = true
-        wakeAlarmIsTest = isTest
-        wakeAlarmRingingFor = isTest ? nil : scheduledFor
-        wakeAlarmBuzzCount = 0
-        wakeAlarmRound = 0
-        wakeAlarmTotalRounds = totalRounds
-        if !isTest { Self.postWakeAlarmNotification(connected: true) }
-        wakeAlarmTask = Task { [weak self] in
-            var rounds = 0
-            while !Task.isCancelled {
-                guard let self else { return }
-                rounds += 1
-                self.wakeAlarmRound = rounds
-                // One burst. Every buzz re-checks cancellation, so Stop / double-tap cuts the remaining
-                // buzzes of the burst (a WHOOP 5.0 `buzz()` is a single short pulse; loops are ignored).
-                for i in 0..<WakeAlarmPolicy.burstBuzzCount {
-                    guard !Task.isCancelled else { return }
-                    if self.live.bonded {
-                        self.buzz(loops: 1)
-                        self.wakeAlarmBuzzCount += 1
-                    } else {
-                        self.live.append(log: "Wake alarm: strap not connected — buzz skipped")
-                    }
-                    guard let gap = WakeAlarmPolicy.delayAfterBuzz(inBurstIndex: i) else { break }
-                    try? await Task.sleep(nanoseconds: UInt64(gap * 1_000_000_000))
-                }
-                guard !Task.isCancelled else { return }
-                guard let delay = WakeAlarmPolicy.delayAfterRound(roundsSent: rounds, totalRounds: totalRounds) else { break }
-                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            }
-            guard !Task.isCancelled, let self else { return }
-            let sent = self.wakeAlarmBuzzCount
-            self.finishWakeAlarm(sent == 0 ? .strapNotConnected : .completed(buzzes: sent))
-        }
-    }
-
-    enum WakeAlarmStopSource { case app, doubleTap, firmware }
-
-    /// Stop a running wake pattern (in-app "Stop", a strap double-tap, or the firmware alarm taking over).
-    func stopWakeAlarm(by source: WakeAlarmStopSource) {
-        guard wakeAlarmRinging else { return }
-        wakeAlarmTask?.cancel()
-        wakeAlarmTask = nil
-        let sent = wakeAlarmBuzzCount
-        switch source {
-        case .doubleTap: finishWakeAlarm(.stoppedByDoubleTap(buzzes: sent))
-        case .app: finishWakeAlarm(.stoppedInApp(buzzes: sent))
-        case .firmware: finishWakeAlarm(.firmwareHandled)
-        }
-    }
-
-    /// Cancel the Mac-driven wake pattern if one is running (used by the manual "Stop buzz").
-    func wakeAlarmStopIfRinging() {
-        if wakeAlarmRinging { stopWakeAlarm(by: .app) }
-    }
-
-    private func finishWakeAlarm(_ outcome: WakeAlarmPolicy.Outcome) {
-        wakeAlarmTask = nil
-        wakeAlarmRinging = false
-        wakeAlarmRingingFor = nil
-        wakeAlarmRound = 0
-        wakeAlarmLastResult = WakeAlarmPolicy.Record(date: Date(), outcome: outcome, isTest: wakeAlarmIsTest)
-        live.append(log: "Wake alarm: pattern finished — \(outcome)")
-    }
-
-    /// Local notification for a real (non-test) Mac-driven alarm. Status-only authorization check — the
-    /// system prompt is raised once when the user enables the alarm, never here. UserNotifications is
-    /// already used on macOS by the battery/illness/wind-down notifiers.
-    private static func postWakeAlarmNotification(connected: Bool) {
-        let title = String(localized: "Wake alarm")
-        let body = connected
-            ? String(localized: "Good morning — double-tap your strap to stop the buzz.")
-            : String(localized: "Strap not connected — it can't wake you. Check Bluetooth.")
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized else { return }
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = body
-            content.sound = .default
-            UNUserNotificationCenter.current()
-                .add(UNNotificationRequest(identifier: "wake-alarm-mac", content: content, trigger: nil))
-        }
-    }
-
     // MARK: - Physical inputs / wear automation
 
     private func handleDoubleTap() {
         let now = Date()
         guard now.timeIntervalSince(lastDoubleTapAt) > 1.2 else { return }   // debounce repeats
         lastDoubleTapAt = now
-        // A ringing wake alarm owns the gesture: stop it and do NOT run the configured double-tap
-        // action (it could lock the Mac or run a Shortcut at 6:30 a.m.).
-        if wakeAlarmRinging {
-            live.append(log: "Double-tap → stop wake alarm")
-            stopWakeAlarm(by: .doubleTap)
-            return
-        }
         live.append(log: "Double-tap → \(behavior.doubleTapAction.label)")
         runMacAction(behavior.doubleTapAction, shortcut: behavior.doubleTapShortcut)
     }

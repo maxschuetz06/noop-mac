@@ -36,14 +36,6 @@ final class BehaviorStore: ObservableObject {
     @Published var stressQuietHours: Bool { didSet { d.set(stressQuietHours, forKey: K.stressQuietHours) } }
     @Published var stressUseResonancePace: Bool { didSet { d.set(stressUseResonancePace, forKey: K.stressUseResonance) } }
 
-    // MARK: Smart alarm
-    @Published var smartAlarmEnabled: Bool { didSet { d.set(smartAlarmEnabled, forKey: K.alarmOn) } }
-    /// Target wake time, minutes since local midnight.
-    @Published var smartAlarmMinutes: Int { didSet { d.set(smartAlarmMinutes, forKey: K.alarmTime) } }
-    /// Weekdays the alarm fires on (Calendar weekday numbers: 1 = Sun … 7 = Sat). An empty set means
-    /// "every day" — the backward-compatible default for anyone upgrading from before per-day scheduling.
-    @Published var smartAlarmWeekdays: Set<Int> { didSet { d.set(Array(smartAlarmWeekdays).sorted(), forKey: K.alarmWeekdays) } }
-
     // MARK: Illness early-warning
     @Published var illnessWatch: Bool { didSet { d.set(illnessWatch, forKey: K.illness) } }
 
@@ -65,12 +57,6 @@ final class BehaviorStore: ObservableObject {
         static let stressAutoNudge = "biofeedback.stressAutoNudge"
         static let stressQuietHours = "biofeedback.stressQuietHours"
         static let stressUseResonance = "biofeedback.stressUseResonancePace"
-        static let alarmOn = "behavior.smartAlarmEnabled"
-        static let alarmTime = "behavior.smartAlarmMinutes"
-        static let alarmWeekdays = "behavior.smartAlarmWeekdays"
-        // "behavior.smartAlarmWindow" retired: it was stored but never read (no wake-window
-        // watcher ever shipped). The defaults key is left orphaned on purpose — harmless, and
-        // preserved should a real light-sleep watcher ever land.
         static let illness = "behavior.illnessWatch"
         static let batteryAlerts = "behavior.batteryAlerts"
     }
@@ -87,11 +73,6 @@ final class BehaviorStore: ObservableObject {
         stressAutoNudge = d.object(forKey: K.stressAutoNudge) as? Bool ?? false
         stressQuietHours = d.object(forKey: K.stressQuietHours) as? Bool ?? true
         stressUseResonancePace = d.object(forKey: K.stressUseResonance) as? Bool ?? true
-        smartAlarmEnabled = d.object(forKey: K.alarmOn) as? Bool ?? false
-        smartAlarmMinutes = d.object(forKey: K.alarmTime) as? Int ?? 7 * 60       // 07:00
-        // Stored as a plain [Int]; only valid weekday numbers (1…7) are kept so a corrupted defaults
-        // entry can never schedule against a bogus day. Empty (or all 7) = every day.
-        smartAlarmWeekdays = Set((d.array(forKey: K.alarmWeekdays) as? [Int] ?? []).filter { (1...7).contains($0) })
         illnessWatch = d.object(forKey: K.illness) as? Bool ?? false
         batteryAlerts = d.object(forKey: K.batteryAlerts) as? Bool ?? true
     }

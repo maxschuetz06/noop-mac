@@ -365,7 +365,7 @@ Screens bind to `Repository`'s published `days`/`sleeps` caches (refreshed on da
 ~1 Hz stream) and render with `StrandDesign` components — `RecoveryRing`, `StrainGauge`, `Hypnogram`,
 `TrendChart`, `Sparkline`, `YearHeatStrip` — over the `StrandPalette` tokens. `AppModel` also hosts
 the opt-in, on-device behaviours (HR smoothing, illness/strain early-warning, stress nudges, HR-zone
-haptic coaching, double-tap actions, wrist-wear automation, smart alarm) — all default-off and all
+haptic coaching, double-tap actions, wrist-wear automation) — all default-off and all
 computed locally.
 
 ---

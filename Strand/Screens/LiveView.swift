@@ -939,7 +939,6 @@ struct LiveView: View {
     private var stopBuzzButton: some View {
         NoopButton("Stop buzz", systemImage: "stop.circle",
                    kind: .secondary, fullWidth: true) {
-            model.wakeAlarmStopIfRinging()
             model.ble.stopStrapHaptics()
         }
         .disabled(!activeConnection)

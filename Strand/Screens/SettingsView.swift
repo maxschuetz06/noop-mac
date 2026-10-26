@@ -1200,8 +1200,7 @@ struct SettingsView: View {
         #endif
     }
 
-    /// Bridges the minutes-since-midnight store to the DatePicker, persisting + rescheduling on change
-    /// (mirrors SmartAlarmView's wakeBinding).
+    /// Bridges the minutes-since-midnight store to the DatePicker, persisting + rescheduling on change.
     private var debugExportTimeBinding: Binding<Date> {
         Binding(
             get: {

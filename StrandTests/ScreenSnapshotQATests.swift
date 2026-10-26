@@ -204,7 +204,6 @@ extension PerfEnvironment {
         if AppModel.shared != nil {
             list.append(PerfScreen(name: "Workouts") { wrap(WorkoutsView()) })
             list.append(PerfScreen(name: "Health") { wrap(HealthView()) })
-            list.append(PerfScreen(name: "SmartAlarm") { wrap(SmartAlarmView()) })
             list.append(PerfScreen(name: "DataSources") { wrap(DataSourcesView()) })
             list.append(PerfScreen(name: "Settings") { wrap(SettingsView()) })
             list.append(PerfScreen(name: "Live") { wrap(LiveView()) })
