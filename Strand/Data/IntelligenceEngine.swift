@@ -87,8 +87,16 @@ final class IntelligenceEngine: ObservableObject {
     /// successes blind spot and the data needed to settle "Rest repeats across days". (Sleep overhaul §2.5.)
     var diagnosticSink: ((String) -> Void)?
 
-    init(repo: Repository, profile: ProfileStore, deviceId: String) {
+    private let clock: () -> Date
+    private let timeZone: () -> TimeZone
+    private let defaults: UserDefaults
+
+    init(repo: Repository, profile: ProfileStore, deviceId: String,
+         clock: @escaping () -> Date = Date.init,
+         timeZone: @escaping () -> TimeZone = { TimeZone.current },
+         defaults: UserDefaults = .standard) {
         self.repo = repo; self.profile = profile; self.deviceId = deviceId
+        self.clock = clock; self.timeZone = timeZone; self.defaults = defaults
     }
 
     /// Median of a list (0 when empty) — used to denoise the 7-day resting-HR for Fitness Age.
@@ -115,8 +123,8 @@ final class IntelligenceEngine: ObservableObject {
     }
 
     /// The Saturday on-or-before a "yyyy-MM-dd" local-day string — the weekly key Fitness Age writes to.
-    static func saturdayKey(onOrBefore dayStr: String) -> String {
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
+    static func saturdayKey(onOrBefore dayStr: String, timeZone: TimeZone = .current) -> String {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = timeZone
         let fmt = DateFormatter(); fmt.calendar = cal; fmt.timeZone = cal.timeZone
         fmt.locale = Locale(identifier: "en_US_POSIX"); fmt.dateFormat = "yyyy-MM-dd"
         guard let d = fmt.date(from: dayStr) else { return dayStr }
@@ -225,12 +233,13 @@ final class IntelligenceEngine: ObservableObject {
                              stepTicksPerStep: profile.stepTicksPerStep)
 
         let maxHR = profile.hrMaxOverride > 0 ? Double(profile.hrMaxOverride) : nil
-        let now = Int(Date().timeIntervalSince1970)
+        let now = Int(clock().timeIntervalSince1970)
         // Device wall-clock offset (seconds east of UTC) for the sleep detector's daytime
         // false-sleep guard (#90): the stager places each window's center on the LOCAL clock
         // so only genuinely-daytime windows face the stricter nap bar. (Computed once; a DST
         // boundary inside the window is a negligible edge case for an hour-of-day band.)
-        let tzOffset = TimeZone.current.secondsFromGMT()
+        let tz = timeZone()
+        let tzOffset = tz.secondsFromGMT(for: Date(timeIntervalSince1970: TimeInterval(now)))
 
         // ── Pass 1: analyse each offloaded night against the IMPORTED-ONLY baseline. For a BLE-only
         // user the imported daily rows are empty, so the HRV baseline isn't usable yet and recovery is
@@ -250,9 +259,10 @@ final class IntelligenceEngine: ObservableObject {
         // per-value "yyyy-MM-dd" day keys (parallel to the values) so foldHistory can drop every night
         // before the epoch. A 0 / absent epoch makes this byte-identical to the plain fold, so scoring is
         // unchanged until the user taps Recalibrate.
-        let hrvBase1 = Baselines.foldHistory(hist.map { $0.avgHrv }, dayKeys: hist.map { $0.day }, cfg: hrvCfg)
+        let hrvBase1 = Baselines.foldHistory(hist.map { $0.avgHrv }, dayKeys: hist.map { $0.day }, cfg: hrvCfg,
+                                             baselineEpoch: Baselines.hrvBaselineEpoch(defaults))
         let rhrBase1 = Baselines.foldHistory(hist.map { $0.restingHr.map(Double.init) }, dayKeys: hist.map { $0.day },
-                                             cfg: rhrCfg, baselineEpoch: Baselines.recoveryBaselineEpoch())
+                                             cfg: rhrCfg, baselineEpoch: Baselines.recoveryBaselineEpoch(defaults))
         let baselines1 = AnalyticsEngine.ProfileBaselines(hrv: hrvBase1, restingHR: rhrBase1)
 
         // Keep each night's small result (daily metrics + sessions), NOT the raw streams — every field
@@ -368,7 +378,7 @@ final class IntelligenceEngine: ObservableObject {
             // #690: read the experimental-V2 toggle ONCE here (off the detached executor, matching the
             // Repository self-heal call site) and capture the Bool, so the Settings toggle now drives the
             // NORMAL detected-night staging path — not only the userEdited self-heal restage.
-            let useSleepStagerV2 = PuffinExperiment.experimentalSleepV2Enabled
+            let useSleepStagerV2 = defaults.bool(forKey: PuffinExperiment.experimentalSleepV2Key)
 
             let res = await Task.detached(priority: .utility) {
                 AnalyticsEngine.analyzeDay(day: day, hr: hr, rr: rr, resp: resp, gravity: grav,
@@ -430,7 +440,7 @@ final class IntelligenceEngine: ObservableObject {
         // rhr/resp/skin honour the Charge-wide recalibration epoch (noop.recoveryBaselineEpoch); 0 = no-op,
         // so this is byte-identical to the plain fold until the user taps Recalibrate, at which point the
         // whole Charge build-up (HRV + resting HR + resp + skin) re-anchors together.
-        let recoveryEpoch = Baselines.recoveryBaselineEpoch()
+        let recoveryEpoch = Baselines.recoveryBaselineEpoch(defaults)
         let hrvDayKeys = histHrvByDay.keys.sorted()                         // chronological "yyyy-MM-dd"
         let hrvSeq = hrvDayKeys.map { histHrvByDay[$0]! }                   // chronological [Double?]
         let rhrDayKeys = histRhrByDay.keys.sorted()
@@ -452,7 +462,8 @@ final class IntelligenceEngine: ObservableObject {
         let baselines2 = AnalyticsEngine.ProfileBaselines(
             // HRV honours noop.hrvBaselineEpoch; rhr/resp/skin honour noop.recoveryBaselineEpoch via their
             // parallel day keys, so the manual Recalibrate restarts the whole Charge build-up together.
-            hrv: Baselines.foldHistory(hrvSeq, dayKeys: hrvDayKeys, cfg: hrvCfg),
+            hrv: Baselines.foldHistory(hrvSeq, dayKeys: hrvDayKeys, cfg: hrvCfg,
+                                     baselineEpoch: Baselines.hrvBaselineEpoch(defaults)),
             restingHR: Baselines.foldHistory(rhrSeq, dayKeys: rhrDayKeys, cfg: rhrCfg, baselineEpoch: recoveryEpoch),
             resp: respFold.usable ? respFold : nil,
             skinTemp: skinFold.usable ? skinFold : nil)
@@ -513,7 +524,7 @@ final class IntelligenceEngine: ObservableObject {
 
         for night in scoredNights {
             let daily = sleepEditedDaily(night.daily, detected: night.cachedSleep, editsByStart: editsByStart,
-                                         habitualMidsleepSec: habitualMidsleepSec)
+                                         habitualMidsleepSec: habitualMidsleepSec, tzOffset: tzOffset)
             let recovery = recomputeRecovery(daily, baselines2)
             let skinDev = recomputeSkinTempDev(night.nightlySkin, baselines2.skinTemp)
             let source = DaySource.classify(day: daily.day, importedWhoopDays: importedWhoopDays,
@@ -614,7 +625,7 @@ final class IntelligenceEngine: ObservableObject {
                 paIndex: FitnessAgeEngine.physicalActivityIndexFromStrain(
                     activeDaysPerWeek: faActiveStrains.count, meanActiveStrain: faMeanActiveStrain),
                 waistCm: faWaist) {
-            let satKey = IntelligenceEngine.saturdayKey(onOrBefore: newestDay)
+            let satKey = IntelligenceEngine.saturdayKey(onOrBefore: newestDay, timeZone: tz)
             var faPts = [MetricPoint(day: satKey, key: "fitness_age", value: faRes.fitnessAge)]
             if let v = faRes.vo2max { faPts.append(MetricPoint(day: satKey, key: "vo2max_est", value: v)) }
             _ = try? await store.upsertMetricSeries(faPts, deviceId: computedId)
@@ -637,7 +648,7 @@ final class IntelligenceEngine: ObservableObject {
             rmssdNorm: VitalityEngine.rmssdNorm(forAge: Double(profile.age)),
             steps: vSteps.isEmpty ? nil : vSteps.reduce(0, +) / Double(vSteps.count))
         if let vRes = VitalityEngine.compute(vInputs) {
-            let satKey = IntelligenceEngine.saturdayKey(onOrBefore: newestDay)
+            let satKey = IntelligenceEngine.saturdayKey(onOrBefore: newestDay, timeZone: tz)
             _ = try? await store.upsertMetricSeries([
                 MetricPoint(day: satKey, key: "vitality", value: vRes.vitality),
                 MetricPoint(day: satKey, key: "body_age", value: vRes.bodyAge),
@@ -815,7 +826,7 @@ final class IntelligenceEngine: ObservableObject {
     /// (negligible calories), and only when the recompute is a genuine improvement — so a well-scored
     /// 4.0 workout is never touched and a still-sparse window is a no-op.
     private func rescoreManualWorkouts(store: WhoopStore, profile up: UserProfile) async {
-        let now = Int(Date().timeIntervalSince1970)
+        let now = Int(clock().timeIntervalSince1970)
         let since = now - 14 * 86_400
         guard let rows = try? await store.workouts(deviceId: deviceId, from: since, to: now, limit: 200)
         else { return }
@@ -860,7 +871,7 @@ final class IntelligenceEngine: ObservableObject {
     /// touching the night → the detected daily is returned unchanged. (#318)
     private func sleepEditedDaily(_ daily: DailyMetric, detected: [CachedSleepSession],
                                  editsByStart: [Int: CachedSleepSession],
-                                 habitualMidsleepSec: Int?) -> DailyMetric {
+                                 habitualMidsleepSec: Int?, tzOffset: Int) -> DailyMetric {
         guard !editsByStart.isEmpty else { return daily }
         let detectedTuples = detected.map { (startTs: $0.startTs, stagesJSON: $0.stagesJSON) }
         let editedStages = editsByStart.mapValues { $0.stagesJSON }
@@ -891,7 +902,7 @@ final class IntelligenceEngine: ObservableObject {
                                                                    edited: editedStages,
                                                                    manual: manualTuples,
                                                                    onsetByStart: onsetByStart,
-                                                                   offsetSec: TimeZone.current.secondsFromGMT(),
+                                                                   offsetSec: tzOffset,
                                                                    habitualMidsleepSec: habitualMidsleepSec),
               r.editApplied else { return daily }
         let agg = r.sleep

@@ -50,7 +50,7 @@ final class ProfileStore: ObservableObject {
         }
     }
 
-    private let d = UserDefaults.standard
+    private let d: UserDefaults
     private enum K {
         static let age = "profile.age", sex = "profile.sex", weight = "profile.weightKg"
         static let height = "profile.heightCm", hrMax = "profile.hrMaxOverride"
@@ -64,7 +64,8 @@ final class ProfileStore: ObservableObject {
         static let avatar = "profile.avatarImageData"
     }
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        d = defaults
         age = d.object(forKey: K.age) as? Int ?? 30
         sex = d.string(forKey: K.sex) ?? "male"
         weightKg = d.object(forKey: K.weight) as? Double ?? 75
