@@ -14,65 +14,65 @@ struct SettingsView: View {
     @EnvironmentObject var profile: ProfileStore
 
     /// Profile-photo picker selection (PhotosUI). Cleared back to nil once the bytes are loaded.
-    @State private var avatarPickerItem: PhotosPickerItem?
+    @State var avatarPickerItem: PhotosPickerItem?
 
     /// Backup & restore UI state.
-    @State private var backupBusy = false
-    @State private var backupAlertTitle = ""
-    @State private var backupAlertMessage = ""
-    @State private var showBackupAlert = false
+    @State var backupBusy = false
+    @State var backupAlertTitle = ""
+    @State var backupAlertMessage = ""
+    @State var showBackupAlert = false
 
     /// Opt-in WHOOP 5/MG protocol experiments (off by default). See [PuffinExperiment].
-    @AppStorage(PuffinExperiment.defaultsKey) private var puffinExperiments = false
+    @AppStorage(PuffinExperiment.defaultsKey) var puffinExperiments = false
 
     /// Opt-in WHOOP 5/MG raw-frame capture to a file (off by default). See [PuffinFrameRecorder].
-    @AppStorage(PuffinFrameRecorder.enabledKey) private var puffinCapture = false
+    @AppStorage(PuffinFrameRecorder.enabledKey) var puffinCapture = false
 
     /// Opt-in WHOOP 5/MG "R22" deep-data unlock (off by default) — the one probe that writes a
     /// persistent feature flag to the strap. See [PuffinExperiment.deepDataKey]. (#174)
-    @AppStorage(PuffinExperiment.deepDataKey) private var deepDataEnabled = false
+    @AppStorage(PuffinExperiment.deepDataKey) var deepDataEnabled = false
 
     /// Opt-in "Broadcast heart rate" (off by default) — makes the strap advertise its HR as a standard
     /// BLE sensor for Garmin/Zwift/gym kit. See [PuffinExperiment.broadcastHrKey]. (#181)
-    @AppStorage(PuffinExperiment.broadcastHrKey) private var broadcastHrEnabled = false
+    @AppStorage(PuffinExperiment.broadcastHrKey) var broadcastHrEnabled = false
 
     /// Opt-in "Continuous HRV capture" (off by default) — holds the dense realtime stream armed 24/7 so
     /// the strap banks beat-to-beat R-R for better overnight HRV/recovery/sleep, at a battery cost.
     /// See [PuffinExperiment.keepRealtimeForDataKey].
-    @AppStorage(PuffinExperiment.keepRealtimeForDataKey) private var continuousHrvEnabled = false
+    @AppStorage(PuffinExperiment.keepRealtimeForDataKey) var continuousHrvEnabled = false
 
     /// Opt-in "Experimental sleep staging (V2)" (off by default). When on, detected nights are re-staged with
     /// `SleepStagerV2` (the transparent cardiorespiratory recipe) instead of the default V1 stager. Read at
     /// the staging call site in `Repository`. See [PuffinExperiment.experimentalSleepV2Key].
-    @AppStorage(PuffinExperiment.experimentalSleepV2Key) private var experimentalSleepV2Enabled = false
+    @AppStorage(PuffinExperiment.experimentalSleepV2Key) var experimentalSleepV2Enabled = false
 
     // Imperial/Metric display preference (D#103). Stored data is always SI; this only changes how
     // distances/weights/heights/temperatures are SHOWN — and lets the profile fields below take
     // imperial entry. Temperature has a separate override so °C/°F can be picked independently.
-    @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
-    @AppStorage(UnitPrefs.temperatureKey) private var temperatureRaw = ""
+    @AppStorage(UnitPrefs.systemKey) var unitSystemRaw = UnitSystem.metric.rawValue
+    @AppStorage(UnitPrefs.temperatureKey) var temperatureRaw = ""
     // Effort display scale (#268). Display-only — Effort stays stored 0–100, this only chooses whether
     // it's shown on NOOP's 0–100 axis or WHOOP's 0–21 Day Strain axis.
-    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
+    @AppStorage(UnitPrefs.effortScaleKey) var effortScaleRaw = EffortScale.hundred.rawValue
     // Light/Dark/System theme. Read by both app roots' .preferredColorScheme; default follows the OS.
-    @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
+    @AppStorage(AppearanceMode.storageKey) var appearanceRaw = AppearanceMode.system.rawValue
     // Chart colour style: Titanium (brand) or Classic (throwback red→green). Re-colours gauges + charts.
-    @AppStorage(ChartStyle.storageKey) private var chartStyleRaw = ChartStyle.titanium.rawValue
+    @AppStorage(ChartStyle.storageKey) var chartStyleRaw = ChartStyle.titanium.rawValue
     // Hydration tracker (opt-in, MVP). Default OFF — when off the hydration dashboard card + detail are
     // hidden. Mirrors the Android pref so the toggle reads the same on both platforms.
-    @AppStorage(HydrationStore.enabledKey) private var hydrationEnabled = false
+    @AppStorage(HydrationStore.enabledKey) var hydrationEnabled = false
 
     /// Opt-in "Auto-detect workouts" (default OFF). When ON, Today scans the last day or two of HR for a
     /// sustained-elevated window and offers — via a single dismissible card — to save it as a workout.
     /// Nothing is ever created automatically. Mirrors the Android `NoopPrefs.KEY_AUTO_DETECT_WORKOUTS`.
-    @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) private var autoDetectWorkoutsEnabled = false
+    @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) var autoDetectWorkoutsEnabled = false
 
     /// The strap model the user last picked (same key the scan pickers write). Gates the WHOOP 4.0-only
     /// rename control in the strap card — renaming uses the Harvard command set, which a 5/MG doesn't share.
-    @AppStorage("selectedWhoopModel") private var selectedWhoopModelRaw = WhoopModel.persisted.rawValue
+    @AppStorage("selectedWhoopModel") var selectedWhoopModelRaw = WhoopModel.persisted.rawValue
     /// Draft text for the strap-rename field (strap card). Empty placeholder; never pre-seeded so the
     /// current name stays visible separately above it.
-    @State private var strapNameDraft = ""
+    @State var strapNameDraft = ""
 
     /// Whether to surface the WHOOP 5/MG-only probes (puffin/R22/broadcast-HR/frame-capture). Gated so a
     /// confident 4.0 owner never sees 5/MG controls that can't touch their strap (#22). The model
@@ -82,47 +82,47 @@ struct SettingsView: View {
     /// this true the moment their strap is discovered. We hide the 5/MG block only when the user is
     /// confidently on a 4.0 (pref says whoop4 AND nothing 5/MG is connected). The always-on raw-CSV
     /// diagnostic stays visible on every model regardless.
-    private var showFiveMGControls: Bool {
+    var showFiveMGControls: Bool {
         selectedWhoopModelRaw == WhoopModel.whoop5mg.rawValue
     }
 
-    private var unitSystem: UnitSystem { UnitSystem(rawValue: unitSystemRaw) ?? .metric }
-    private var temperatureUnit: TemperatureUnit {
+    var unitSystem: UnitSystem { UnitSystem(rawValue: unitSystemRaw) ?? .metric }
+    var temperatureUnit: TemperatureUnit {
         UnitPrefs.resolveTemperature(system: unitSystem, override: temperatureRaw)
     }
 
     /// Raw-sensor CSV export (experimental diagnostic, #308/#276/#322). Holds the last-written file so
     /// macOS can "Reveal in Finder" after a share, mirroring the puffin-capture export.
-    @State private var rawCsvBusy = false
-    @State private var lastRawCsvURL: URL?
+    @State var rawCsvBusy = false
+    @State var lastRawCsvURL: URL?
 
     /// Scheduled daily debug auto-export (#510, parity with Android). Seeded from the persisted store;
     /// the toggle + time picker write back through `ScheduledDebugExport`. Opt-in, default OFF.
-    @State private var debugExportOn = ScheduledDebugExport.isEnabled
-    @State private var debugExportMinutes = ScheduledDebugExport.timeMinutes
+    @State var debugExportOn = ScheduledDebugExport.isEnabled
+    @State var debugExportMinutes = ScheduledDebugExport.timeMinutes
 
     /// Confirm gate for the "Recalibrate Charge baseline" action (it re-learns the HRV anchor from tonight).
-    @State private var showRecalibrateConfirm = false
+    @State var showRecalibrateConfirm = false
 
     /// "What's New" changelog sheet, reachable any time from About.
-    @State private var showWhatsNew = false
+    @State var showWhatsNew = false
 
     /// "How your scores work" explainer sheet, reachable any time from About.
-    @State private var showScoringGuide = false
+    @State var showScoringGuide = false
 
     /// "How NOOP works" primer sheet (the four-section explainability primer), reachable any
     /// time from About — covers how sleep is sorted, how scores + calibration work, what
     /// recording means, and where the provenance badges come from.
-    @State private var showHowNoopWorks = false
+    @State var showHowNoopWorks = false
 
     /// Steps-estimate calibration sheet (WHOOP 4.0). Reached from the Profile card's "Steps estimate"
     /// tap-through; explains the estimate, shows the current fit + a recent estimated-vs-phone table,
     /// and offers a manual coefficient override. See [StepsCalibrationSheet].
-    @State private var showStepsCalibration = false
+    @State var showStepsCalibration = false
 
     /// User-initiated GitHub release check behind the About "Check for updates" button.
-    @StateObject private var updateChecker = UpdateChecker()
-    @Environment(\.openURL) private var openURL
+    @StateObject var updateChecker = UpdateChecker()
+    @Environment(\.openURL) var openURL
 
     var body: some View {
         ScreenScaffold(title: "Settings",
@@ -173,7 +173,7 @@ struct SettingsView: View {
     /// Set / change / remove an optional profile picture. PhotosUI's `PhotosPicker` works on both
     /// iOS 16+ and macOS 13+ (NOOP's floor), so the same control serves both platforms — no
     /// availability gating needed. The photo is stored only on this device (NOOP is fully offline).
-    private var profilePhotoCard: some View {
+    var profilePhotoCard: some View {
         SettingsSection(
             icon: "person.crop.circle",
             title: "Profile photo",
@@ -214,7 +214,7 @@ struct SettingsView: View {
 
     // MARK: - Profile
 
-    private var profileCard: some View {
+    var profileCard: some View {
         SettingsSection(
             icon: "person.fill",
             title: "Profile",
@@ -358,7 +358,7 @@ struct SettingsView: View {
 
     /// One-line state for the "Steps estimate" tap-through row: manual, the auto-fit confidence, or a
     /// not-yet-calibrated prompt — so the row reflects the current calibration without opening the sheet.
-    private var stepsCalibrationSummary: String {
+    var stepsCalibrationSummary: String {
         if profile.stepsManualCoefficient > 0 { return "Manual" }
         if profile.stepsCalibrationCoefficient > 0 {
             return "Auto · \(StepsCalibrationFormat.confidenceLabel(profile.stepsCalibrationConfidence)) confidence"
@@ -367,7 +367,7 @@ struct SettingsView: View {
     }
 
     /// Numeric weight/height field: tabular value + small +/- stepper.
-    private func measureField(value: Binding<Double>, unit: String,
+    func measureField(value: Binding<Double>, unit: String,
                               range: ClosedRange<Double>, step: Double,
                               format: String, accessibility: String) -> some View {
         HStack(spacing: 10) {
@@ -388,7 +388,7 @@ struct SettingsView: View {
 
     /// Imperial weight entry: shows pounds, steps in 1-lb increments, and writes the kg equivalent back
     /// to the SI-stored profile. Range mirrors the metric 30…250 kg (≈66…551 lb).
-    private func poundsField(weightKg: Binding<Double>) -> some View {
+    func poundsField(weightKg: Binding<Double>) -> some View {
         let lb = Binding<Double>(
             get: { UnitFormatter.kgToPounds(weightKg.wrappedValue) },
             set: { weightKg.wrappedValue = $0 / UnitFormatter.poundsPerKilogram }
@@ -411,7 +411,7 @@ struct SettingsView: View {
 
     /// Imperial height entry: shows feet′ inches″, steps in whole inches, and writes the cm equivalent
     /// back to the SI-stored profile. Range mirrors the metric 120…230 cm (≈47…91 in).
-    private func feetInchesField(heightCm: Binding<Double>) -> some View {
+    func feetInchesField(heightCm: Binding<Double>) -> some View {
         let inches = Binding<Double>(
             get: { UnitFormatter.cmToInches(heightCm.wrappedValue).rounded() },
             set: { heightCm.wrappedValue = $0 * UnitFormatter.centimetersPerInch }
@@ -431,7 +431,7 @@ struct SettingsView: View {
     /// Metric waist entry: 0 = unset (shows a muted "Not set" rather than a misleading 0 cm). Steps in
     /// 1-cm increments; the first increment from unset lands at a sensible 80 cm so the stepper doesn't
     /// crawl up from the range floor. Mirrors `measureField` but tolerant of the optional empty state.
-    private func waistCentimetresField(waistCm: Binding<Double>) -> some View {
+    func waistCentimetresField(waistCm: Binding<Double>) -> some View {
         let set = waistCm.wrappedValue > 0
         return HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -460,7 +460,7 @@ struct SettingsView: View {
     /// Imperial waist entry: 0 = unset (muted "Not set"); otherwise shows whole inches and stores the cm
     /// equivalent — the same metric/imperial treatment as Height. First increment from unset lands near a
     /// sensible 31″. Range mirrors the metric 60…160 cm (≈24…63 in).
-    private func waistInchesField(waistCm: Binding<Double>) -> some View {
+    func waistInchesField(waistCm: Binding<Double>) -> some View {
         let set = waistCm.wrappedValue > 0
         let inches = set ? UnitFormatter.cmToInches(waistCm.wrappedValue).rounded() : 0
         return HStack(spacing: 10) {
@@ -489,7 +489,7 @@ struct SettingsView: View {
     }
 
     /// HR-max override: 0 = auto. Shown as a compact tabular value with a stepper.
-    private var hrMaxField: some View {
+    var hrMaxField: some View {
         HStack(spacing: 10) {
             Text(profile.hrMaxOverride > 0 ? "\(profile.hrMaxOverride)" : "Auto")
                 .font(StrandFont.bodyNumber)
@@ -508,7 +508,7 @@ struct SettingsView: View {
 
     /// Imperial/Metric display toggle + a separate temperature override. Display-only — nothing stored
     /// changes, NOOP keeps everything in SI and converts at the point of display.
-    private var unitsCard: some View {
+    var unitsCard: some View {
         SettingsSection(
             icon: "ruler",
             title: "Units",
@@ -561,7 +561,7 @@ struct SettingsView: View {
     /// Theme (System / Light / Dark) on every platform, plus the iOS app-icon choice. The Theme picker
     /// writes `AppearanceMode.storageKey`, which both app roots read via `.preferredColorScheme`; because
     /// every palette token is a dynamic `Color(light:dark:)`, the whole UI re-resolves on change.
-    private var appearanceCard: some View {
+    var appearanceCard: some View {
         SettingsSection(
             icon: "circle.lefthalf.filled",
             title: "Appearance",
@@ -598,7 +598,7 @@ struct SettingsView: View {
 
     // MARK: - Strap
 
-    private var strapCard: some View {
+    var strapCard: some View {
         SettingsSection(
             icon: "antenna.radiowaves.left.and.right",
             title: "Strap",
@@ -679,7 +679,7 @@ struct SettingsView: View {
     /// Rename the WHOOP 4.0's BLE advertising name. Shows the current name (read back from firmware in
     /// the connect handshake → `LiveState.advertisingName`) and writes a new one via `renameStrap`. The
     /// strap reboots to apply, so the new name lands on the next connect. WHOOP 4.0 only (Harvard).
-    @ViewBuilder private var strapNameControl: some View {
+    @ViewBuilder var strapNameControl: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Strap name").strandOverline()
             Text("Current: \(live.advertisingName ?? "—")")
@@ -715,15 +715,15 @@ struct SettingsView: View {
     }
 
     // Shares LiveState.connectionStatus* with the sidebar footer (RootView) so the two never drift (#266).
-    private var strapStatusTitle: String { live.connectionStatusLabel }
+    var strapStatusTitle: String { live.connectionStatusLabel }
 
-    private var strapTone: StrandTone {
+    var strapTone: StrandTone {
         if live.connectionStatusIsActive { return .positive }
         if live.connectionStatusIsIdle { return .warning }
         return .critical
     }
 
-    private var strapStatusDetail: String {
+    var strapStatusDetail: String {
         if live.bonded && live.connected {
             return "Your strap is paired and sending data. Open Live for a real-time heart rate."
         }
@@ -733,7 +733,7 @@ struct SettingsView: View {
         return "No strap connected. Put your WHOOP nearby and tap Re-scan to pair."
     }
 
-    private func batteryTone(_ pct: Double) -> StrandTone {
+    func batteryTone(_ pct: Double) -> StrandTone {
         if pct <= 15 { return .critical }
         if pct <= 30 { return .warning }
         return .positive
@@ -746,7 +746,7 @@ struct SettingsView: View {
     /// or an early reading that anchored too high). It writes now (epoch SECONDS) to BOTH the
     /// `noop.hrvBaselineEpoch` and `noop.recoveryBaselineEpoch` settings the recovery engine reads, then
     /// kicks a recompute the same way the sleep-edit path does (analyzeRecent → refresh). History stays.
-    private var recoveryCard: some View {
+    var recoveryCard: some View {
         SettingsSection(
             icon: "heart.text.square",
             title: "Recovery",
@@ -771,7 +771,7 @@ struct SettingsView: View {
     /// truth (`Baselines.recalibrateRecoveryBaselines`). No stored day is deleted; only the day the
     /// baselines re-learn from moves. Then re-score + refresh so the change is reflected without a
     /// relaunch (same path as a sleep edit), and Today honestly shows the building/calibrating state.
-    private func recalibrateHrvBaseline() {
+    func recalibrateHrvBaseline() {
         Baselines.recalibrateRecoveryBaselines()
         Task {
             await model.intelligence.analyzeRecent()
@@ -786,7 +786,7 @@ struct SettingsView: View {
 
     /// Opt-in, manual-first feature toggles (default OFF). Hydration tracking gates the water-log card on
     /// the Today dashboard and its detail screen — nothing is shown or stored until it's enabled.
-    private var featuresCard: some View {
+    var featuresCard: some View {
         SettingsSection(
             icon: "drop.fill",
             title: "Features",
@@ -833,7 +833,7 @@ struct SettingsView: View {
     /// Entry point used by `body`. The 5/MG probe card only renders for a 5/MG (see `showFiveMGControls`,
     /// #22); the raw-sensor CSV diagnostic is split into its own card so it stays available on every
     /// model — a 4.0 owner still needs the export to share decoded streams.
-    @ViewBuilder private var experimentalCard: some View {
+    @ViewBuilder var experimentalCard: some View {
         if showFiveMGControls { fiveMGCard }
         sleepStagingCard
         rawSensorDiagnosticsCard
@@ -843,7 +843,7 @@ struct SettingsView: View {
     /// Opt-in experimental sleep staging (V2). Model-agnostic — the V2 recipe works on WHOOP 4 and 5 — so it
     /// renders on every strap, separate from the 5/MG probe card. Default OFF; flipping it on re-stages
     /// future (and re-derived) nights with `SleepStagerV2`. The default V1 stager is untouched.
-    private var sleepStagingCard: some View {
+    var sleepStagingCard: some View {
         SettingsSection(
             icon: "bed.double.fill",
             title: "Experimental · Sleep staging",
@@ -869,23 +869,23 @@ struct SettingsView: View {
     /// the full encrypted bond plus the strap on the wrist — via the pure `Whoop5WriteGate`. macOS
     /// CoreBluetooth completes the encrypted bond and the command-characteristic writes work there
     /// (verified on real hardware), so there is no OS term.
-    private var deepDataGate: Whoop5WriteGate.Status {
+    var deepDataGate: Whoop5WriteGate.Status {
         Whoop5WriteGate.deepData(encryptedBond: live.encryptedBond, worn: live.worn)
     }
 
-    private var deepDataButtonDisabled: Bool { !deepDataGate.isReady }
+    var deepDataButtonDisabled: Bool { !deepDataGate.isReady }
 
     /// The reason line under the R22 button, explaining the unmet condition (or what to do when ready).
-    private var deepDataButtonReason: String { Whoop5WriteGate.deepDataCaption(deepDataGate) }
+    var deepDataButtonReason: String { Whoop5WriteGate.deepDataCaption(deepDataGate) }
 
     /// Broadcast HR needs the encrypted bond (not the wrist). The toggle stays usable — it is a saved
     /// preference applied on the next connection and must always be switchable OFF — so this only
     /// feeds an explanatory caption.
-    private var broadcastHrCaption: String? {
+    var broadcastHrCaption: String? {
         Whoop5WriteGate.broadcastHrCaption(Whoop5WriteGate.broadcastHr(encryptedBond: live.encryptedBond))
     }
 
-    private var fiveMGCard: some View {
+    var fiveMGCard: some View {
         SettingsSection(
             icon: "flask.fill",
             title: "Experimental · WHOOP 5 / MG",
@@ -1034,7 +1034,7 @@ struct SettingsView: View {
     /// Raw-sensor CSV export — a read-only diagnostic over the decoded streams NOOP already stores
     /// (HR, R-R, motion, steps, PPG-HR, SpO₂, skin temp, resp, events). Split out of the 5/MG card so it
     /// stays visible on EVERY model (#22): a WHOOP 4.0 owner still needs this to share decoded data.
-    private var rawSensorDiagnosticsCard: some View {
+    var rawSensorDiagnosticsCard: some View {
         SettingsSection(
             icon: "doc.text.magnifyingglass",
             title: "Diagnostics",
@@ -1082,7 +1082,7 @@ struct SettingsView: View {
     /// default OFF: a toggle + a time-of-day picker + a "Run now". Honest about iOS background timing —
     /// the macOS drop is reliable (the app is usually running), the iOS one fires when iOS next wakes
     /// NOOP near the chosen time, never guaranteed to the minute.
-    @ViewBuilder private var scheduledExportControls: some View {
+    @ViewBuilder var scheduledExportControls: some View {
         Toggle(isOn: $debugExportOn) {
             Text("Daily auto-export of the strap log")
                 .font(StrandFont.subhead)
@@ -1115,12 +1115,12 @@ struct SettingsView: View {
     }
 
     /// Honest caption — the drop location plus the platform-specific timing reality.
-    private var debugExportCaption: String {
+    var debugExportCaption: String {
         return "Writes a timestamped copy of your strap log to your Documents folder, once a day — handy for a bug report without remembering to grab it. On Mac it runs while NOOP is open (and catches up on launch if the time passed while it was closed). Everything stays on \(Platform.deviceNounPhrase); nothing is uploaded."
     }
 
     /// Bridges the minutes-since-midnight store to the DatePicker, persisting + rescheduling on change.
-    private var debugExportTimeBinding: Binding<Date> {
+    var debugExportTimeBinding: Binding<Date> {
         Binding(
             get: {
                 var c = DateComponents()
@@ -1139,7 +1139,7 @@ struct SettingsView: View {
 
     /// "Run now": write an immediate timestamped strap-log drop (with the raw capture beside it, if a
     /// session has recorded one) and tell the user where it landed.
-    private func runScheduledExportNow() {
+    func runScheduledExportNow() {
         model.ble.flushPuffinCaptures()
         let url = ScheduledDebugExport.runNow(captureURL: live.puffinCaptureURL)
         if let url {
@@ -1155,7 +1155,7 @@ struct SettingsView: View {
     /// Export the last 24h of decoded sensor streams for the connected strap to a CSV, then save (macOS
     /// NSSavePanel) or share (iOS share sheet) — the same pattern as exportPuffinCaptures(). The store
     /// handle and the strap deviceId both come from the app's single "my-whoop" id.
-    private func exportRawSensorCSV() {
+    func exportRawSensorCSV() {
         rawCsvBusy = true
         Task {
             let since = Date().timeIntervalSince1970 - 24 * 60 * 60
@@ -1201,7 +1201,7 @@ struct SettingsView: View {
 
     /// Flush the in-flight capture, then copy it to a user-chosen location (save panel on macOS) or
     /// hand it to the system share sheet (iOS).
-    private func exportPuffinCaptures() {
+    func exportPuffinCaptures() {
         model.ble.flushPuffinCaptures()
         guard let src = live.puffinCaptureURL else { return }
         // Suggest a friendly, timestamped name so a reporter saving several captures gets sortable,
@@ -1227,7 +1227,7 @@ struct SettingsView: View {
     /// both stamped with the same `yyMMdd-HHmm` minute so they're obviously a pair. Reuses the existing
     /// export utilities — `FileExport.exportPair` shares both files in one iOS share sheet, and saves
     /// each via its own NSSavePanel on macOS (no new file plumbing).
-    private func exportRawAndLog() {
+    func exportRawAndLog() {
         model.ble.flushPuffinCaptures()
         guard let capture = live.puffinCaptureURL else {
             backupAlertTitle = "Nothing to export"
@@ -1242,13 +1242,13 @@ struct SettingsView: View {
     }
 
     /// Flush, then reveal the capture file in Finder so the user can grab it directly.
-    private func revealPuffinCaptures() {
+    func revealPuffinCaptures() {
         model.ble.flushPuffinCaptures()
         guard let url = live.puffinCaptureURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
-    private var backupCard: some View {
+    var backupCard: some View {
         SettingsSection(
             icon: "externaldrive.fill",
             title: "Backup & restore",
@@ -1312,14 +1312,14 @@ struct SettingsView: View {
 
     // Equal-width, single-line label for the three Backup buttons. (#188)
     @ViewBuilder
-    private func backupButtonLabel(_ title: String, systemImage: String) -> some View {
+    func backupButtonLabel(_ title: String, systemImage: String) -> some View {
         // The NoopButtonStyle (fullWidth) owns the width + padding; the label just supplies the
         // content and the single-line shrink-to-fit so the 3-up row never wraps mid-word (#188).
         Label(title, systemImage: systemImage)
             .lineLimit(1).minimumScaleFactor(0.7)
     }
 
-    private func runExport() {
+    func runExport() {
         backupBusy = true
         Task {
             let result = await DataBackup.runExport(checkpoint: { await model.repo.checkpointForBackup() })
@@ -1327,7 +1327,7 @@ struct SettingsView: View {
         }
     }
 
-    private func runImport() {
+    func runImport() {
         backupBusy = true
         Task {
             let result = await DataBackup.runImport()
@@ -1335,7 +1335,7 @@ struct SettingsView: View {
         }
     }
 
-    private func runCsvExport() {
+    func runCsvExport() {
         backupBusy = true
         Task {
             let result = await CsvExport.run(repo: model.repo)
@@ -1356,7 +1356,7 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func handleBackup(_ result: DataBackup.BackupResult) {
+    func handleBackup(_ result: DataBackup.BackupResult) {
         backupBusy = false
         switch result {
         case .cancelled:
@@ -1382,11 +1382,11 @@ struct SettingsView: View {
     /// project.yml MARKETING_VERSION), so the About pill can never go stale the way a hand-edited
     /// Swift constant can. Mirrors how Android's pill reads BuildConfig.VERSION_NAME. Falls back to
     /// the hand-maintained changelog version only if the Info.plist key is somehow missing.
-    private var bundleVersionString: String {
+    var bundleVersionString: String {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? AppChangelog.currentVersion
     }
 
-    private var aboutCard: some View {
+    var aboutCard: some View {
         SettingsSection(
             icon: "info.circle.fill",
             title: "About",
@@ -1629,7 +1629,7 @@ struct SettingsView: View {
         }
     }
 
-    private func attribution(repo: String, note: String) -> some View {
+    func attribution(repo: String, note: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "chevron.right")
                 .font(.system(size: 9, weight: .semibold))
@@ -1647,7 +1647,7 @@ struct SettingsView: View {
 
     // MARK: - Shared bits
 
-    private var rowDivider: some View {
+    var rowDivider: some View {
         Rectangle()
             .fill(StrandPalette.hairline)
             .frame(height: 1)
@@ -1693,7 +1693,7 @@ struct SettingsSection<Content: View>: View {
 
 /// "App" settings for the Mac build: start NOOP at login (`SMAppService.mainApp`) and pick the UI
 /// language (`AppLanguage` → the app's own `AppleLanguages` default, effective after a relaunch).
-private struct AppSettingsCard: View {
+struct AppSettingsCard: View {
     @StateObject private var launchAtLogin = LaunchAtLoginController()
     @State private var language = AppLanguage.current()
     @State private var relaunchError: String?
@@ -2193,7 +2193,7 @@ struct StepsCalibrationSheet: View {
 // MARK: - Two-column form row
 
 /// Label on the left, control on the right — the two-column form feel.
-private struct FormRow<Control: View>: View {
+struct FormRow<Control: View>: View {
     let label: LocalizedStringKey
     @ViewBuilder var control: () -> Control
 
