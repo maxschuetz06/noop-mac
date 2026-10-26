@@ -36,9 +36,7 @@ struct RootView: View {
         .task { await repo.refresh() }
         // Programmatic navigation (router requests, etc.) to a "More" item must reveal its row.
         .onChangeCompat(of: selection) { item in
-            if let item, item.isRemoved {
-                selection = .today
-            } else if let item, !item.isCore, !showAllSections {
+            if let item, !item.isCore, !showAllSections {
                 showAllSections = true
             }
         }
@@ -46,7 +44,7 @@ struct RootView: View {
         // then clear it so the same tap can fire again later. Devices maps to the `.devices` sidebar item.
         .onChangeCompat(of: router.requestedDestination) { dest in
             guard let dest else { return }
-            selection = NavItem(destination: dest).resolved
+            selection = NavItem(destination: dest)
             router.requestedDestination = nil
         }
     }
@@ -176,8 +174,6 @@ struct RootView: View {
         switch selection ?? .today {
         case .today: HomeView(navigate: { selection = $0 })
         case .dayDetails: TodayView()
-        // Removed sections never render; a stale selection shows Today.
-        case .intelligence, .coach: TodayView()
         case .insightsHub: InsightsHubView()
         case .live: LiveView()
         case .breathe: BreathingView()
@@ -199,7 +195,6 @@ struct RootView: View {
         case .devices: DevicesView()
         case .notifications: NotificationSettingsView()
         case .automation: AutomationsView()
-        case .smartAlarm: SmartAlarmView()
         case .settings: SettingsView()
         case .about: AboutView()
         }

@@ -8,8 +8,7 @@ enum TodayDisplayRules {
     // MARK: Coaching prose
 
     /// Coach-style prose cards on Today (the "Synthesis" read-out and the "Readiness" advice card). The
-    /// macOS app is a plain values display — the same way `NavItem.removed` drops Intelligence / Coach
-    /// from the sidebar — so they are off there. iOS keeps them. The engines behind them stay.
+    /// macOS app is a plain values display, so they are off there. iOS keeps them. The engines behind them stay.
     static var coachingCardsVisible: Bool {
         #if os(macOS)
         false

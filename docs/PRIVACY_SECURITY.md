@@ -26,9 +26,7 @@ local SQLite — has no network layer at all: no phone-home, no analytics, no ac
 no login, no cloud sync, and no telemetry. Everything NOOP computes about you lives in a
 single SQLite file on your own device.
 
-There are exactly **two** exceptions, both started by you: the **AI Coach** (§1.1a) is off until
-you turn it on with your own API key; when you ask it a question it sends a short text summary of
-your recent metrics to the provider you choose. **Check for updates** (§1.1b) reads the latest
+There is exactly **one** exception, started by you: **Check for updates** (§1.1a) reads the latest
 release version from GitHub only when you tap it. Nothing else in the app ever touches the
 network, and your raw data never does.
 
@@ -39,17 +37,16 @@ Data enters NOOP two ways:
 | Live collection | Bluetooth LE, strap → device | Read-only from the strap |
 | File import (Apple Health, WHOOP CSV, nutrition CSV) | User-selected files on disk | Read-only from disk |
 
-The only **network** paths are the opt-in AI Coach and the user-tapped update check; the
+The only **network** path is the user-tapped update check; the
 biometric pipeline produces no network traffic of any kind.
 
-### 1.1 Network code: only the AI Coach and the update check
+### 1.1 Network code: only the update check
 
 The biometric pipeline and all six Swift packages
 (`WhoopProtocol`, `WhoopStore`, `StrandAnalytics`, `StrandImport`, `StrandDesign`,
 `NoopLocalAccess`) contain **no** use of `URLSession`, `URLRequest`, `NWConnection`,
 `dataTask`, or any other networking API. The **only** networking anywhere in the app is
-the AI Coach (`Strand/AI/`), described in §1.1a, and the update check
-(`Strand/System/UpdateChecker.swift`), described in §1.1b. The package manifests reference dependency *download* URLs
+the update check (`Strand/System/UpdateChecker.swift`), described in §1.1a. The package manifests reference dependency *download* URLs
 that Swift Package Manager resolves at build time, never at runtime:
 
 ```
@@ -60,37 +57,16 @@ Packages/StrandImport/Package.swift → https://github.com/weichsel/ZIPFoundatio
 GRDB.swift is the SQLite layer; ZIPFoundation is the archive reader used by the
 importers. Neither opens a socket.
 
-### 1.1a The AI Coach (optional, off by default, bring your own key)
-
-The AI Coach lets you ask questions about your data in plain language. It is the one
-feature that uses the network, and only on your terms:
-
-- **Off until you enable it.** You enter your own API key for the provider you choose
-  (Anthropic, OpenAI, or a local / self-hosted OpenAI-compatible LLM such as Ollama or
-  LM Studio). No key, no network calls, ever.
-- **What is sent.** When you ask a question, NOOP builds a compact **text** summary of
-  your recent metrics (Charge, Effort, Rest, HRV, resting HR over ~14 days, plus
-  30-day averages and recent workouts) and sends it, with your question, directly to
-  your chosen endpoint (e.g. `api.anthropic.com` / `api.openai.com` for the hosted
-  providers). If you point the Coach at a local / self-hosted LLM, that endpoint is on
-  your own machine and the request never leaves it.
-- **What is NOT sent.** No raw biometric streams, no Bluetooth data, no account or
-  device identifiers — only the summary text and your question.
-- **Your key, your relationship.** The request goes from your device straight to the
-  provider you picked, under your own account. NOOP runs no server in between and keeps
-  no copy.
-
-### 1.1b Check for updates (only when you tap it)
+### 1.1a Check for updates (only when you tap it)
 
 **Settings → About → Check for updates** makes one HTTPS request to GitHub's public releases API
 for this repository and compares the latest release version with the installed one. It runs only
 when you tap the button: no background polling, no auto-update, and nothing about you or your data
 is sent.
 
-If you never enable the AI Coach and never tap Check for updates, NOOP makes zero network
-connections.
+If you never tap Check for updates, NOOP makes zero network connections.
 
-### 1.2 The macOS sandbox (and what it means for the AI Coach)
+### 1.2 The macOS sandbox
 
 On macOS the App Sandbox is the backstop. The app ships with a deliberately minimal
 entitlement set (`Strand/Resources/Strand.entitlements`):
@@ -115,9 +91,8 @@ That is the entire default entitlement file:
   your device."*
 - **`files.user-selected.read-write`** — lets the app read import files the user
   explicitly picks (and write the database in its own container).
-- **`network.client`** — outbound connections. Used **only** by the opt-in, off-by-default AI
-  Coach, which talks to the provider you configure with your own key (§1.1a), and by the
-  user-tapped update check (§1.1b). Nothing else in the app opens a network connection, but the sandbox does not enforce that: it is a property of the
+- **`network.client`** — outbound connections. Used **only** by the user-tapped update check
+  (§1.1a). Nothing else in the app opens a network connection, but the sandbox does not enforce that: it is a property of the
   code, not of the OS.
 
 Notably **absent**:
@@ -395,7 +370,7 @@ dedicated source id `nutrition-csv`, alongside your other metrics and entirely o
 
 | Surface | Risk | Mitigation | Where |
 |---------|------|------------|-------|
-| Process | Data exfiltration / network egress | Only the opt-in AI Coach (your key, to your chosen provider, a text summary — §1.1a) and the user-tapped update check (§1.1b) network — nothing else makes a network call, and nothing is sent until you ask. The sandbox grants `network.client` for both (§1.2), so this is enforced by the code, not the OS | `Strand/AI/`, `Strand/System/UpdateChecker.swift` |
+| Process | Data exfiltration / network egress | Only the user-tapped update check (§1.1a) uses the network — nothing else makes a network call, and nothing is sent until you ask. The sandbox grants `network.client` for it (§1.2), so this is enforced by the code, not the OS | `Strand/System/UpdateChecker.swift` |
 | Filesystem | Broad disk access | Only `files.user-selected.read-write`; data stays in the sandbox container | `Strand.entitlements`, `Strand/Collect/StorePaths.swift` |
 | BLE frames | Malformed / adversarial packets | CRC8 + CRC32 (+ CRC16 for v5) gating; reject on failure | `WhoopProtocol/Framing.swift`, `Strand/BLE/FrameRouter.swift` |
 | BLE frames | Out-of-bounds reads from short/lying length | `nil`-returning bounds-checked readers; slice clamping; min-length guards | `WhoopProtocol/Interpreter.swift` |

@@ -1,10 +1,5 @@
 import SwiftUI
-#if os(macOS)
 import AppKit
-#endif
-#if os(iOS)
-import UIKit
-#endif
 import UniformTypeIdentifiers
 import PhotosUI
 import StrandDesign
@@ -59,11 +54,6 @@ struct SettingsView: View {
     // Effort display scale (#268). Display-only — Effort stays stored 0–100, this only chooses whether
     // it's shown on NOOP's 0–100 axis or WHOOP's 0–21 Day Strain axis.
     @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
-    // Live-HR Live Activity (Lock Screen + Dynamic Island), iOS only (#336). Default on.
-    @AppStorage(UnitPrefs.liveActivityKey) private var liveActivityEnabled = true
-    // Alternate app icon (iOS only) — false = Titanium (primary AppIcon), true = Blue Titanium
-    // ("AppIcon-Navy"). Display-only preference; the live switch goes through setAlternateIconName.
-    @AppStorage("appIcon.alt") private var useNavyIcon = false
     // Light/Dark/System theme. Read by both app roots' .preferredColorScheme; default follows the OS.
     @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
     // Chart colour style: Titanium (brand) or Classic (throwback red→green). Re-colours gauges + charts.
@@ -130,10 +120,6 @@ struct SettingsView: View {
     /// and offers a manual coefficient override. See [StepsCalibrationSheet].
     @State private var showStepsCalibration = false
 
-    /// iOS environment-diagnostics sheet (device, iOS+build, Data Protection, background refresh,
-    /// low-power, sideload + cert expiry). iOS-only; the macOS strap log already carries OS + version.
-    @State private var showDiagnostics = false
-
     /// User-initiated GitHub release check behind the About "Check for updates" button.
     @StateObject private var updateChecker = UpdateChecker()
     @Environment(\.openURL) private var openURL
@@ -142,9 +128,7 @@ struct SettingsView: View {
         ScreenScaffold(title: "Settings",
                        subtitle: "Your numbers, your strap, and how NOOP works. All on \(Platform.deviceNounPhrase).") {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                #if os(macOS)
                 AppSettingsCard().staggeredAppear(index: 0)
-                #endif
                 profilePhotoCard.staggeredAppear(index: 0)
                 profileCard.staggeredAppear(index: 1)
                 unitsCard.staggeredAppear(index: 2)
@@ -182,11 +166,6 @@ struct SettingsView: View {
             StepsCalibrationSheet(repo: model.repo, onClose: { showStepsCalibration = false })
                 .environmentObject(profile)
         }
-        #if os(iOS)
-        .sheet(isPresented: $showDiagnostics) {
-            DiagnosticsSheet(onClose: { showDiagnostics = false })
-        }
-        #endif
     }
 
     // MARK: - Profile photo (optional, on-device)
@@ -613,44 +592,9 @@ struct SettingsView: View {
                     .fixedSize()
                     .accessibilityLabel("Chart colours")
                 }
-                #if os(iOS)
-                FormRow(label: "App icon") {
-                    Picker("App icon", selection: $useNavyIcon) {
-                        Text("Default").tag(false)
-                        Text("Navy").tag(true)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                    .accessibilityLabel("App icon")
-                    .onChangeCompat(of: useNavyIcon) { applyAppIcon($0) }
-                }
-                #endif
             }
         }
     }
-
-    #if os(iOS)
-    /// Apply the alternate-icon choice. Runs on the main actor (UIKit requirement) and tolerates the
-    /// no-op cases (already-set, unsupported); on failure it surfaces the error and reverts the toggle
-    /// so the control never disagrees with what's actually on the Home Screen.
-    private func applyAppIcon(_ useNavy: Bool) {
-        Task { @MainActor in
-            let target = useNavy ? "AppIcon-Navy" : nil
-            // No-op if iOS already shows the requested icon (avoids a needless system prompt).
-            guard UIApplication.shared.supportsAlternateIcons,
-                  UIApplication.shared.alternateIconName != target else { return }
-            do {
-                try await UIApplication.shared.setAlternateIconName(target)
-            } catch {
-                useNavyIcon = !useNavy
-                backupAlertTitle = "Couldn't change the app icon"
-                backupAlertMessage = error.localizedDescription
-                showBackupAlert = true
-            }
-        }
-    }
-    #endif
 
     // MARK: - Strap
 
@@ -728,21 +672,6 @@ struct SettingsView: View {
                     strapNameControl
                 }
 
-                #if os(iOS)
-                Divider().overlay(StrandPalette.hairline)
-                // MARK: Live Activity — show live HR on the Lock Screen + Dynamic Island (#336).
-                Toggle(isOn: $liveActivityEnabled) {
-                    Text("Live heart rate in Dynamic Island")
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                }
-                .toggleStyle(.switch)
-                .tint(StrandPalette.accent)
-                Text("Shows your live heart rate on the Lock Screen and in the Dynamic Island while the strap is connected. Turn it off to keep your live HR out of the Dynamic Island. (Any one already showing clears within a moment.)")
-                    .font(StrandFont.caption)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                #endif
             }
         }
     }
@@ -908,9 +837,7 @@ struct SettingsView: View {
         if showFiveMGControls { fiveMGCard }
         sleepStagingCard
         rawSensorDiagnosticsCard
-        #if os(macOS)
         RawPPGCaptureCard()
-        #endif
     }
 
     /// Opt-in experimental sleep staging (V2). Model-agnostic — the V2 recipe works on WHOOP 4 and 5 — so it
@@ -1082,11 +1009,9 @@ struct SettingsView: View {
                             exportPuffinCaptures()
                         }
 
-                        #if os(macOS)
                         NoopButton("Reveal in Finder", systemImage: "folder", kind: .secondary) {
                             revealPuffinCaptures()
                         }
-                        #endif
                         Spacer(minLength: 0)
                     }
                     // One-tap "matched pair" export (#510): hands a reporter BOTH the raw capture file
@@ -1133,13 +1058,11 @@ struct SettingsView: View {
                 .buttonStyle(NoopButtonStyle(.secondary))
                 .disabled(rawCsvBusy)
 
-                #if os(macOS)
                 if let url = lastRawCsvURL {
                     NoopButton("Reveal in Finder", systemImage: "folder", kind: .secondary) {
                         NSWorkspace.shared.activateFileViewerSelecting([url])
                     }
                 }
-                #endif
 
                 Text("Dumps the last 24 hours of decoded per-sample sensor streams (heart rate, R-R, motion, steps, SpO₂, skin temperature, respiration, events) to a single CSV — all on \(Platform.deviceNounPhrase), nothing uploaded. Share it to help prototype and test sleep, activity and strength algorithms.")
                     .font(StrandFont.caption)
@@ -1193,15 +1116,10 @@ struct SettingsView: View {
 
     /// Honest caption — the drop location plus the platform-specific timing reality.
     private var debugExportCaption: String {
-        #if os(iOS)
-        return "Writes a timestamped copy of your strap log to NOOP's folder in the Files app, once a day — handy for a bug report without remembering to grab it. On iPhone it fires when iOS next wakes NOOP near your chosen time, not guaranteed to the minute (keep NOOP open overnight for the best chance). Everything stays on \(Platform.deviceNounPhrase); nothing is uploaded."
-        #else
         return "Writes a timestamped copy of your strap log to your Documents folder, once a day — handy for a bug report without remembering to grab it. On Mac it runs while NOOP is open (and catches up on launch if the time passed while it was closed). Everything stays on \(Platform.deviceNounPhrase); nothing is uploaded."
-        #endif
     }
 
-    /// Bridges the minutes-since-midnight store to the DatePicker, persisting + rescheduling on change
-    /// (mirrors SmartAlarmView's wakeBinding).
+    /// Bridges the minutes-since-midnight store to the DatePicker, persisting + rescheduling on change.
     private var debugExportTimeBinding: Binding<Date> {
         Binding(
             get: {
@@ -1226,11 +1144,7 @@ struct SettingsView: View {
         let url = ScheduledDebugExport.runNow(captureURL: live.puffinCaptureURL)
         if let url {
             backupAlertTitle = "Strap log exported"
-            #if os(iOS)
-            backupAlertMessage = "Saved \(url.lastPathComponent) to NOOP's folder in the Files app."
-            #else
             backupAlertMessage = "Saved \(url.lastPathComponent) to your Documents folder."
-            #endif
         } else {
             backupAlertTitle = "Export failed"
             backupAlertMessage = "Couldn't write the strap log right now."
@@ -1259,7 +1173,6 @@ struct SettingsView: View {
                 await MainActor.run {
                     rawCsvBusy = false
                     lastRawCsvURL = url
-                    #if os(macOS)
                     let panel = NSSavePanel()
                     panel.allowedContentTypes = [.commaSeparatedText]
                     panel.nameFieldStringValue = url.lastPathComponent
@@ -1274,9 +1187,6 @@ struct SettingsView: View {
                         backupAlertMessage = error.localizedDescription
                         showBackupAlert = true
                     }
-                    #else
-                    FileExport.exportFile(at: url)
-                    #endif
                 }
             } catch {
                 await MainActor.run {
@@ -1297,7 +1207,6 @@ struct SettingsView: View {
         // Suggest a friendly, timestamped name so a reporter saving several captures gets sortable,
         // non-colliding files (#510) — e.g. noop-raw-capture-260617-1042.json.
         let suggested = FileExport.timestampedName("noop-raw-capture", ext: "json")
-        #if os(macOS)
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = suggested
@@ -1312,9 +1221,6 @@ struct SettingsView: View {
             backupAlertMessage = error.localizedDescription
             showBackupAlert = true
         }
-        #else
-        FileExport.exportFile(at: src, suggestedName: suggested)
-        #endif
     }
 
     /// One-tap matched-pair export (#510): export the raw puffin capture AND the strap log together,
@@ -1335,14 +1241,12 @@ struct SettingsView: View {
             text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
     }
 
-    #if os(macOS)
     /// Flush, then reveal the capture file in Finder so the user can grab it directly.
     private func revealPuffinCaptures() {
         model.ble.flushPuffinCaptures()
         guard let url = live.puffinCaptureURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
-    #endif
 
     private var backupCard: some View {
         SettingsSection(
@@ -1406,19 +1310,13 @@ struct SettingsView: View {
         }
     }
 
-    // Equal-width, single-line label for the three Backup buttons. iPhone is too narrow to fit
-    // an icon + text three-up, so it goes icon-less there; macOS keeps the SF Symbol. (#188)
+    // Equal-width, single-line label for the three Backup buttons. (#188)
     @ViewBuilder
     private func backupButtonLabel(_ title: String, systemImage: String) -> some View {
         // The NoopButtonStyle (fullWidth) owns the width + padding; the label just supplies the
-        // content and the single-line shrink-to-fit so the 3-up iPhone row never wraps mid-word (#188).
-        #if os(macOS)
+        // content and the single-line shrink-to-fit so the 3-up row never wraps mid-word (#188).
         Label(title, systemImage: systemImage)
             .lineLimit(1).minimumScaleFactor(0.7)
-        #else
-        Text(title)
-            .lineLimit(1).minimumScaleFactor(0.6)
-        #endif
     }
 
     private func runExport() {
@@ -1595,14 +1493,6 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Storage")
 
-                #if os(iOS)
-                // iOS reality & diagnostics — honest expectations for a sideloaded iPhone build, plus a
-                // one-tap environment dump (device, iOS+build, Data Protection, background refresh,
-                // low-power, sideload expiry) for bug reports. iOS-only; macOS doesn't have these gotchas.
-                iosDiagnosticsRow
-                iphoneExpectations
-                #endif
-
                 // Check for updates — a single, user-initiated read of GitHub's public releases API.
                 // No background polling, no auto-update; sends nothing about you, just reads the version.
                 VStack(alignment: .leading, spacing: NoopMetrics.space2) {
@@ -1755,107 +1645,6 @@ struct SettingsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: - iOS reality & diagnostics (iOS-only)
-
-    #if os(iOS)
-    /// A tappable row (mirroring "How your scores work") that opens the environment-diagnostics sheet.
-    private var iosDiagnosticsRow: some View {
-        Button {
-            showDiagnostics = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "stethoscope")
-                    .foregroundStyle(StrandPalette.accent)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Diagnostics")
-                        .font(StrandFont.body)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    Text("Device, iOS build, Data Protection and sideload status — for bug reports.")
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .accessibilityHidden(true)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Diagnostics")
-    }
-
-    /// Calm, honest "what to expect running NOOP on iPhone" callout — sideloading reality, re-sign
-    /// cadence, the unlock-after-reboot (#222) note, background-BLE limits, and beta-iOS caveat. Surfaces
-    /// the live sideload-cert expiry when we can read it, with a gentle warning under ~3 days.
-    private var iphoneExpectations: some View {
-        let diag = IOSDiagnostics.capture()
-        let expiry = diag.expiryDaysRemaining()
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "iphone.gen3")
-                    .foregroundStyle(StrandPalette.accent)
-                    .accessibilityHidden(true)
-                Text("Using NOOP on iPhone")
-                    .font(StrandFont.subhead.weight(.semibold))
-                    .foregroundStyle(StrandPalette.textPrimary)
-            }
-
-            iphoneExpectationLine("This is a sideloaded build — installed outside the App Store. It needs re-signing periodically: roughly every 7 days on a free Apple ID, about a year on a paid developer account.")
-            iphoneExpectationLine("After your iPhone reboots, unlock it once. Until you do, iOS keeps NOOP's files locked (Data Protection), so new history can't be written or synced.")
-            iphoneExpectationLine("Background Bluetooth has OS limits — iOS may pause NOOP when it's not in the foreground, so keep it open while syncing a fresh strap.")
-            iphoneExpectationLine("On a beta version of iOS, things can break that work on the release build.")
-
-            if let days = expiry {
-                let warning = days <= 3
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: warning ? "exclamationmark.triangle.fill" : "clock.badge.checkmark")
-                        .font(.system(size: 13))
-                        .foregroundStyle(warning ? StrandPalette.statusWarning : StrandPalette.textTertiary)
-                        .accessibilityHidden(true)
-                    Text(expiryMessage(days))
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(warning ? StrandPalette.statusWarning : StrandPalette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.top, 2)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(StrandPalette.surfaceInset,
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(StrandPalette.hairline, lineWidth: 1)
-        )
-    }
-
-    private func expiryMessage(_ days: Int) -> String {
-        if days < 0 {
-            return "This sideloaded build expired \(-days) day\(abs(days) == 1 ? "" : "s") ago — re-sign it to keep it running."
-        }
-        return "This sideloaded build expires in \(days) day\(days == 1 ? "" : "s") — re-sign to keep it running."
-    }
-
-    private func iphoneExpectationLine(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 4))
-                .foregroundStyle(StrandPalette.textTertiary)
-                .padding(.top, 6)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(StrandFont.footnote)
-                .foregroundStyle(StrandPalette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-    #endif
-
     // MARK: - Shared bits
 
     private var rowDivider: some View {
@@ -1902,7 +1691,6 @@ struct SettingsSection<Content: View>: View {
 
 // MARK: - App card (macOS: launch at login + language)
 
-#if os(macOS)
 /// "App" settings for the Mac build: start NOOP at login (`SMAppService.mainApp`) and pick the UI
 /// language (`AppLanguage` → the app's own `AppleLanguages` default, effective after a relaunch).
 private struct AppSettingsCard: View {
@@ -2004,85 +1792,6 @@ private struct AppSettingsCard: View {
         }
     }
 }
-#endif
-
-// MARK: - iOS diagnostics sheet
-
-#if os(iOS)
-/// A read-only environment dump for bug reports: device, iOS+build, Data Protection (#222),
-/// background refresh, low-power, sideload + cert expiry — with a one-tap Copy.
-private struct DiagnosticsSheet: View {
-    let onClose: () -> Void
-
-    /// Captured once at presentation; a snapshot, not a live monitor.
-    private let lines: [String] = IOSDiagnostics.capture().summaryLines()
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Diagnostics").font(StrandFont.title2)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    Text("Attach this to a bug report.").font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                }
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(StrandPalette.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close")
-            }
-            .padding(20)
-
-            Divider().overlay(StrandPalette.hairline)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    if lines.isEmpty {
-                        Text("No iOS diagnostics available.")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textTertiary)
-                    } else {
-                        ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                            Text(line)
-                                .font(StrandFont.mono(12))
-                                .foregroundStyle(StrandPalette.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(StrandPalette.surfaceInset,
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(20)
-            }
-
-            Divider().overlay(StrandPalette.hairline)
-
-            HStack {
-                Spacer()
-                Button {
-                    // UIPasteboard via the shared cross-platform wrapper.
-                    PlatformPasteboard.copy(lines.joined(separator: "\n"))
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                        .frame(minWidth: 120)
-                }
-                .buttonStyle(NoopButtonStyle(.primary))
-                .disabled(lines.isEmpty)
-            }
-            .padding(16)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(StrandPalette.surfaceBase)
-    }
-}
-#endif
 
 // MARK: - Steps estimate calibration
 
@@ -2155,12 +1864,7 @@ struct StepsCalibrationSheet: View {
             Divider().overlay(StrandPalette.hairline)
             footerBar
         }
-        #if os(macOS)
         .frame(width: 560, height: 680)
-        #else
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .noopSheetPresentation(largeFirst: true)
-        #endif
         .background(StrandPalette.surfaceBase)
         .task { await loadIfNeeded() }
     }

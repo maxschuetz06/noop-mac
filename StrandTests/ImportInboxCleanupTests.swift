@@ -75,24 +75,4 @@ final class ImportInboxCleanupTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: userFile.path),
                       "a file outside Documents/Inbox must never be deleted by cleanup()")
     }
-
-    func testPurgeRemovesStaleInboxDropsButKeepsFreshOnes() throws {
-        // Only meaningful on iOS (purgeImportInbox is a no-op elsewhere); on macOS this asserts the
-        // no-op leaves files alone, which is also correct.
-        let stale = try makeFile(at: inbox.appendingPathComponent("stale-\(UUID()).zip"))
-        // Age it well past the 60 s in-flight guard.
-        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -3600)],
-                                              ofItemAtPath: stale.path)
-        let fresh = try makeFile(at: inbox.appendingPathComponent("fresh-\(UUID()).zip"))
-        defer { try? FileManager.default.removeItem(at: fresh); try? FileManager.default.removeItem(at: stale) }
-
-        AppModel.purgeImportInbox()
-
-        XCTAssertTrue(FileManager.default.fileExists(atPath: fresh.path),
-                      "a just-written (in-flight) Inbox drop must be left alone")
-        #if os(iOS)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: stale.path),
-                       "a stale Inbox drop must be purged on launch (#590)")
-        #endif
-    }
 }

@@ -20,9 +20,8 @@ everything on your Mac. No account, no cloud, no subscription.
 ## Local-only by design
 
 NOOP has no server, no telemetry and no account. Your strap data, imports and computed metrics never
-leave your Mac. Only two features make network requests: the optional, off-by-default AI Coach (to a
-provider you configure with your own API key) and "Check for updates" (one read of the latest GitHub
-release, only when you tap it).
+leave your Mac. Only one feature makes a network request: "Check for updates" (one read of the latest
+GitHub release, only when you tap it).
 
 An optional external data folder (database mirror for local scripts, import inbox, raw PPG capture)
 is off by default and must be enabled at build time. See
