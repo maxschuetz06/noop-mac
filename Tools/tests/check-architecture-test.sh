@@ -40,11 +40,16 @@ guard let store = await repo.storeHandle() else { return }
 let max = StrainScorer.maxStrain
 let s = SleepStagerV2.stage(epochs) /* trailing */
 let b = repo.storeHandle ()
+let open = repo.storeHandle
+let text = "count \(await repo.storeHandle()?.count ?? 0) rows"
+let ok = "\(title) storeHandle StrainScorer (\(n))"
 SWIFT
 expect violations 1 'Strand/Screens/Today/TodayView+Loading.swift:2: storeHandle: guard let store = await repo.storeHandle() else { return }
 Strand/Screens/Today/TodayView+Loading.swift:3: StrainScorer: let max = StrainScorer.maxStrain
 Strand/Screens/Today/TodayView+Loading.swift:4: SleepStager: let s = SleepStagerV2.stage(epochs) /* trailing */
-Strand/Screens/Today/TodayView+Loading.swift:5: storeHandle: let b = repo.storeHandle ()'
+Strand/Screens/Today/TodayView+Loading.swift:5: storeHandle: let b = repo.storeHandle ()
+Strand/Screens/Today/TodayView+Loading.swift:6: storeHandle: let open = repo.storeHandle
+Strand/Screens/Today/TodayView+Loading.swift:7: storeHandle: let text = "count \(await repo.storeHandle()?.count ?? 0) rows"'
 
 fixture outside Strand/Data/Repository+Effort.swift <<'SWIFT'
 let store = await storeHandle()

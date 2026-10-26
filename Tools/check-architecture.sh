@@ -2,8 +2,10 @@
 # Layering guard for the macOS app: views read and write data only through named Repository methods
 # and never run the analytics scorers themselves.
 #
-# Flags, in Swift code under Strand/Screens/ (comments and string literals are ignored):
-#   storeHandle(   the raw WhoopStore handle (Repository.storeHandle) — use a named Repository method
+# Flags, in Swift code under Strand/Screens/ (comments and string literals are ignored; the code inside
+# string interpolations is checked):
+#   storeHandle    the raw WhoopStore handle (Repository.storeHandle), called or referenced — use a
+#                  named Repository method instead
 #   StrainScorer   strain scoring belongs to Repository / StrandAnalytics callers in Strand/Data
 #   SleepStager    sleep staging likewise (also matches SleepStagerV2)
 #
@@ -27,9 +29,11 @@ files=$(find Strand/Screens -type f -name '*.swift' | LC_ALL=C sort)
 LC_ALL=C awk '
 FNR == 1 { inBlock = 0 }
 
-# Returns the line with comments and string-literal contents removed (block comments may span lines).
-function codeOnly(line,    out, i, c, n, inString) {
-    out = ""; inString = 0; n = length(line)
+# Returns the line with comments and string-literal text removed (block comments may span lines). The
+# code of a `\(...)` interpolation is kept: inside it, `depth` counts open parentheses until the string
+# resumes.
+function codeOnly(line,    out, i, c, n, inString, depth) {
+    out = ""; inString = 0; depth = 0; n = length(line)
     for (i = 1; i <= n; i++) {
         c = substr(line, i, 1)
         if (inBlock) {
@@ -37,10 +41,13 @@ function codeOnly(line,    out, i, c, n, inString) {
             continue
         }
         if (inString) {
+            if (c == "\\" && substr(line, i + 1, 1) == "(") { inString = 0; depth = 1; out = out " ("; i++; continue }
             if (c == "\\") { i++; continue }
             if (c == "\"") { inString = 0; out = out c }
             continue
         }
+        if (depth > 0 && c == "(") depth++
+        if (depth > 0 && c == ")" && --depth == 0) { inString = 1; out = out ") "; continue }
         if (c == "/" && substr(line, i + 1, 1) == "/") break
         if (c == "/" && substr(line, i + 1, 1) == "*") { inBlock = 1; i++; continue }
         if (c == "\"") inString = 1
@@ -57,7 +64,7 @@ function report(rule, raw) {
 
 {
     code = codeOnly($0)
-    if (code ~ /(^|[^A-Za-z0-9_])storeHandle[ \t]*\(/) report("storeHandle", $0)
+    if (code ~ /(^|[^A-Za-z0-9_])storeHandle([^A-Za-z0-9_]|$)/) report("storeHandle", $0)
     if (code ~ /(^|[^A-Za-z0-9_])StrainScorer([^A-Za-z0-9_]|$)/) report("StrainScorer", $0)
     if (code ~ /(^|[^A-Za-z0-9_])SleepStager[A-Za-z0-9_]*/) report("SleepStager", $0)
 }
