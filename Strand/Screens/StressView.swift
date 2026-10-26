@@ -84,8 +84,7 @@ struct StressView: View {
 
         let hr = await repo.hrSamples(from: from, to: to, limit: 200_000)
         guard hr.count >= DaytimeStress.minHourHRSamples else { daytime = .empty; return }
-        let rr = (try? await repo.storeHandle()?.rrIntervals(
-            deviceId: repo.deviceId, from: from, to: to, limit: 200_000)) ?? []
+        let rr = await repo.rrIntervals(from: from, to: to, limit: 200_000)
 
         daytime = DaytimeStress.analyze(hr: hr, rr: rr, tzOffsetSeconds: tz)
     }

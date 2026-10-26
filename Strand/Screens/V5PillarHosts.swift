@@ -75,19 +75,18 @@ struct RhythmHost: View {
     /// Read the most recent banked sleep session, pull its R-R + gravity, split into ~5-minute windows,
     /// gate each on stillness + resting rate, and screen it. Descriptive stats only — never a verdict.
     private func load() async {
-        guard let store = await repo.storeHandle(),
-              let lastSleep = (await repo.allSleepSessions(days: 14)).last else { return }
+        guard let lastSleep = (await repo.allSleepSessions(days: 14)).last else { return }
         let lo = lastSleep.effectiveStartTs
         let hi = lastSleep.endTs
         guard hi > lo else { return }
-        let rr = (try? await store.rrIntervals(deviceId: repo.deviceId, from: lo, to: hi, limit: 200_000)) ?? []
+        let rr = await repo.rrIntervals(from: lo, to: hi, limit: 200_000)
         // BLE-only users have their night under the computed source; fall back to it when the imported
         // device yields nothing.
         let rrRows = rr.isEmpty
-            ? ((try? await store.rrIntervals(deviceId: repo.deviceId + "-noop", from: lo, to: hi, limit: 200_000)) ?? [])
+            ? await repo.rrIntervals(deviceId: repo.deviceId + "-noop", from: lo, to: hi, limit: 200_000)
             : rr
         guard !rrRows.isEmpty else { return }
-        let grav = (try? await store.gravitySamples(deviceId: repo.deviceId, from: lo, to: hi, limit: 200_000)) ?? []
+        let grav = await repo.gravitySamples(from: lo, to: hi, limit: 200_000)
 
         // Window the night into 5-minute slices; a slice is "still" when its gravity variance is small.
         let windowSec = 5 * 60

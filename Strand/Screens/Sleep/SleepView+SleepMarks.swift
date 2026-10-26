@@ -57,8 +57,7 @@ extension SleepView {
         // The shareable strap log is the human-readable surface that lands in a debug export.
         live.append(log: mark.logLine)
         Task {
-            guard let store = await repo.storeHandle() else { return }
-            try? await store.upsertMetricSeries([mark.metricPoint], deviceId: repo.deviceId)
+            try? await repo.saveMetricPoints([mark.metricPoint], source: repo.deviceId)
         }
     }
 }

@@ -137,17 +137,8 @@ extension SettingsView {
         rawCsvBusy = true
         Task {
             let since = Date().timeIntervalSince1970 - 24 * 60 * 60
-            guard let store = await model.repo.storeHandle() else {
-                await MainActor.run {
-                    rawCsvBusy = false
-                    backupAlertTitle = "Export failed"
-                    backupAlertMessage = "Couldn't open the local store."
-                    showBackupAlert = true
-                }
-                return
-            }
             do {
-                let url = try await store.exportRawCSV(deviceId: model.deviceId, since: since)
+                let url = try await model.repo.exportRawSensorCSV(deviceId: model.deviceId, since: since)
                 await MainActor.run {
                     rawCsvBusy = false
                     lastRawCsvURL = url
@@ -165,6 +156,13 @@ extension SettingsView {
                         backupAlertMessage = error.localizedDescription
                         showBackupAlert = true
                     }
+                }
+            } catch RepositoryError.storeUnavailable {
+                await MainActor.run {
+                    rawCsvBusy = false
+                    backupAlertTitle = "Export failed"
+                    backupAlertMessage = "Couldn't open the local store."
+                    showBackupAlert = true
                 }
             } catch {
                 await MainActor.run {
