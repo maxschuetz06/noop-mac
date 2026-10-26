@@ -87,7 +87,7 @@ You can revisit pairing and profile any time from **Settings**.
 
 **Sidebar: Today · works from imported data; live status shown in the sidebar.**
 
-The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gapless grid:
+The home dashboard (`Screens/Today/`, titled "Control Center"). A tight, gapless grid:
 
 - **Health alert banner** — the illness early-warning banner appears here when triggered (see
   [Illness early-warning](#illness-early-warning)).
@@ -239,7 +239,7 @@ Sparse series auto-widen so they still overlay against dense ones.
 
 **Sidebar: Sleep · works from imported WHOOP data.**
 
-`SleepView.swift` — last night, read in two seconds — and **browse back through past nights**, not
+`Screens/Sleep/` — last night, read in two seconds — and **browse back through past nights**, not
 just the most recent (step through earlier nights to compare):
 
 - **Stage breakdown hero** — a **hypnogram** (reconstructed from stage durations) or, if intervals
@@ -475,7 +475,7 @@ of history. On-device and approximate — informational only, **not** a diagnosi
 
 **Sidebar: Settings · always available.**
 
-`SettingsView.swift`:
+`Screens/Settings/`:
 
 - **Profile** — age, sex, weight, height, and max heart rate (auto-estimated via Tanaka, or a
   manual override). These power your zones, calorie estimates and Charge baselines.
