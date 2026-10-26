@@ -17,7 +17,7 @@ extension Repository {
 
     /// Best-effort upsert of lab markers; a write failure leaves the book unchanged.
     func saveLabMarkers(_ rows: [LabMarkerRow]) async {
-        guard !rows.isEmpty, let store = await storeHandle() else { return }
+        guard let store = await storeHandle() else { return }
         _ = try? await store.upsertLabMarkers(rows)
     }
 
