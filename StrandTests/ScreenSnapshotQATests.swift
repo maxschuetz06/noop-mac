@@ -184,7 +184,7 @@ extension PerfEnvironment {
         func wrap<V: View>(_ v: V) -> AnyView {
             var any = AnyView(v
                 .environmentObject(repo).environmentObject(live).environmentObject(profile)
-                .environmentObject(behavior).environmentObject(intelligence).environmentObject(coach)
+                .environmentObject(behavior).environmentObject(intelligence)
                 .environmentObject(router).environmentObject(UpdateStore.shared)
                 .environment(\.locale, AppLanguage.currentContentLocale)
                 .preferredColorScheme(snapshotIsLight ? .light : .dark))

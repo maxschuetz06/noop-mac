@@ -303,7 +303,6 @@ final class PerfEnvironment {
     let profile = ProfileStore()
     let behavior = BehaviorStore()
     let intelligence: IntelligenceEngine
-    let coach: AICoachEngine
     let router = NavRouter()
 
     /// Multiplier on the 50 ms step budget. The shipped app is an optimised build; `xcodebuild test` builds
@@ -348,7 +347,6 @@ final class PerfEnvironment {
         repo.setStoreForTesting(store)
         self.repo = repo
         self.intelligence = IntelligenceEngine(repo: repo, profile: profile, deviceId: "my-whoop")
-        self.coach = AICoachEngine(repo: repo)
     }
 
     func cleanup() { try? FileManager.default.removeItem(at: dir) }
@@ -359,7 +357,7 @@ final class PerfEnvironment {
         func wrap<V: View>(_ v: V) -> AnyView {
             var any = AnyView(v
                 .environmentObject(repo).environmentObject(live).environmentObject(profile)
-                .environmentObject(behavior).environmentObject(intelligence).environmentObject(coach)
+                .environmentObject(behavior).environmentObject(intelligence)
                 .environmentObject(router).environmentObject(UpdateStore.shared))
             if let model = AppModel.shared { any = AnyView(any.environmentObject(model)) }
             return any

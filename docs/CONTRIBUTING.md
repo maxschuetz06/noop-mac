@@ -200,8 +200,8 @@ Developer account. See [`BUILD.md`](BUILD.md) for the signed-bundle recipe and p
   app layer).
 - `xcodegen generate` has been run if you added or removed files, **but do not commit
   `Strand.xcodeproj/`** — it's gitignored and regenerated from `project.yml`.
-- No new third-party dependency unless it's discussed first. Today they are **GRDB.swift** (SQLite),
-  **ZIPFoundation** (archives) and **MarkdownUI** (AI Coach replies), all via SwiftPM and listed in
+- No new third-party dependency unless it's discussed first. Today they are **GRDB.swift** (SQLite) and
+  **ZIPFoundation** (archives), both via SwiftPM and listed in
   [`../NOTICE`](../NOTICE).
 
 ---

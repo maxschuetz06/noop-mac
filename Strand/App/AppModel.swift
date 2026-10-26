@@ -46,9 +46,6 @@ final class AppModel: ObservableObject {
     /// On-device WHOOP-style recovery/strain/sleep computation from raw strap streams.
     let intelligence: IntelligenceEngine
 
-    /// Opt-in AI coach (bring-your-own-key) — the one networked feature, off until the user enables it.
-    let coach: AICoachEngine
-
     /// Observable cache over the paired-device registry; `activeDeviceId` drives the source coordinator.
     /// Built lazily once the store opens (see `wireSourceCoordinator`). nil until then — with no generic
     /// strap paired the active id stays "my-whoop", so this never affects the WHOOP startup path.
@@ -212,7 +209,6 @@ final class AppModel: ObservableObject {
         self.live = live
         self.ble = BLEManager(state: live, deviceId: "my-whoop")
         self.repo = Repository(deviceId: "my-whoop")
-        self.coach = AICoachEngine(repo: repo)
         self.intelligence = IntelligenceEngine(repo: repo, profile: profile, deviceId: "my-whoop")
         // Route the engine's per-day scoring diagnostic into the SAME shareable strap log every other
         // subsystem writes to (PII-scrubbed by `live.append(log:)`), so a bug report ships proof of what

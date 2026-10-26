@@ -8,8 +8,8 @@ cloud sync, so the usual web attack surface does not apply. What remains is loca
 - **Bluetooth Low Energy** — the link to your WHOOP strap.
 - **Local SQLite database** — every reading is stored on your own device.
 - **File imports** — WHOOP CSV exports and Apple Health ZIP files you choose to open.
-- **AI Coach (optional, off by default)** — the only feature that makes a network
-  request, and only with an API key you supply yourself, to the provider you choose.
+- **Check for updates (only when you tap it)** — the only feature that makes a network
+  request: one read of the latest GitHub release version, with nothing about you attached.
 
 A useful security report is one that lets data leave the device when it shouldn't,
 lets a malicious strap or crafted import file corrupt the database or run code, or
@@ -41,5 +41,3 @@ latest `main` to pick up security fixes.
 - Issues in third-party dependencies — please report those upstream (see
   [`NOTICE`](NOTICE) for the bundled libraries and their licences)
 - The WHOOP strap firmware itself, which NOOP does not ship or modify
-- The user's own API key being misused after they have entered it (the key is
-  stored in the macOS Keychain; protecting the user account is the user's job)

@@ -95,7 +95,7 @@ prefix, so the desktop widget cannot share data with the app; everything else wo
 
 The app is sandboxed. Its default entitlements (`Strand/Resources/Strand.entitlements`) are the App
 Sandbox, Bluetooth, user-selected file access, the App Group, and outbound network client access
-(used only by the opt-in, bring-your-own-key AI Coach and the user-tapped "Check for updates"). They
+(used only by the user-tapped "Check for updates"). They
 contain no sandbox exceptions. The file
 is maintained by hand; XcodeGen does not regenerate it.
 
