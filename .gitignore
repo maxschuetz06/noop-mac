@@ -1,0 +1,80 @@
+# ── macOS / Finder ──────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.localized
+Icon?
+
+# ── Swift / Xcode ───────────────────────────────────────────────
+# Xcode project is generated from project.yml by XcodeGen — do not commit it.
+*.xcodeproj/
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+# …EXCEPT the xcodeproj's SPM lockfile. The shipped app builds from this Package.resolved,
+# so it MUST be tracked — otherwise a clean checkout resolves a floating, uncommitted lockfile
+# that could drift to a newer (potentially compromised) upstream release. Supply-chain pin.
+# Git won't descend into an excluded directory, so re-include each ancestor on the path, then
+# re-exclude its contents with a wildcard so ONLY Package.resolved gets tracked (not the
+# generated project.pbxproj / contents.xcworkspacedata / xcuserdata cruft).
+!Strand.xcodeproj/
+Strand.xcodeproj/*
+!Strand.xcodeproj/project.xcworkspace/
+Strand.xcodeproj/project.xcworkspace/*
+!Strand.xcodeproj/project.xcworkspace/xcshareddata/
+Strand.xcodeproj/project.xcworkspace/xcshareddata/*
+!Strand.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+Strand.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
+!Strand.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+build/
+DerivedData/
+.build/
+Packages/*/.build/
+Tools/*/.build/
+*.swiftpm
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+# SwiftPM resolved file is fine to commit; uncomment to ignore:
+# Package.resolved
+
+# ── App bundles / build output ──────────────────────────────────
+*.app/
+NOOP.app/
+
+# ── Per-machine build identity (copy Config/Local.xcconfig.example) ──
+Config/Local.xcconfig
+Config/Local.entitlements
+Config/*.local.entitlements
+
+# ── IDE / editor ────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+
+# ── Misc / secrets (never commit) ───────────────────────────────
+*.log
+.env
+# Deployment credentials (PAT / signing / endpoints) — never commit. `.env` above
+# won't match `deploy.env`, so list it (and any `deploy.env.<stage>`) explicitly.
+deploy.env
+deploy.env.*
+secrets.*
+
+# ── Personal data — NEVER publish (real WHOOP/Apple Health exports) ──
+Fixtures/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+export.xml
+export.zip
+*whoop_export*.zip
+*apple_health*.zip
+
+# Python bytecode
+__pycache__/
+*.pyc

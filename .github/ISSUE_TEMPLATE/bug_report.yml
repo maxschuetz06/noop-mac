@@ -1,0 +1,92 @@
+name: 🐞 Bug report
+description: Report something in NOOP that doesn't work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        NOOP runs **entirely on your device** — there are no servers or accounts for us to check, so a bug is almost always diagnosed from your **strap log**. A report without one (and without an obvious repro) usually can't be investigated and may be closed asking for the log.
+
+        **Please don't strip out the fields below.** "Live HR works but no data" alone has half a dozen different causes — the version, strap model and log are how we tell which one you've actually hit. A few seconds filling this in saves a day of back-and-forth. 🙏
+  - type: input
+    id: version
+    attributes:
+      label: NOOP version
+      description: Settings → What's New, or the commit you built from.
+      placeholder: "7.0.1"
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: macOS version
+      description: e.g. macOS 15.5
+    validations:
+      required: true
+  - type: dropdown
+    id: strap
+    attributes:
+      label: WHOOP strap model
+      options:
+        - WHOOP 4.0
+        - WHOOP 5.0
+        - WHOOP MG
+        - No strap — imported data only
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where the data is coming from
+      multiple: true
+      description: Tick all that apply.
+      options:
+        - Live Bluetooth (strap connected)
+        - WHOOP CSV export import
+        - Apple Health import
+    validations:
+      required: true
+  - type: textarea
+    id: what_happens
+    attributes:
+      label: What happens
+      description: A clear description of the bug — what you actually saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Strap log
+      description: |
+        **The single most useful thing you can include.** Connect to your strap and reproduce the problem FIRST, then grab the log from the Live screen → Strap log card → Copy / Save…
+
+        Paste it here or drag-and-drop the file. Redact anything you'd rather not share — partial logs still help. No serials, accounts or personal data are needed.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I attached or pasted a strap log above — **or** my bug is a clearly reproducible UI issue that doesn't need one (e.g. a typo, a button that does nothing) and I've described exactly how to see it.
+          required: true
+        - label: I searched the existing issues and this isn't already reported.
+          required: true
+        - label: I've left out anything personal (strap serial, account email, raw export).
+          required: true

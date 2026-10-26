@@ -1,0 +1,14 @@
+// Copy to Config/Local.xcconfig (ignored by git) and fill in your own values.
+
+// Your Apple Developer team id (Xcode > Settings > Accounts, or `security find-identity -v -p codesigning`).
+DEVELOPMENT_TEAM = ABCDE12345
+
+// A bundle id you own. Keep it stable: a new id starts with an empty sandbox container.
+NOOP_BUNDLE_ID = com.example.noop
+
+// Optional external data folder (~/NOOP-Data). Both lines belong together: the folder name must
+// match the path in the entitlements file. See docs/EXTERNAL_DATA_FOLDER.md.
+// NOOP_EXTERNAL_DATA_FOLDER = NOOP-Data
+// NOOP_APP_ENTITLEMENTS = Config/Strand-ExternalDataFolder.entitlements
+// For another folder name, copy the entitlements file to Config/Strand-ExternalDataFolder.local.entitlements
+// (ignored by git), change its path to /<your folder>/ and point NOOP_APP_ENTITLEMENTS at the copy.

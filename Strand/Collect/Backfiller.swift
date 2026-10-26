@@ -1,0 +1,644 @@
+import Foundation
+import WhoopProtocol
+import WhoopStore
+
+// MARK: - BackfillStoreWriting protocol
+
+/// The async subset the Backfiller needs. Plain async protocol (not @MainActor) so both the
+/// real WhoopStore actor and a @MainActor SpyBackfillStore in tests can satisfy it.
+protocol BackfillStoreWriting: AnyObject {
+    @discardableResult
+    func insert(_ streams: Streams, deviceId: String) async throws
+        -> (hr: Int, rr: Int, events: Int, battery: Int,
+            spo2: Int, skinTemp: Int, resp: Int, gravity: Int)
+    func enqueueRawBatch(_ meta: RawBatchMeta, frames: [[UInt8]]) async throws
+    func setCursor(_ name: String, _ value: Int) async throws
+    func cursor(_ name: String) async throws -> Int?
+    /// One `NOOP_HISTORY_CENSUS` row per finished session (see `WhoopStore.recordHistoryCensus`).
+    func recordHistoryCensus(deviceId: String, ts: Int, counts: [String: Int],
+                             chunks: Int, diagnosticFrames: Int) async throws
+    /// Newest timestamp of any row only the historical offload writes (see `WhoopStore.latestHistoryTs`).
+    /// The "history frontier" — unlike max HR ts it is NOT dragged to "now" by the live HR stream.
+    func latestHistoryTs(deviceId: String) async throws -> Int?
+}
+
+extension BackfillStoreWriting {
+    /// Default no-op so lightweight test/preview stores need not implement the census write.
+    func recordHistoryCensus(deviceId: String, ts: Int, counts: [String: Int],
+                             chunks: Int, diagnosticFrames: Int) async throws {}
+    /// Default "unknown" so lightweight test/preview stores need not implement the frontier read.
+    func latestHistoryTs(deviceId: String) async throws -> Int? { nil }
+}
+
+extension WhoopStore: BackfillStoreWriting {}
+
+// MARK: - Backfiller
+
+/// Historical-offload state machine (idle / backfilling).
+///
+/// Per-chunk local safe-trim invariant:
+///   decode known → await insert (decoded durable) →
+///   await enqueueRawBatch (raw durable) →
+///   await setCursor(strap_trim) →
+///   ackTrim (link-layer confirmed ack to strap)
+///
+/// A chunk is forgotten only after decoded AND raw are both locally durable AND the ack
+/// (.withResponse) is link-layer confirmed. Never waits on the server.
+@MainActor
+final class Backfiller {
+    /// (parsed frames, deviceClockRef, wallClockRef, sessionOldestUnix?, sessionNewestUnix?) → Streams.
+    /// The trailing session-range markers are the strap's GET_DATA_RANGE oldest/newest for THIS sync
+    /// (#547 session-relative gate); nil when the range isn't known yet (the absolute-only floor applies).
+    ///
+    /// `@Sendable`: `finishChunk` runs it on a background task (pure value-in / value-out decode), so an
+    /// injected extractor must not touch main-actor state.
+    typealias Extractor = @Sendable ([ParsedFrame], Int, Int, Int?, Int?) -> Streams
+
+    private let store: BackfillStoreWriting
+    /// Device id offloaded chunks persist under. MUTABLE so a WHOOP↔WHOOP switch
+    /// (BLEManager.setActiveDeviceId) re-attributes the next finishChunk persist immediately, rather
+    /// than freezing the id captured at construction. Single-WHOOP never switches, so this stays
+    /// "my-whoop" exactly as a `let` would have.
+    var deviceId: String
+    /// Confirms one HISTORY_END chunk to the strap. Carries both the trim cursor (= first u32
+    /// of end_data, used for the `strap_trim` cursor) and the 8-byte `end_data` (= the raw
+    /// HISTORY_END metadata.data[10:18]) that the high-freq-sync ack form requires verbatim.
+    private let ackTrim: (_ trim: UInt32, _ endData: [UInt8]) -> Void
+    private let extract: Extractor
+    /// Research toggle. When false (DEFAULT) no raw frames are persisted — the chunk's
+    /// decoded streams are still durable and the trim is still acked (decoded is the product of
+    /// record). Injected for tests; backed by UserDefaults in the production init site.
+    private let enableRawCapture: Bool
+
+    /// The clock reference set by BLEManager when GET_CLOCK confirms (required for decoding).
+    var clockRef: ClockRef?
+
+    /// #547 SESSION-RELATIVE gate: the strap's own GET_DATA_RANGE oldest/newest banked-record markers for
+    /// the CURRENT offload, set by BLEManager when the range reply lands. A record dated months outside this
+    /// window is wandering-clock pollution even if it clears the absolute 2023-11 floor, so the ingest gate
+    /// rejects it. nil (both) until the range is known — the gate then falls back to the absolute floor only,
+    /// so behaviour is unchanged on the no-range / replay paths. Reset in `begin`.
+    var sessionOldestUnix: Int?
+    var sessionNewestUnix: Int?
+
+    /// True while a historical offload session is active.
+    private(set) var isBackfilling = false
+
+    /// Buffered data frames for the current open chunk (between START and END).
+    private var chunk: [[UInt8]] = []
+    /// Whether a START has been received and we're accumulating a chunk.
+    private var chunkOpen = false
+    /// Strap family for the current offload, set at begin(). Drives family-aware frame parsing (WHOOP 5/MG
+    /// records sit at +4 offsets vs WHOOP 4.0) and the end_data slice the ack needs. Captured at begin()
+    /// rather than init so it's correct even if the Backfiller was constructed before the strap was known.
+    private var family: DeviceFamily = .whoop4
+
+    /// Diagnostic sink (strap log). Surfaces historical records whose firmware layout we can't decode.
+    private let log: ((String) -> Void)?
+    /// Versions already reported this session, so the diagnostic logs each once (no spam).
+    private var loggedUnmappedVersions: Set<Int> = []
+
+    /// Per-session persistence tally — the success-side observability the log forensics flagged as the
+    /// blind spot (#150): we logged FAILURES (decoded-to-0) but never SUCCESSES, so a strap log couldn't
+    /// tell a banking strap from a broken one. Reset at begin(); read by BLEManager at session end to emit
+    /// "persisted N rows (M with motion) across K night(s)". Nights are day-keys (ts / 86400).
+    private(set) var sessionRowsPersisted = 0
+    private(set) var sessionMotionRows = 0
+    private var sessionNightKeys: Set<Int> = []
+    var sessionNights: Int { sessionNightKeys.count }
+    /// History-frontier progress of THIS session: the store's history frontier as of the session's first
+    /// persisted chunk (`nil` = no history row existed yet, or the read isn't available) and the newest
+    /// history-derived row timestamp this session newly persisted. "The frontier moved forward" =
+    /// the latter exceeds the former — the auto-continue progress test (see `BackfillContinuation`).
+    private var sessionStartHistoryFrontier: Int?
+    private var sessionHistoryFrontierSeeded = false
+    private(set) var sessionNewestHistoryTs: Int?
+    /// True when this session persisted a history row newer than the history frontier it started from.
+    var sessionHistoryFrontierAdvanced: Bool {
+        guard let newest = sessionNewestHistoryTs else { return false }
+        guard let start = sessionStartHistoryFrontier else { return true }
+        return newest > start
+    }
+    /// Throughput forensics: wall time since `begin()`, and the time spent INSIDE chunk commits (decode →
+    /// store → archive → ack), summed and worst-case. Separates "the strap paces the offload" from "our
+    /// main-actor commit is slow" in the strap log (`sessionTimingLine`).
+    private var sessionStartedAt = Date()
+    private(set) var sessionChunkWorkSeconds: TimeInterval = 0
+    private(set) var sessionMaxChunkWorkSeconds: TimeInterval = 0
+    /// Per-session record census (what the strap actually handed over, by packet type / layout version) and
+    /// the forensics counters behind it. Without this a completed offload that persisted nothing left no
+    /// trace of WHAT arrived (v26-only? v20/v21? nothing at all?). Reset at begin(); logged at session end.
+    private(set) var sessionCensus = HistoryCensus()
+    private(set) var sessionChunks = 0
+    private(set) var sessionDiagnosticFrames = 0
+    private var sessionDiagnosticBytes = 0
+    private var loggedDiagnosticFailure = false
+    /// Frames sampled per label per chunk, and the raw-byte budget per session (v20 records are 2 KB each).
+    nonisolated static let diagnosticFramesPerLabel = 2
+    static let diagnosticSessionByteBudget = 1_500_000
+    /// Logged once per session when the strap reports trim=0xFFFFFFFF — the "no valid flash cursor"
+    /// sentinel: it has no banked history to offload (a clock/charge state, not a decode bug).
+    private var loggedNoCursor = false
+
+    /// #547: running count of historical records DROPPED this session for an implausible own-timestamp
+    /// (a bad-clock strap — far-past / bogus-2027 / future-dated). Tallied across chunks and surfaced once
+    /// at a session boundary so a clock-broken strap is visible in the strap log (observability only — the
+    /// ingest gate already kept the garbage rows out of the DB).
+    private(set) var sessionDroppedImplausible = 0
+
+    /// The trim cursor of the LAST chunk this Backfiller acked (durably persisted + confirmed to the
+    /// strap). Survives across sessions on the same connection so the auto-continue gate (#364) can ask
+    /// "did the offload actually advance the strap's trim this session?" — the spin-detector signal that
+    /// stops it re-kicking forever when the cursor is frozen. nil until the first ack. NOT reset in
+    /// `begin()` (it's a cross-session high-water mark, not a per-session tally).
+    private(set) var lastAckedTrim: UInt32?
+
+    /// Distinct historical layout versions logged this session. Unlike `loggedUnmappedVersions` (which
+    /// only fires for layouts NOOP can't decode), this surfaces the layout on a HEALTHY sync too, so a
+    /// shared strap log always reveals what the strap emits (v18/v24/v25/v26). Mirrors the Android
+    /// Backfiller (PR #241, ryanbr); reset per session in `begin`.
+    private var loggedLayoutVersions: Set<Int> = []
+
+    /// Durably archives undecodable record frames BEFORE the trim ack (#77 / #91). Returns true once
+    /// the bytes are safe (written OR cap-reached — either way the chunk may be acked) and false on a
+    /// genuine write failure, in which case `finishChunk` holds the cursor/ack so the strap re-sends.
+    /// nil in non-production inits (tests/preview) → archiving is skipped and acks proceed as before.
+    private let rejectedSink: ((_ frames: [[UInt8]], _ trim: UInt32, _ family: DeviceFamily) -> Bool)?
+    /// Per-chunk outcome hook (#77 family): (didDecodeSensorRows, wasConsoleOnly). Lets BLEManager
+    /// tally a session so a COMPLETED-but-empty offload (all console, no sensor records) can tell the
+    /// user their strap isn't banking, without false-positiving a normal caught-up sync.
+    private let onChunk: ((_ decoded: Bool, _ console: Bool) -> Void)?
+
+    init(store: BackfillStoreWriting,
+         deviceId: String,
+         ackTrim: @escaping (_ trim: UInt32, _ endData: [UInt8]) -> Void,
+         enableRawCapture: Bool = false,
+         log: ((String) -> Void)? = nil,
+         rejectedSink: ((_ frames: [[UInt8]], _ trim: UInt32, _ family: DeviceFamily) -> Bool)? = nil,
+         onChunk: ((_ decoded: Bool, _ console: Bool) -> Void)? = nil,
+         extract: @escaping Extractor = { extractHistoricalStreams($0, deviceClockRef: $1, wallClockRef: $2,
+                                                                    sessionOldestUnix: $3, sessionNewestUnix: $4) }) {
+        self.store = store
+        self.deviceId = deviceId
+        self.ackTrim = ackTrim
+        self.enableRawCapture = enableRawCapture
+        self.log = log
+        self.rejectedSink = rejectedSink
+        self.onChunk = onChunk
+        self.extract = extract
+    }
+
+    /// Called by BLEManager when the strap signals a historical offload is beginning.
+    /// chunkOpen starts TRUE: the high-freq-sync biometric replay streams records immediately and
+    /// sends one HISTORY_START then repeated HISTORY_ENDs, so we must accumulate from the outset.
+    func begin(family: DeviceFamily) {
+        self.family = family
+        isBackfilling = true
+        chunk.removeAll(keepingCapacity: true)
+        chunkOpen = true
+        sessionRowsPersisted = 0
+        sessionMotionRows = 0
+        sessionNightKeys.removeAll(keepingCapacity: true)
+        sessionStartHistoryFrontier = nil
+        sessionHistoryFrontierSeeded = false
+        sessionNewestHistoryTs = nil
+        sessionStartedAt = Date()
+        sessionChunkWorkSeconds = 0
+        sessionMaxChunkWorkSeconds = 0
+        loggedNoCursor = false
+        sessionDroppedImplausible = 0
+        loggedLayoutVersions.removeAll(keepingCapacity: true)
+        sessionCensus = HistoryCensus()
+        sessionChunks = 0
+        sessionDiagnosticFrames = 0
+        sessionDiagnosticBytes = 0
+        loggedDiagnosticFailure = false
+        // #547: the range markers belong to a connection's GET_DATA_RANGE, which BLEManager re-sets per
+        // connect; clear them here so a fresh session never reuses a previous strap's window. BLEManager
+        // re-publishes them as soon as the range reply arrives.
+        sessionOldestUnix = nil
+        sessionNewestUnix = nil
+    }
+
+    /// Feed one raw BLE frame into the state machine. May trigger async store operations.
+    func ingest(_ frame: [UInt8]) async {
+        switch Backfiller.classify(frame, family: family) {
+        case .start:
+            isBackfilling = true
+            chunk.removeAll(keepingCapacity: true)
+            chunkOpen = true
+        case .end(let unix, let trim):
+            let began = Date()
+            await finishChunk(unix: unix, trim: trim, endFrame: frame)
+            let took = Date().timeIntervalSince(began)
+            sessionChunkWorkSeconds += took
+            sessionMaxChunkWorkSeconds = max(sessionMaxChunkWorkSeconds, took)
+        case .complete:
+            isBackfilling = false
+            chunk.removeAll(keepingCapacity: true)
+            chunkOpen = false
+        case .other:
+            if chunkOpen { chunk.append(frame) }
+        }
+    }
+
+    /// Classify one raw frame for the offload state machine. Almost every frame in a history sync is a
+    /// type-47 data record, and a full `parseFrame` (CRC + dozens of String allocations) just to learn
+    /// "not METADATA" used to dominate main-thread time. `quickHistoricalMetaCandidate` rejects those from
+    /// one packet-type byte; only possible METADATA frames take the full parse, so the CRC integrity gate
+    /// inside `classifyHistoricalMeta` still guards every START/END/COMPLETE exactly as before.
+    nonisolated static func classify(_ frame: [UInt8], family: DeviceFamily) -> HistoricalMeta {
+        guard quickHistoricalMetaCandidate(frame, family: family) else { return .other }
+        return classifyHistoricalMeta(parseFrame(frame, family: family))
+    }
+
+    /// Everything `finishChunk` derives from a chunk's raw frames WITHOUT touching actor state: a pure
+    /// function of (frames, family, clock refs, session range, extractor). `Sendable` value types only, so
+    /// it can be computed on a background task and handed back to the main actor.
+    struct DecodedChunk: Sendable {
+        /// First `hist_version` seen in the chunk (drives the once-per-session layout log).
+        var firstLayoutVersion: Int?
+        /// Distinct hist_versions, in first-seen order, whose records decoded to no HR / gravity / PPG.
+        /// The main actor filters these against its already-logged set (that set is actor state).
+        var unmappedVersions: [Int]
+        var streams: Streams
+        var rejected: [[UInt8]]
+        /// Per-label record counts of this chunk's data frames (type / layout version / CRC state).
+        var census: HistoryCensus
+        /// Bounded sample of the frames that did NOT become sensor rows (v26 PPG, v20/v21, unmapped
+        /// layouts, CRC failures, unknown types) — stored raw for offline analysis. Never acked-against.
+        var diagnostic: [[UInt8]]
+    }
+
+    /// Pure CPU decode of one chunk (parse → layout/unmapped scan → extract → reject classification).
+    nonisolated static func decodeChunk(frames: [[UInt8]],
+                                        family: DeviceFamily,
+                                        deviceClock: Int, wallClock: Int,
+                                        sessionOldestUnix: Int?, sessionNewestUnix: Int?,
+                                        extract: Extractor) -> DecodedChunk {
+        let parsed = frames.map { parseFrame($0, family: family) }
+        let firstLayoutVersion = parsed.lazy.compactMap { $0.parsed["hist_version"]?.intValue }.first
+        // "Decoded nothing" must cover every mapped layout's signature field: v18 emits heart_rate,
+        // v25 emits gravity_x (no per-second HR — it's PPG-derived), v26 emits ppg_waveform (no HR
+        // either) — checking heart_rate alone false-flagged v25/v26 as unmapped (#156, sudden-break).
+        // v20/v21 raw bulk-sensor records (raw sample channels, no HR/gravity by design) are a decoded,
+        // known layout too: they were wrongly reported as "doesn't decode yet / no motion data" even
+        // though the v18 records of the same chunk carry HR, gravity, skin temp, steps and wear state.
+        var unmapped: [Int] = []
+        for p in parsed {
+            guard let v = p.parsed["hist_version"]?.intValue,
+                  p.parsed["heart_rate"] == nil,
+                  p.parsed["gravity_x"] == nil,
+                  p.parsed["ppg_waveform"] == nil,
+                  !isRawSensorChannelRecord(p),
+                  !unmapped.contains(v) else { continue }
+            unmapped.append(v)
+        }
+        let streams = extract(parsed, deviceClock, wallClock, sessionOldestUnix, sessionNewestUnix)
+        let rejected = rejectedHistoricalRecords(frames, family: family)
+        var census = HistoryCensus()
+        for (f, p) in zip(frames, parsed) { census.note(f, family: family, crcOK: p.ok ? p.crcOK : false) }
+        let diagnostic = diagnosticHistoryFrames(frames: frames, parsed: parsed, family: family,
+                                                 perLabelCap: Backfiller.diagnosticFramesPerLabel)
+        return DecodedChunk(firstLayoutVersion: firstLayoutVersion, unmappedVersions: unmapped,
+                            streams: streams, rejected: rejected, census: census, diagnostic: diagnostic)
+    }
+
+    /// Log line for a historical layout version NOOP has no field map for. The "no motion data, so sleep
+    /// can't be computed" consequence is only true when nothing in the chunk supplied gravity — when other
+    /// records of the same chunk (the v18 per-second records) did, those rows persist and sleep is unaffected.
+    nonisolated static func unmappedLayoutLogLine(version: Int, chunkHasMotion: Bool) -> String {
+        if chunkHasMotion {
+            return "Historical records of layout v\(version) are not decoded by NOOP (raw bytes are sampled); this chunk's other records supplied HR and motion, so sleep is unaffected. Please report this (issue #30)."
+        }
+        return "Historical records use firmware layout v\(version), which NOOP doesn't decode yet — no motion data, so sleep can't be computed from the strap. Please report this (issue #30)."
+    }
+
+    /// The 8-byte `end_data` the high-freq-sync ack requires: metadata.data[10:18].
+    /// metadata.data begins at frame[7] (after [type,seq,cmd]), so end_data = frame[17:25].
+    /// trim cursor = the first u32 of end_data (data[10:14]). Returns nil if the frame is too
+    /// short to contain the field (shouldn't happen for a real HISTORY_END, which is >=14 data
+    /// bytes, but guards against a malformed frame).
+    static func endData(from frame: [UInt8], family: DeviceFamily) -> [UInt8]? {
+        // metadata.data begins at frame[7] (WHOOP4) / frame[11] (WHOOP5, the +4 puffin envelope); the
+        // ack's end_data = data[10:18] → frame[17:25] (WHOOP4) or frame[21:29] (WHOOP5). The WHOOP5 slice
+        // is verified on a real HISTORY_END (trim=112193 = frame[21..25]) in Whoop5HistoricalTests.
+        let start = family == .whoop5 ? 21 : 17
+        guard frame.count >= start + 8 else { return nil }
+        return Array(frame[start..<(start + 8)])
+    }
+
+    /// Pure per-chunk persistence tally (#150). `rows` = biometric rows actually inserted (HR, R-R, SpO2,
+    /// skin-temp, resp, gravity — battery/events are housekeeping, not biometric history). `motion` =
+    /// gravity rows (the sleep-critical signal). `nights` = the distinct day-keys (ts / 86400) the chunk's
+    /// records covered. Summed across a session by finishChunk to drive the success summary line.
+    nonisolated static func chunkTally(
+        counts: (hr: Int, rr: Int, events: Int, battery: Int, spo2: Int, skinTemp: Int, resp: Int, gravity: Int),
+        timestamps: [Int]
+    ) -> (rows: Int, motion: Int, nights: Set<Int>) {
+        let rows = counts.hr + counts.rr + counts.spo2 + counts.skinTemp + counts.resp + counts.gravity
+        return (rows, counts.gravity, Set(timestamps.map { $0 / 86400 }))
+    }
+
+    /// The one-line session success summary (#150) — the success-side log that never existed. Returns nil
+    /// when nothing persisted (so a console-only / caught-up session stays quiet and the existing
+    /// empty-banking diagnostics speak instead).
+    nonisolated static func sessionSummaryLine(rows: Int, motion: Int, nights: Int) -> String? {
+        guard rows > 0 else { return nil }
+        return "Backfill: session persisted \(rows) rows (\(motion) with motion) across \(nights) night(s)."
+    }
+
+    /// Newest timestamp among the rows of `s` that only the historical offload produces (gravity, strap
+    /// state, skin temp, steps, resp, SpO₂, PPG-derived HR) — i.e. NOT the HR/R-R the live stream also writes.
+    nonisolated static func newestHistoryTs(of s: Streams) -> Int? {
+        [s.gravity.map(\.ts).max(), s.strapState.map(\.ts).max(), s.skinTemp.map(\.ts).max(),
+         s.steps.map(\.ts).max(), s.resp.map(\.ts).max(), s.spo2.map(\.ts).max(),
+         s.ppgHr.map(\.ts).max()].compactMap { $0 }.max()
+    }
+
+    /// One-line session throughput summary: how long the session ran, how many chunks it committed, and how
+    /// much of that time was our own chunk commit (decode + store write + archive + ack) vs waiting for the strap.
+    nonisolated static func sessionTimingLine(chunks: Int, elapsed: TimeInterval,
+                                              chunkWork: TimeInterval, maxChunkWork: TimeInterval) -> String {
+        let perChunk = chunks > 0 ? elapsed / Double(chunks) : 0
+        return String(format: "Backfill: session timing — %d chunk(s) in %.1f s (%.2f s/chunk); our commit work %.2f s total, slowest chunk %.2f s.",
+                      chunks, elapsed, perChunk, chunkWork, maxChunkWork)
+    }
+
+    /// Wall seconds since this session began (for `sessionTimingLine`).
+    var sessionElapsedSeconds: TimeInterval { Date().timeIntervalSince(sessionStartedAt) }
+
+    /// One log line describing what a finished offload actually contained. Always emitted (also for an
+    /// empty session) — "0 type-47 records" is exactly the evidence a no-rows night needs.
+    nonisolated static func sessionCensusLine(census: HistoryCensus, chunks: Int, diagnosticFrames: Int) -> String {
+        let kept = diagnosticFrames > 0 ? " Kept \(diagnosticFrames) raw diagnostic frame(s) of non-decoded records." : ""
+        guard !census.isEmpty else {
+            return "Backfill: record census — no data records in \(chunks) chunk(s) (the strap handed over only bookkeeping, or nothing).\(kept)"
+        }
+        return "Backfill: record census — \(census.summary) in \(chunks) chunk(s); \(census.type47Total) type-47 sensor record(s).\(kept)"
+    }
+
+    /// Value copy of one finished session's census, taken synchronously at session end so a following
+    /// `begin()` (which resets the live counters) can never race the asynchronous DB write.
+    struct SessionCensusSnapshot: Equatable {
+        let deviceId: String
+        let counts: [String: Int]
+        let chunks: Int
+        let diagnosticFrames: Int
+    }
+
+    func sessionCensusSnapshot() -> SessionCensusSnapshot {
+        SessionCensusSnapshot(deviceId: deviceId, counts: sessionCensus.counts,
+                              chunks: sessionChunks, diagnosticFrames: sessionDiagnosticFrames)
+    }
+
+    /// Persist the session census as one `NOOP_HISTORY_CENSUS` event row so it is readable from the DB
+    /// mirror (the strap log is not). Observation only: it can neither throw nor hold an ack — a failure
+    /// is logged and sync is unaffected. Written for empty sessions too ("0 records" is evidence).
+    @discardableResult
+    func persistSessionCensus(_ snapshot: SessionCensusSnapshot,
+                              ts: Int = Int(Date().timeIntervalSince1970)) async -> Bool {
+        do {
+            try await store.recordHistoryCensus(deviceId: snapshot.deviceId, ts: ts, counts: snapshot.counts,
+                                                chunks: snapshot.chunks, diagnosticFrames: snapshot.diagnosticFrames)
+            return true
+        } catch {
+            log?("Backfill: couldn't store the record census row: \(error) — sync is unaffected.")
+            return false
+        }
+    }
+
+    /// Store a bounded raw sample of frames that did not become sensor rows (see `diagnosticHistoryFrames`)
+    /// as an ordinary `rawBatch` row (`histdiag-` prefix, aged out by `WhoopStore.pruneDiagnosticRaw`).
+    /// Observation only: it can neither throw nor hold the ack — a failure is logged once per session.
+    /// Skipped when the research raw-capture toggle already stores EVERY frame of the chunk.
+    @discardableResult
+    func archiveDiagnostic(frames diag: [[UInt8]], tag: String, ref: ClockRef? = nil) async -> Bool {
+        guard !diag.isEmpty else { return false }
+        let bytes = diag.reduce(0) { $0 + $1.count }
+        guard sessionDiagnosticBytes + bytes <= Backfiller.diagnosticSessionByteBudget else { return false }
+        let now = Int(Date().timeIntervalSince1970)
+        let clock = ref ?? ClockRef(device: now, wall: now)
+        let meta = RawBatchMeta(
+            batchId: "\(WhoopStore.diagnosticRawPrefix)\(deviceId)-\(tag)",
+            deviceId: deviceId, clockRef: clock, capturedAt: now,
+            startTs: clock.wall, endTs: clock.wall, frameCount: diag.count, byteSize: bytes)
+        do {
+            try await store.enqueueRawBatch(meta, frames: diag)
+            sessionDiagnosticBytes += bytes
+            sessionDiagnosticFrames += diag.count
+            return true
+        } catch {
+            if !loggedDiagnosticFailure {
+                loggedDiagnosticFailure = true
+                log?("Backfill: couldn't store the raw diagnostic sample (\(tag)): \(error) — sync is unaffected.")
+            }
+            return false
+        }
+    }
+
+    /// Commit one HISTORY_END chunk: (persist decoded → enqueueRaw when present) → setCursor → ackTrim.
+    /// Early-returns on any throw to preserve the safe-trim invariant.
+    ///
+    /// CRITICAL: high-freq-sync sends ONE HISTORY_START then REPEATED HISTORY_ENDs (a chunk-close
+    /// every ~50 records). So we must ack EVERY end and keep accumulating afterwards — NOT close
+    /// the chunk after the first. We snapshot+clear the accumulated frames but leave `chunkOpen`
+    /// TRUE so the records following this END become the next chunk. An END with no accumulated
+    /// records is still acked (it advances the strap's trim) — that's how the offload progresses.
+    /// `endFrame` carries the 8-byte `end_data` the ack requires.
+    private func finishChunk(unix: UInt32, trim: UInt32, endFrame: [UInt8]) async {
+        guard let endData = Backfiller.endData(from: endFrame, family: family) else { return }
+        sessionChunks += 1
+
+        // #150 forensics: trim=0xFFFFFFFF is the strap's "no valid flash cursor" sentinel — it has no
+        // banked history to hand over. Surface it once so a log reads as a clock/charge state on the
+        // strap, not a NOOP decode bug (retro-decode can't help here). The ack still proceeds below.
+        if trim == 0xFFFFFFFF, !loggedNoCursor {
+            loggedNoCursor = true
+            log?("Backfill: strap reported no flash cursor (trim=0xFFFFFFFF) — it has no banked history to offload. This is a clock/charge state on the strap, not a decode problem; fully charge it and reconnect so it starts banking.")
+        }
+
+        let frames = chunk
+        chunk.removeAll(keepingCapacity: true)   // next records accumulate into the next chunk
+
+        if !frames.isEmpty {
+            // type-47 HISTORICAL_DATA carries its OWN real-unix timestamp — extractHistoricalStreams
+            // ignores the clock offset for it — so the historical offload does NOT need GET_CLOCK.
+            // If the (device,wall) correlation isn't established yet (e.g. GET_CLOCK silent), fall back
+            // to an identity ref (device==wall==now): the offset math becomes a no-op, type-47 still
+            // decodes to correct wall time, and we can persist + ack + upload. The correlation is only
+            // truly required to map REALTIME (type-40/43) device-epoch timestamps, never in a hist chunk.
+            let ref = clockRef ?? { let now = Int(Date().timeIntervalSince1970); return ClockRef(device: now, wall: now) }()
+            // The pure CPU decode (parse every frame, scan layouts, extract rows, classify rejects) runs OFF the
+            // main actor: on a real history sync it was ~all non-idle main-thread time and hung the UI. Only
+            // value types cross the boundary (copied `[[UInt8]]` in, `Sendable` DecodedChunk out); every store
+            // write, log line, tally and the ack below stays on the main actor in the SAME order as before, and
+            // nothing is acked until the writes further down succeed — the "ack only after durable write"
+            // invariant is untouched. (Inputs are snapshotted here, at the same point they were read before.)
+            let decodeFamily = family, extractor = extract
+            let refDevice = ref.device, refWall = ref.wall
+            let oldest = sessionOldestUnix, newest = sessionNewestUnix
+            let chunkDecoded = await Task.detached(priority: .userInitiated) {
+                Backfiller.decodeChunk(frames: frames, family: decodeFamily,
+                                       deviceClock: refDevice, wallClock: refWall,
+                                       sessionOldestUnix: oldest, sessionNewestUnix: newest,
+                                       extract: extractor)
+            }.value
+            // Observability (PR #241): log which layout this strap emits on a HEALTHY sync too — the
+            // unmapped-version path below only fires for layouts NOOP can't decode, so a normal log
+            // never revealed v18/v24/v25/v26. Once per distinct layout this session.
+            if let v = chunkDecoded.firstLayoutVersion,
+               loggedLayoutVersions.insert(v).inserted {
+                log?("Backfill: historical records use layout v\(v)")
+            }
+            // Diagnostic (#30): a historical record whose firmware version we don't have a field map for
+            // bails out of decode entirely — no HR, no R-R, no GRAVITY — so sleep (which is gravity/
+            // motion-driven) can never be computed from it, even though the offload "completes". Surface
+            // each unmapped version once so the user's strap log reveals what their firmware emits.
+            for v in chunkDecoded.unmappedVersions where !loggedUnmappedVersions.contains(v) {
+                loggedUnmappedVersions.insert(v)
+                log?(Backfiller.unmappedLayoutLogLine(version: v, chunkHasMotion: !chunkDecoded.streams.gravity.isEmpty))
+            }
+            let decoded = chunkDecoded.streams
+            // History-frontier baseline for the auto-continue progress test: read ONCE per session, before the
+            // session's first insert, so "newer than where we started" is exact. Read failure ⇒ nil ⇒ any
+            // persisted history row counts as an advance (never blocks the drain).
+            if !sessionHistoryFrontierSeeded {
+                sessionHistoryFrontierSeeded = true
+                sessionStartHistoryFrontier = (try? await store.latestHistoryTs(deviceId: deviceId)) ?? nil
+            }
+            // #547: surface a bad-clock strap. extractHistoricalStreams DROPPED any record whose own unix
+            // timestamp was implausible (far-past / bogus-2027 / future-dated) before it could pollute the
+            // DB. Log it (once it's accrued at least one this session, on the first chunk that sees it) so
+            // the user's strap log explains why a clock-broken strap banks fewer rows than expected — this
+            // is the strap's clock, not a NOOP decode bug. Observability only; the gate already did the work.
+            if decoded.droppedImplausible > 0 {
+                let wasZero = sessionDroppedImplausible == 0
+                sessionDroppedImplausible += decoded.droppedImplausible
+                if wasZero {
+                    log?("Backfill: dropped record(s) with an implausible timestamp (trim=\(trim)) — the strap's clock is wrong (records dated far in the past or future), so those samples were skipped rather than misfiled onto the wrong day. Fully charge and reconnect the strap so its clock re-syncs.")
+                }
+            }
+            // Diagnostic (#77): the AGGREGATE silent-loss case — frames arrived but produced no rows at
+            // all (CRC fail / unmapped layout / out-of-range timestamp), so this chunk persists nothing
+            // yet still acks below and the strap trims past it. The per-version log above only catches
+            // unmapped layouts; this catches CRC drops too. Observability only — behaviour unchanged
+            // (not acking would wedge the offload on a re-send loop). Surfaces in the user's strap log.
+            // Classify FIRST: separate genuinely-undecodable SENSOR records from the strap's own
+            // type-50 console/diagnostic frames, which decode to 0 rows by design and are NOT a loss
+            // (the "rejected frames" red herring users kept reporting — #77/#120). Drives both the
+            // log wording below and the archive guard further down.
+            let rejected = chunkDecoded.rejected
+            // Tally this chunk's outcome so a completed-but-empty session is distinguishable from a
+            // caught-up one (#77 family): did it decode sensor rows, and was it console-only?
+            onChunk?(!decoded.isEmpty, decoded.isEmpty && rejected.isEmpty)
+            // A chunk that produced no rows AND held no genuine rejects was pure console output — say
+            // so calmly so it doesn't read as data loss (the "rejected frames" red herring, #77/#120).
+            if decoded.isEmpty && rejected.isEmpty {
+                if chunkDecoded.census.type47Total > 0 {
+                    // Not console output: type-47 records arrived but none carried HR/gravity (e.g. v26 raw PPG,
+                    // skipped by design). Say what they were; a bounded raw sample is kept below.
+                    log?("Backfill: \(frames.count) frame(s) this chunk (\(chunkDecoded.census.summary)) decoded to no sensor rows — type-47 records without HR/gravity; raw sample kept for analysis (trim=\(trim)).")
+                } else {
+                    log?("Backfill: \(frames.count) frame(s) this chunk carried no sensor records (strap console/diagnostic output) — normal, nothing to persist (trim=\(trim)).")
+                }
+            }
+            // Log + hex-sample the GENUINE rejects whenever there are any — INCLUDING a partially-decoded
+            // chunk (some good rows alongside CRC-failed / unmapped records), which used to archive those
+            // raw bytes with no log line at all (only the all-empty case was observable). (ryanbr, PR #123)
+            if !rejected.isEmpty {
+                log?("Backfill: \(rejected.count) undecodable sensor record(s) of \(frames.count) frame(s) (trim=\(trim)) — archiving raw bytes before ack (CRC/unmapped layout).")
+                // #91 / #30: dump a hex sample of the genuine rejects so an unmapped firmware's record
+                // layout can be mapped from a user's strap log. Dump the FULL frame (not a 64-byte
+                // prefix — v25/v26 records run ~84 B and the truncated tail is exactly where the
+                // unmapped motion/HR fields sit), and sample a few more so one log carries enough
+                // records to triangulate offsets. These only ever fire for unmapped firmware.
+                for (i, f) in rejected.prefix(8).enumerated() {
+                    let hex = f.map { String(format: "%02x", $0) }.joined()
+                    log?("Backfill: rejected frame[\(i)] \(f.count)B: \(hex)")
+                }
+            }
+            // Commit the decoded rows FIRST (durable). Doing this before the reject archive means a
+            // rare insert failure — which returns and re-sends the whole chunk next session — can't
+            // leave duplicate lines in the append-only reject archive.
+            let counts: (hr: Int, rr: Int, events: Int, battery: Int, spo2: Int, skinTemp: Int, resp: Int, gravity: Int)
+            do { counts = try await store.insert(decoded, deviceId: deviceId) } catch {
+                // Diag (#601): the decoded rows couldn't be written — this is the "history stalls but live HR
+                // works" class. We return WITHOUT acking so the strap keeps this chunk and re-sends it next
+                // session (no data loss), but a silent return left a strap log with no trace of the stall.
+                log?("Backfill: failed to persist decoded rows (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; history won't advance until the write succeeds.")
+                return
+            }
+            // Success-side observability (#150): tally what actually persisted so the session can emit
+            // "persisted N rows (M with motion) across K night(s)" — the win-rate signal a log never had.
+            sessionCensus.merge(chunkDecoded.census)   // only once the rows are durable (a failed insert re-sends the chunk)
+            let tally = Backfiller.chunkTally(counts: counts, timestamps: decoded.gravity.map(\.ts) + decoded.hr.map(\.ts))
+            sessionRowsPersisted += tally.rows
+            sessionMotionRows += tally.motion
+            sessionNightKeys.formUnion(tally.nights)
+            // History-frontier progress counts only when this chunk newly persisted rows (a re-sent chunk the
+            // store already holds inserts 0 and must not read as progress).
+            if tally.rows > 0, let newest = Backfiller.newestHistoryTs(of: decoded) {
+                sessionNewestHistoryTs = max(sessionNewestHistoryTs ?? newest, newest)
+            }
+
+            // #77 / #91: any genuinely-undecodable type-47 record in this chunk must be ARCHIVED
+            // before we ack — the ack frees the strap's copy, so the archive is the only remaining
+            // copy of an unmapped firmware's records. A genuine archive write FAILURE aborts the
+            // chunk (no setCursor, no ack) so the strap re-sends it next session — no data loss
+            // either way. (A full archive is reported as success by the sink; we still ack.)
+            if !rejected.isEmpty, let rejectedSink {
+                guard rejectedSink(rejected, trim, family) else {
+                    log?("Backfill: rejected-frame archive failed (trim=\(trim)) — holding ack so the strap re-sends.")
+                    return
+                }
+            }
+
+            // RAW: only persisted when the research toggle is ON. Default OFF → decoded-only; the
+            // chunk is still durably committed (decoded) so the trim is safe to advance + ack.
+            if enableRawCapture {
+                let meta = RawBatchMeta(
+                    batchId: "hist-\(deviceId)-\(trim)",
+                    deviceId: deviceId,
+                    clockRef: ref,
+                    capturedAt: Int(Date().timeIntervalSince1970),
+                    startTs: ref.wall,
+                    endTs: ref.wall,
+                    frameCount: frames.count,
+                    byteSize: frames.reduce(0) { $0 + $1.count })
+                do { try await store.enqueueRawBatch(meta, frames: frames) } catch {
+                    // Diag (#601): raw-capture is ON and the raw batch couldn't be enqueued. Hold the ack
+                    // (return) so the strap re-sends — the research toggle's contract is that raw is durable
+                    // before the trim advances. Surface it so a stalled offload with raw-capture on is visible.
+                    log?("Backfill: failed to enqueue raw batch (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; raw capture must be durable before the trim advances.")
+                    return
+                }
+            }
+            // Forensics (never blocks the ack): a bounded raw sample of the records that did NOT become sensor
+            // rows. Skipped when raw capture already stores the whole chunk.
+            if !enableRawCapture {
+                await archiveDiagnostic(frames: chunkDecoded.diagnostic, tag: String(trim), ref: ref)
+            }
+        }
+        do { try await store.setCursor("strap_trim", Int(trim)) } catch {
+            // Diag (#601): decoded (and raw, if on) are durable but the strap_trim cursor write failed. We
+            // return WITHOUT acking — acking now would let the strap trim past records the cursor hasn't
+            // recorded, so on reconnect the offload could replay or skip. Holding the ack keeps it safe; the
+            // strap re-offers this chunk next session. A silent return here was a prime "history won't advance"
+            // suspect with nothing in the log to confirm it.
+            log?("Backfill: failed to write strap_trim cursor (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; history won't advance until the cursor write succeeds.")
+            return
+        }
+
+        ackTrim(trim, endData)
+        lastAckedTrim = trim   // #364: record the advanced cursor for the auto-continue spin-detector
+    }
+
+    /// Called when a backfill watchdog timer fires (strap went silent mid-offload).
+    /// Clears state without acking — the chunk was never durably committed.
+    func timeoutFired() {
+        isBackfilling = false
+        chunk.removeAll(keepingCapacity: true)
+        chunkOpen = false
+    }
+}

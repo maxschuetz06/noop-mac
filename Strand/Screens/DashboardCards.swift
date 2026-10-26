@@ -1,0 +1,162 @@
+import Foundation
+import SwiftUI
+
+// MARK: - "Your cards" customisable dashboard (WHOOP "My Dashboard")
+//
+// The Today screen's "Your cards" section was a fixed trio (Stress / Fitness age / Vitality). This turns
+// it into a user-customisable dashboard faithful to WHOOP's "My Dashboard": the user chooses WHICH metric
+// cards show and in WHAT order from a registry of the values Today already loads. Persistence is
+// DISPLAY-ONLY — no metric is computed or stored differently; this just decides which already-loaded
+// values render as WHOOP metric rows and in what sequence.
+//
+// Stored as a JSON-encoded [String] of card ids in @AppStorage (UserDefaults). Unknown ids are dropped on
+// read; a known id missing from the saved list is offered (disabled) in the editor so a future card can't
+// be lost. Mirrors the existing KeyMetric layout mechanism but as its own list so the two sections stay
+// independent (Key Metrics grid vs. the Your-cards dashboard).
+
+/// One available card in the "Your cards" dashboard. The `rawValue` is the stable persisted identifier —
+/// keep it byte-identical to the Android `DashboardCard` ids so a backup/restore reads the same dashboard
+/// on either OS.
+enum DashboardCard: String, CaseIterable, Identifiable {
+    case hrv
+    case restingHr
+    case respiratory
+    case steps
+    case stress
+    case fitnessAge
+    case vitality
+    case bloodOxygen
+    case skinTemp
+    case sleep
+    case calories
+    case hydration
+
+    var id: String { rawValue }
+
+    /// The card's display label (the UPPERCASE WHOOP metric-row label is derived from this).
+    var title: String {
+        switch self {
+        case .hrv:         return "HRV"
+        case .restingHr:   return "Resting HR"
+        case .respiratory: return "Respiratory"
+        case .steps:       return "Steps"
+        case .stress:      return "Stress"
+        case .fitnessAge:  return "Fitness Age"
+        case .vitality:    return "Vitality"
+        case .bloodOxygen: return "Blood Oxygen"
+        case .skinTemp:    return "Skin Temp"
+        case .sleep:       return "Sleep"
+        case .calories:    return "Calories"
+        case .hydration:   return "Hydration"
+        }
+    }
+
+    /// A short grey baseline/caption shown under the row's value (the WHOOP "30-day baseline" line).
+    /// Static descriptive text only — never invented data.
+    var subtitle: String {
+        switch self {
+        case .hrv:         return "Heart-rate variability"
+        case .restingHr:   return "Resting heart rate"
+        case .respiratory: return "Breaths per minute"
+        case .steps:       return "Today"
+        case .stress:      return "Autonomic load"
+        case .fitnessAge:  return "Updated weekly"
+        case .vitality:    return "Wellness score"
+        case .bloodOxygen: return "Blood oxygen"
+        case .skinTemp:    return "Skin temperature"
+        case .sleep:       return "Last night"
+        case .calories:    return "Active energy"
+        case .hydration:   return "Today's fluid"
+        }
+    }
+
+    /// The thin-line SF Symbol shown in the leading icon tile.
+    var icon: String {
+        switch self {
+        case .hrv:         return "waveform.path.ecg"
+        case .restingHr:   return "heart.fill"
+        case .respiratory: return "lungs.fill"
+        case .steps:       return "figure.walk"
+        case .stress:      return "bolt.heart"
+        case .fitnessAge:  return "figure.run"
+        case .vitality:    return "sparkles"
+        case .bloodOxygen: return "drop.fill"
+        case .skinTemp:    return "thermometer.medium"
+        case .sleep:       return "bed.double.fill"
+        case .calories:    return "flame.fill"
+        case .hydration:   return "drop.fill"
+        }
+    }
+
+    /// The unit suffix shown after the value (smaller weight). Empty when the value is already complete.
+    var unit: String {
+        switch self {
+        case .hrv:         return "ms"
+        case .restingHr:   return "bpm"
+        case .respiratory: return "rpm"
+        case .steps:       return ""
+        case .stress:      return ""
+        case .fitnessAge:  return "yrs"
+        case .vitality:    return ""
+        case .bloodOxygen: return ""    // value carries the % itself
+        case .skinTemp:    return ""    // value carries the ° itself
+        case .sleep:       return ""    // value carries the h/m itself
+        case .calories:    return "kcal"
+        case .hydration:   return ""    // value bakes in "<total> / <goal> L" itself
+        }
+    }
+
+    /// The default set when the user hasn't customised the dashboard: the original Stress / Fitness age /
+    /// Vitality trio plus HRV + Resting HR (per the task's "sensible default"). Cards with no value yet
+    /// simply render "—", so the default set is safe on a fresh install.
+    static let defaultSelection: [DashboardCard] = [
+        .stress, .fitnessAge, .vitality, .hrv, .restingHr,
+    ]
+
+    /// Canonical order used to list the disabled remainder in the editor.
+    static let canonicalOrder: [DashboardCard] = allCases
+}
+
+/// Display-only persistence for the "Your cards" dashboard selection. Holds an ORDERED list of the enabled
+/// cards as a JSON-encoded [String] of ids; a card not in the list is hidden. Stored in
+/// @AppStorage("today.dashboardCards").
+enum DashboardCardPrefs {
+    /// UserDefaults key — a JSON array of `DashboardCard` ids in display order.
+    static let selectionKey = "today.dashboardCards"
+
+    /// Encode an ordered list of enabled cards into the stored JSON string. Falls back to a comma-joined
+    /// string if JSON encoding ever fails (it won't for [String]), so the value is always decodable.
+    static func encode(_ cards: [DashboardCard]) -> String {
+        let ids = cards.map(\.rawValue)
+        if let data = try? JSONEncoder().encode(ids), let json = String(data: data, encoding: .utf8) {
+            return json
+        }
+        return ids.joined(separator: ",")
+    }
+
+    /// Decode the stored string into an ordered list of enabled cards. An empty/unset string yields the
+    /// default selection (so a fresh install shows the sensible default). Accepts both the JSON-array form
+    /// and a legacy comma-joined form. Unknown ids are dropped; duplicates are de-duped; this returns ONLY
+    /// the enabled cards in their saved order — the editor pairs it with the disabled remainder.
+    static func decodeEnabled(_ raw: String) -> [DashboardCard] {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return DashboardCard.defaultSelection }
+
+        let ids: [String]
+        if let data = trimmed.data(using: .utf8), let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            ids = decoded
+        } else {
+            ids = trimmed.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+        }
+
+        var seen = Set<DashboardCard>()
+        var result: [DashboardCard] = []
+        for token in ids {
+            if let c = DashboardCard(rawValue: token), seen.insert(c).inserted {
+                result.append(c)
+            }
+        }
+        // An all-unknown / empty decode shouldn't blank the dashboard — fall back to the default set.
+        return result.isEmpty ? DashboardCard.defaultSelection : result
+    }
+}

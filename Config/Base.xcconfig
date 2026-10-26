@@ -1,0 +1,22 @@
+// Build identity and build-time options for NOOP.
+//
+// Defaults build an unsigned/ad-hoc app with the upstream identity. Per-machine values go in
+// Config/Local.xcconfig (untracked); start from Config/Local.xcconfig.example.
+
+// Apple Developer team used for signing. Empty = no team (build with CODE_SIGN_IDENTITY=-).
+DEVELOPMENT_TEAM =
+
+// App bundle id. The widget appends ".widgets", the unit tests ".tests".
+// Changing it on an existing install moves the app to a new, empty sandbox container.
+NOOP_BUNDLE_ID = com.noopapp.noop
+
+// Team-prefixed macOS App Group shared by the app and its widget; needs no provisioning profile.
+MAC_APP_GROUP_ID = $(DEVELOPMENT_TEAM).$(NOOP_BUNDLE_ID)
+
+// Opt-in external data folder: a folder name relative to your home directory. Empty = off, and the
+// app writes nothing outside its sandbox container. Enabling it also requires the matching
+// entitlements variant below; see docs/EXTERNAL_DATA_FOLDER.md.
+NOOP_EXTERNAL_DATA_FOLDER =
+NOOP_APP_ENTITLEMENTS = Strand/Resources/Strand.entitlements
+
+#include? "Local.xcconfig"

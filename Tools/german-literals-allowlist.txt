@@ -1,0 +1,9 @@
+# Swift string literals that legitimately contain German (data, not UI copy), one per line:
+#   <path relative to the repo root>|<exact literal as printed by Tools/lint-german-literals.sh>
+# Example: Strand/Data/SomeImporter.swift|Schlafqualität %
+# UI copy never belongs here: write it in English and translate it in the String Catalog.
+# Legacy on-disk archive folder names from builds before the English names; kept so they are never re-scanned.
+Strand/Data/ImportInbox.swift|Erledigt
+Strand/Data/ImportInbox.swift|Fehler
+# File name of the sleep CSV in WHOOP's German-language data export.
+Strand/Data/ImportInbox.swift|schlaf.csv

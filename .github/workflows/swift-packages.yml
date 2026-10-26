@@ -1,0 +1,43 @@
+# Builds and tests every Swift package under Packages/ with plain SwiftPM on every push and pull
+# request. No Xcode project, no signing, no secrets.
+name: Swift packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swift-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - WhoopProtocol
+          - WhoopStore
+          - StrandAnalytics
+          - StrandImport
+          - StrandDesign
+          - NoopLocalAccess
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.package }}
+        run: swift build
+        working-directory: Packages/${{ matrix.package }}
+
+      - name: Test ${{ matrix.package }}
+        run: swift test
+        working-directory: Packages/${{ matrix.package }}

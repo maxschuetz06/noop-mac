@@ -1,0 +1,50 @@
+# Builds and tests the macOS app (Strand scheme, with StrandTests) on every push and pull request.
+# Unsigned: no team, no secrets, ad-hoc signature only. Package dependencies are taken strictly from
+# the committed Strand.xcodeproj Package.resolved.
+name: macOS app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # macOS 26 image (default Xcode 26); macos-15 still defaults to Xcode 16, see docs/BUILD.md
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Self-test the German literal lint
+        run: Tools/tests/lint-german-literals-test.sh
+
+      - name: Lint German UI literals
+        run: Tools/lint-german-literals.sh
+
+      - name: Build and test Strand
+        env:
+          # xcodebuild forwards TEST_RUNNER_* variables to the test host without the prefix;
+          # MainThreadBudgetTests widens its timing budgets for shared CI runners when CI is "true".
+          TEST_RUNNER_CI: "true"
+        run: >-
+          xcodebuild test -project Strand.xcodeproj -scheme Strand
+          -destination 'platform=macOS'
+          -onlyUsePackageVersionsFromResolvedFile
+          CODE_SIGN_IDENTITY=-
