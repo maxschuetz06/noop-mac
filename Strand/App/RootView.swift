@@ -71,7 +71,7 @@ struct RootView: View {
                         let hits = searchHits
                         if hits.isEmpty {
                             Text("No matches")
-                                .font(.system(size: 13)).foregroundStyle(Soft.ink3)
+                                .font(.system(size: 13)).foregroundStyle(StrandPalette.textTertiary)
                                 .padding(.horizontal, 12).padding(.top, 6)
                         }
                         ForEach(hits) { sidebarRow($0) }
@@ -84,8 +84,8 @@ struct RootView: View {
                 .padding(.horizontal, 14).padding(.bottom, 14).padding(.top, 6)
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Soft.sidebar)
-        .overlay(alignment: .trailing) { Rectangle().fill(Soft.cardEdge).frame(width: 1) }
+        .background(StrandPalette.surfaceSidebar)
+        .overlay(alignment: .trailing) { Rectangle().fill(StrandPalette.hairline).frame(width: 1) }
         // ⌘K focuses the search field (an invisible button carries the shortcut).
         .background {
             Button("") { searchFocused = true }
@@ -102,7 +102,7 @@ struct RootView: View {
 
     private var searchField: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(Soft.ink3)
+            Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(StrandPalette.textTertiary)
                 .accessibilityHidden(true)
             TextField("Search", text: $search)
                 .textFieldStyle(.plain)
@@ -115,13 +115,13 @@ struct RootView: View {
                 .onExitCommand { search = ""; searchFocused = false }
             Text("⌘K")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Soft.ink3)
+                .foregroundStyle(StrandPalette.textTertiary)
                 .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(Soft.fill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .padding(.horizontal, 12).frame(height: 38)
-        .background(Soft.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Soft.cardEdge, lineWidth: 1))
+        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(StrandPalette.hairline, lineWidth: 1))
     }
 
     private func sidebarRow(_ item: NavItem) -> some View {
@@ -134,7 +134,7 @@ struct RootView: View {
     private func sectionLabel(_ text: LocalizedStringKey) -> some View {
         Text(text).textCase(.uppercase)
             .font(.system(size: 11, weight: .medium)).tracking(0.8)
-            .foregroundStyle(Soft.ink3)
+            .foregroundStyle(StrandPalette.textTertiary)
             .padding(.horizontal, 12).padding(.bottom, 6)
     }
 
@@ -150,11 +150,11 @@ struct RootView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .rotationEffect(.degrees(showAllSections ? 90 : 0))
             }
-            .foregroundStyle(Soft.ink3)
+            .foregroundStyle(StrandPalette.textTertiary)
             .padding(.horizontal, 12).padding(.vertical, 6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(DimPressButtonStyle())
         .accessibilityLabel(showAllSections ? "Hide more sections" : "Show more sections")
     }
 
@@ -163,7 +163,7 @@ struct RootView: View {
             BrandMark(size: 26)
             Text("NOOP")
                 .font(.system(size: 20, weight: .semibold)).tracking(-0.3)
-                .foregroundStyle(Soft.ink)
+                .foregroundStyle(StrandPalette.textPrimary)
             Spacer()
         }
         // Top padding clears the traffic-light controls (the window hides its title bar, so they sit
@@ -251,27 +251,27 @@ private struct SidebarStatus: View {
                 ZStack(alignment: .bottomTrailing) {
                     BrandMark(size: 26)
                     Circle().fill(statusColor).frame(width: 9, height: 9)
-                        .overlay(Circle().stroke(Soft.card, lineWidth: 2))
+                        .overlay(Circle().stroke(StrandPalette.surfaceRaised, lineWidth: 2))
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("WHOOP")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Soft.ink)
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
                     detail
-                        .font(.system(size: 11)).foregroundStyle(Soft.ink2)
+                        .font(.system(size: 11)).foregroundStyle(StrandPalette.textSecondary)
                         .lineLimit(2)
                 }
                 Spacer(minLength: 2)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(Soft.ink2)
+                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(StrandPalette.textSecondary)
                     .frame(width: 24, height: 24)
-                    .background(Soft.fill, in: Circle())
+                    .background(StrandPalette.surfaceInset, in: Circle())
             }
             .padding(12)
-            .background(Soft.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Soft.cardEdge, lineWidth: 1))
+            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(StrandPalette.hairline, lineWidth: 1))
             .contentShape(Rectangle())
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(DimPressButtonStyle())
         .help("Open devices")
         .accessibilityLabel(Text("WHOOP, \(detail). Open devices"))
     }
@@ -306,15 +306,15 @@ private struct SidebarRow: View {
                     .font(.system(size: 14, weight: selected ? .medium : .regular))
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(selected ? Soft.ink : Soft.ink.opacity(0.78))
+            .foregroundStyle(selected ? StrandPalette.textPrimary : StrandPalette.textPrimary.opacity(0.78))
             .padding(.horizontal, 12).frame(height: 38)
             .background(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(selected ? Soft.fill : (hovering ? Soft.fill.opacity(0.5) : .clear))
+                    .fill(selected ? StrandPalette.surfaceInset : (hovering ? StrandPalette.surfaceInset.opacity(0.5) : .clear))
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(DimPressButtonStyle())
         .onHover { hovering = $0 }
         .accessibilityLabel(Text(item.title))
         .accessibilityAddTraits(selected ? .isSelected : [])
