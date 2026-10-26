@@ -96,100 +96,8 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
                                didDisconnectPeripheral peripheral: CBPeripheral,
                                error: Error?) {
         Task { @MainActor in await collector?.flush() }
-        // #80 marginal-radio detection: judge this drop BEFORE the state resets below clobber the
-        // arm timestamp. A drop that is unintentional, error-bearing, and lands shortly after we armed
-        // the R10/R11 burst is the marginal-radio tell. Feed the detector; if it trips, the NEXT connect
-        // skips the heavy arm (the flag is intentionally NOT reset on disconnect so it survives rescan).
-        let timedOut = !intentionalDisconnect && error != nil
-        let sinceArm = realtimeArmedAt.map { Date().timeIntervalSince($0) }
-        if marginalRadio.connectionEnded(wasArmed: realtimeArmedAt != nil,
-                                         secondsSinceArm: sinceArm,
-                                         timedOut: timedOut) {
-            standardHRFallback = true
-            log("Marginal radio (#80): \(marginalRadio.consecutiveArmTimeouts) arm-then-timeout cycles — next connect uses standard-HR mode (0x2A37 only)")
-        }
-        // #617 bond-loop detection: same pre-reset read. The bond-loop tell is a CONNECTION TIMEOUT that
-        // lands within seconds of a genuine bond — bond → drop → rescan → bond → drop, forever. We require
-        // the OS to classify the drop as a connection timeout (`CBError.connectionTimeout`), not merely any
-        // error, so a one-off radio blip or a different failure doesn't get mistaken for the loop. Once it
-        // trips, surface the EXISTING re-pair guide (the same forget-and-re-pair steps the #74/firmware-reset
-        // path shows) rather than letting the link loop silently and drain the battery.
-        let connTimedOut: Bool = (error as? CBError)?.code == .connectionTimeout
-        let sinceBond = bondedAt.map { Date().timeIntervalSince($0) }
-        if postBondLoop.connectionEnded(wasBonded: bondedAt != nil,
-                                        secondsSinceBond: sinceBond,
-                                        timedOut: connTimedOut && !intentionalDisconnect) {
-            log("Bond-loop (#617): \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles — surfacing the re-pair guide")
-            if state.reconnectGuide == nil {
-                state.reconnectGuide = """
-                Your strap keeps connecting and then dropping a second later. This is almost always a stale Bluetooth pairing — usually after a WHOOP firmware update, or the official WHOOP app holding the strap. NOOP works fine once it's re-paired:
-
-                1. Quit the official WHOOP app (or turn off Bluetooth on that phone).
-                2. Open System Settings → Bluetooth and Forget your WHOOP if it's listed.
-                3. Tap the strap repeatedly until its LEDs flash blue (pairing mode).
-                4. Come back here and reconnect.
-                """
-            }
-        }
-        bondedAt = nil   // cleared after the bond-loop detector above read it (#617)
-        state.connected = false
-        state.encryptedBond = false   // cleared with didBond; next session must re-prove the bond (#69)
-        state.charging = nil          // a stale charging flag must not outlive the link
-        state.clearBiometrics()       // and a stale HR / R-R must not outlive the link either
-        state.liveFeedActive = false  // a drop while Live is open must not leave a stale "Stop live feed"
-        didBond = false
-        whoop5RealtimeArmed = false
-        // The strap forgets the realtime-HR toggle across a disconnect; the post-bond branch re-arms it
-        // from `wantsRealtime`. Clear only the "what we last sent" flag — `screenWantsRealtime` /
-        // `keepRealtimeForData` (and thus `wantsRealtime`) are intent and must survive a reconnect so the
-        // stream comes back automatically.
-        realtimeArmed = false
-        whoop5SessionStarted = false
-        clockRequested = false
-        connectHandshakeDone = false
-        realtimeArmedAt = nil   // cleared after the marginal-radio detector above read it (#80)
-        // Reset backfill state so the next connect starts a fresh offload (incl. the syncing pill —
-        // a dropped link mid-offload must not leave "Syncing strap history…" stuck on, #77).
-        backfillStarted = false
-        // #364: the auto-continue streak + spin-detector are per-connection — a fresh connection earns a
-        // fresh budget of back-to-back re-kicks and starts its trim-advance comparison from scratch.
-        consecutiveAutoContinues = 0
-        autoContinueStreakStartedAt = nil
-        loggedHistoryFrontierUnavailable = false
-        lastSessionEndTrim = nil
-        backfilling = false
-        state.backfilling = false
-        state.syncChunksThisSession = 0
-        // A mid-sync disconnect bypasses exitBackfilling, so clear the reject counters here too —
-        // otherwise a stale non-zero count survives until the next beginBackfill. (#77/#91)
-        state.rejectedFramesThisSession = 0
-        state.rejectedFramesUnarchived = 0
-        state.decodedChunksThisSession = 0
-        state.consoleChunksThisSession = 0
-        state.r22FlagsAccepted = 0
-        state.deepPacketsThisSession = 0
-        lastOffloadFrameAt = nil   // #174: don't carry a stale cooldown reference into the next session
-        // #580: a fresh connection earns a fresh empty-offload streak — a strap that was history-empty last
-        // session might bank this time (or vice-versa). Clear the experimental note too; the next offload
-        // re-derives it. (The honest flag is per-link, like the syncing pill / reject counters above.)
-        whoop5EmptyOffload.reset()
-        state.historySyncExperimental = false
-        backfillTimeout?.cancel()
-        backfillTimeout = nil
-        backfillFrameQueue.removeAll()
-        backfillDraining = false
-        releaseSyncActivityNow()   // the link is gone — nothing left to keep out of App Nap
-        uploadTimer?.cancel()
-        uploadTimer = nil
-        backfillTimer?.cancel()
-        backfillTimer = nil
-        keepAliveTimer?.cancel()
-        keepAliveTimer = nil
-        resetCharacteristics()
-        reassemblers.reset()   // a half frame from the dropped link must not swallow the next stream's head
-        flushUnmappedTap(context: "disconnect")
-        puffinRecorder.flush()   // persist any buffered puffin capture frames before reconnect
-        Task { @MainActor in await collector?.flushStandardHR() }   // persist any buffered 0x2A37 HR
+        judgeConnectionEnd(error: error)
+        tearDownLinkState()
         if !intentionalDisconnect {
             log("Disconnected\(error.map { " — \($0.localizedDescription)" } ?? ""); rescanning in 3s")
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
@@ -280,5 +188,110 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
             log("Restored DISCONNECTED peripheral \(p.identifier) — reconnect on poweredOn")
             if central.state == .poweredOn { central.connect(p, options: nil) }
         }
+    }
+}
+
+extension BLEManager {
+    /// Feed the #80 marginal-radio and #617 bond-loop detectors with this drop. Must run BEFORE
+    /// `tearDownLinkState` clears the arm / bond timestamps they read.
+    private func judgeConnectionEnd(error: Error?) {
+        // #80 marginal-radio detection: judge this drop BEFORE the state resets below clobber the
+        // arm timestamp. A drop that is unintentional, error-bearing, and lands shortly after we armed
+        // the R10/R11 burst is the marginal-radio tell. Feed the detector; if it trips, the NEXT connect
+        // skips the heavy arm (the flag is intentionally NOT reset on disconnect so it survives rescan).
+        let timedOut = !intentionalDisconnect && error != nil
+        let sinceArm = realtimeArmedAt.map { Date().timeIntervalSince($0) }
+        if marginalRadio.connectionEnded(wasArmed: realtimeArmedAt != nil,
+                                         secondsSinceArm: sinceArm,
+                                         timedOut: timedOut) {
+            standardHRFallback = true
+            log("Marginal radio (#80): \(marginalRadio.consecutiveArmTimeouts) arm-then-timeout cycles — next connect uses standard-HR mode (0x2A37 only)")
+        }
+        // #617 bond-loop detection: same pre-reset read. The bond-loop tell is a CONNECTION TIMEOUT that
+        // lands within seconds of a genuine bond — bond → drop → rescan → bond → drop, forever. We require
+        // the OS to classify the drop as a connection timeout (`CBError.connectionTimeout`), not merely any
+        // error, so a one-off radio blip or a different failure doesn't get mistaken for the loop. Once it
+        // trips, surface the EXISTING re-pair guide (the same forget-and-re-pair steps the #74/firmware-reset
+        // path shows) rather than letting the link loop silently and drain the battery.
+        let connTimedOut: Bool = (error as? CBError)?.code == .connectionTimeout
+        let sinceBond = bondedAt.map { Date().timeIntervalSince($0) }
+        if postBondLoop.connectionEnded(wasBonded: bondedAt != nil,
+                                        secondsSinceBond: sinceBond,
+                                        timedOut: connTimedOut && !intentionalDisconnect) {
+            log("Bond-loop (#617): \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles — surfacing the re-pair guide")
+            if state.reconnectGuide == nil {
+                state.reconnectGuide = """
+                Your strap keeps connecting and then dropping a second later. This is almost always a stale Bluetooth pairing — usually after a WHOOP firmware update, or the official WHOOP app holding the strap. NOOP works fine once it's re-paired:
+
+                1. Quit the official WHOOP app (or turn off Bluetooth on that phone).
+                2. Open System Settings → Bluetooth and Forget your WHOOP if it's listed.
+                3. Tap the strap repeatedly until its LEDs flash blue (pairing mode).
+                4. Come back here and reconnect.
+                """
+            }
+        }
+    }
+
+    /// Reset every per-connection flag, counter and timer so the next connect starts clean.
+    private func tearDownLinkState() {
+        bondedAt = nil   // cleared after the bond-loop detector above read it (#617)
+        state.connected = false
+        state.encryptedBond = false   // cleared with didBond; next session must re-prove the bond (#69)
+        state.charging = nil          // a stale charging flag must not outlive the link
+        state.clearBiometrics()       // and a stale HR / R-R must not outlive the link either
+        state.liveFeedActive = false  // a drop while Live is open must not leave a stale "Stop live feed"
+        didBond = false
+        whoop5RealtimeArmed = false
+        // The strap forgets the realtime-HR toggle across a disconnect; the post-bond branch re-arms it
+        // from `wantsRealtime`. Clear only the "what we last sent" flag — `screenWantsRealtime` /
+        // `keepRealtimeForData` (and thus `wantsRealtime`) are intent and must survive a reconnect so the
+        // stream comes back automatically.
+        realtimeArmed = false
+        whoop5SessionStarted = false
+        clockRequested = false
+        connectHandshakeDone = false
+        realtimeArmedAt = nil   // cleared after the marginal-radio detector above read it (#80)
+        // Reset backfill state so the next connect starts a fresh offload (incl. the syncing pill —
+        // a dropped link mid-offload must not leave "Syncing strap history…" stuck on, #77).
+        backfillStarted = false
+        // #364: the auto-continue streak + spin-detector are per-connection — a fresh connection earns a
+        // fresh budget of back-to-back re-kicks and starts its trim-advance comparison from scratch.
+        consecutiveAutoContinues = 0
+        autoContinueStreakStartedAt = nil
+        loggedHistoryFrontierUnavailable = false
+        lastSessionEndTrim = nil
+        backfilling = false
+        state.backfilling = false
+        state.syncChunksThisSession = 0
+        // A mid-sync disconnect bypasses exitBackfilling, so clear the reject counters here too —
+        // otherwise a stale non-zero count survives until the next beginBackfill. (#77/#91)
+        state.rejectedFramesThisSession = 0
+        state.rejectedFramesUnarchived = 0
+        state.decodedChunksThisSession = 0
+        state.consoleChunksThisSession = 0
+        state.r22FlagsAccepted = 0
+        state.deepPacketsThisSession = 0
+        lastOffloadFrameAt = nil   // #174: don't carry a stale cooldown reference into the next session
+        // #580: a fresh connection earns a fresh empty-offload streak — a strap that was history-empty last
+        // session might bank this time (or vice-versa). Clear the experimental note too; the next offload
+        // re-derives it. (The honest flag is per-link, like the syncing pill / reject counters above.)
+        whoop5EmptyOffload.reset()
+        state.historySyncExperimental = false
+        backfillTimeout?.cancel()
+        backfillTimeout = nil
+        backfillFrameQueue.removeAll()
+        backfillDraining = false
+        releaseSyncActivityNow()   // the link is gone — nothing left to keep out of App Nap
+        uploadTimer?.cancel()
+        uploadTimer = nil
+        backfillTimer?.cancel()
+        backfillTimer = nil
+        keepAliveTimer?.cancel()
+        keepAliveTimer = nil
+        resetCharacteristics()
+        reassemblers.reset()   // a half frame from the dropped link must not swallow the next stream's head
+        flushUnmappedTap(context: "disconnect")
+        puffinRecorder.flush()   // persist any buffered puffin capture frames before reconnect
+        Task { @MainActor in await collector?.flushStandardHR() }   // persist any buffered 0x2A37 HR
     }
 }

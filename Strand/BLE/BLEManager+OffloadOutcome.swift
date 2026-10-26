@@ -22,6 +22,49 @@ extension BLEManager {
         backfillFrameQueue.removeAll()
         scheduleSyncActivityRelease()
         log("Backfill: session ended — reason=\(reason)")
+        logEndedSession(reason: reason)
+        // #547 RE-POLLUTION: this session's ingest gate dropped bad-clock records, so the strap has a
+        // wandering clock and may have banked similar garbage on an OLDER build whose gate was weaker. Arm
+        // a heal re-run so the next analyze tick purges any such pollution — not gated behind the one-shot
+        // done flag. Pure UserDefaults set (no engine handle here); IntelligenceEngine honours it next tick.
+        if (backfiller?.sessionDroppedImplausible ?? 0) > 0 {
+            IntelligenceEngine.requestTimestampReheal()
+        }
+        // #364 auto-continue spin-detector: did THIS session move the strap's trim cursor? Compare the
+        // Backfiller's current high-water trim against where it stood when the previous session ended.
+        // A frozen cursor (console-only / strap refusing to trim) ⇒ don't re-kick (it would spin forever).
+        let currentTrim = backfiller?.lastAckedTrim
+        let trimAdvanced = currentTrim != nil && currentTrim != lastSessionEndTrim
+        lastSessionEndTrim = currentTrim
+        // Honest sync outcome for a cloud-free user (mirrors Android exitBackfilling, ed6a31d):
+        // HISTORY_COMPLETE stamps lastSyncedAt + clears any error; the idle-watchdog timeout surfaces
+        // a non-silent error. A disconnect mid-sync bypasses this path (didDisconnectPeripheral resets
+        // the flags directly) — that's not a sync failure, and the next connect re-offloads.
+        if reason == "HISTORY_COMPLETE" {
+            recordCompletedSync()
+        } else if reason == "timeout" {
+            recordTimedOutSync()
+        }
+        checkStrapLiveness()         // safety-net: strap ahead of us AND our frontier frozen ⇒ stuck?
+        // #364 / #25: a session that ended on the 60s IDLE cap OR on a true HISTORY_COMPLETE while still
+        // connected, with more backlog to fetch and the trim still advancing, immediately re-kicks another
+        // offload instead of tearing down to wait the 15-min floor — so a deep oldest-first backlog drains
+        // in back-to-back ~60s passes rather than one-per-15-min. #25: fire on HISTORY_COMPLETE too — some
+        // straps segment a deep overnight offload into many small HISTORY_COMPLETE slices and would
+        // otherwise stall between slices until the periodic floor. The pure shouldAutoContinue guards make
+        // this safe: a genuinely caught-up strap (newest within behindGapSeconds of the frontier and 0 rows)
+        // returns false and stops; that else path is also where the consecutive streak is cleared. Bounded
+        // by the consecutive-cap and the spin-detector inside the pure predicate either way.
+        if reason == "timeout" || reason == "HISTORY_COMPLETE" {
+            maybeAutoContinueBackfill(trimAdvanced: trimAdvanced,
+                                      rowsPersisted: backfiller?.sessionRowsPersisted ?? 0,
+                                      historyFrontierAdvanced: backfiller?.sessionHistoryFrontierAdvanced ?? false)
+        }
+    }
+
+    /// Strap-log forensics and progress signals for an ended session, plus the inactivity hook on a
+    /// true HISTORY_COMPLETE. Logging and best-effort maintenance only; never touches the ack path.
+    private func logEndedSession(reason: String) {
         // Forensics: what did the strap actually hand over this session (packet types / layout versions),
         // plus any frames no handler persists? Logged for EVERY ended session, empty ones included — "0
         // type-47 records" is the evidence a no-rows night needs. The bounded raw sample is already stored.
@@ -55,119 +98,92 @@ extension BLEManager {
            let summary = Backfiller.sessionSummaryLine(rows: bf.sessionRowsPersisted, motion: bf.sessionMotionRows, nights: bf.sessionNights) {
             log(summary)
         }
-        // #547 RE-POLLUTION: this session's ingest gate dropped bad-clock records, so the strap has a
-        // wandering clock and may have banked similar garbage on an OLDER build whose gate was weaker. Arm
-        // a heal re-run so the next analyze tick purges any such pollution — not gated behind the one-shot
-        // done flag. Pure UserDefaults set (no engine handle here); IntelligenceEngine honours it next tick.
-        if (backfiller?.sessionDroppedImplausible ?? 0) > 0 {
-            IntelligenceEngine.requestTimestampReheal()
+    }
+
+    /// HISTORY_COMPLETE: stamp `lastSyncedAt` and derive the honest sync status for this session.
+    private func recordCompletedSync() {
+        state.lastSyncedAt = Date().timeIntervalSince1970
+        // HISTORY_COMPLETE already triggers the mirror + refresh + analysis via lastSyncedAt: count it as the
+        // newest progress reference so the intermediate signal does not double-fire right after it.
+        lastHistoryProgressSignalAt = Date()
+        // #77 / #91: a sync that COMPLETED but discarded records must not read as a clean
+        // "History synced" — the wording distinguishes bytes saved on this Mac from bytes the
+        // full archive could not preserve, so "saved" is never claimed falsely.
+        let archived = state.rejectedFramesThisSession
+        let unarchived = state.rejectedFramesUnarchived
+        // Classify this completed offload (pure, unit-tested in EmptyBankingClassifierTests).
+        let banking = BLEManager.classifyCompletedOffload(
+            decodedChunks: state.decodedChunksThisSession,
+            archivedFrames: archived,
+            unarchivedFrames: unarchived,
+            consoleChunks: state.consoleChunksThisSession,
+            rowsPersisted: backfiller?.sessionRowsPersisted ?? 0)
+        let bankedSensorRecords = banking.bankedSensorRecords
+        let bankedNothing = banking.bankedNothing
+        let sustainedEmpty = emptySyncTracker.recordCompletedSync(
+            bankedSensorRecords: bankedSensorRecords, consoleOnly: bankedNothing)
+        if unarchived > 0 {
+            state.lastSyncError = "Synced, but \(archived + unarchived) record(s) couldn't be decoded (unrecognised strap firmware layout), and the on-device archive is full — the \(unarchived) newest weren't preserved. Please share a strap log so the layout can be mapped."
+        } else if archived > 0 {
+            state.lastSyncError = "Synced, but \(archived) record(s) couldn't be decoded (unrecognised strap firmware layout). The raw bytes were saved on this Mac — please share a strap log so the layout can be mapped."
+        } else if bankedNothing {
+            // #77 / #214 family: the offload COMPLETED but the strap handed over no sensor records
+            // at all — either console/diagnostic output across many chunks, OR a near-empty
+            // metadata-only completion (zero rows persisted) — i.e. it isn't banking history to
+            // flash (its RTC has lost sync). Only escalate to the actionable banner once emptiness
+            // is SUSTAINED (#126): a single empty cycle on an otherwise-banking strap stays silent.
+            let detail = state.consoleChunksThisSession >= 3
+                ? "console-only across \(state.consoleChunksThisSession) chunks"
+                : "metadata-only, 0 sensor rows persisted"
+            log("Backfill: completed but the strap banked no sensor history (\(detail)); consecutive empty syncs = \(emptySyncTracker.consecutiveEmptySyncs).")
+            state.lastSyncError = sustainedEmpty
+                ? "Synced, but your strap had no stored history to hand over — only its diagnostic output. This usually means its clock has lost sync, so it isn't saving data to flash. Fully charge it to 100%, then reconnect, and it should start banking again."
+                : nil
+        } else {
+            state.lastSyncError = nil
         }
-        // #364 auto-continue spin-detector: did THIS session move the strap's trim cursor? Compare the
-        // Backfiller's current high-water trim against where it stood when the previous session ended.
-        // A frozen cursor (console-only / strap refusing to trim) ⇒ don't re-kick (it would spin forever).
-        let currentTrim = backfiller?.lastAckedTrim
-        let trimAdvanced = currentTrim != nil && currentTrim != lastSessionEndTrim
-        lastSessionEndTrim = currentTrim
-        // Honest sync outcome for a cloud-free user (mirrors Android exitBackfilling, ed6a31d):
-        // HISTORY_COMPLETE stamps lastSyncedAt + clears any error; the idle-watchdog timeout surfaces
-        // a non-silent error. A disconnect mid-sync bypasses this path (didDisconnectPeripheral resets
-        // the flags directly) — that's not a sync failure, and the next connect re-offloads.
-        if reason == "HISTORY_COMPLETE" {
-            state.lastSyncedAt = Date().timeIntervalSince1970
-            // HISTORY_COMPLETE already triggers the mirror + refresh + analysis via lastSyncedAt: count it as the
-            // newest progress reference so the intermediate signal does not double-fire right after it.
-            lastHistoryProgressSignalAt = Date()
-            // #77 / #91: a sync that COMPLETED but discarded records must not read as a clean
-            // "History synced" — the wording distinguishes bytes saved on this Mac from bytes the
-            // full archive could not preserve, so "saved" is never claimed falsely.
-            let archived = state.rejectedFramesThisSession
-            let unarchived = state.rejectedFramesUnarchived
-            // Classify this completed offload (pure, unit-tested in EmptyBankingClassifierTests).
-            let banking = BLEManager.classifyCompletedOffload(
-                decodedChunks: state.decodedChunksThisSession,
-                archivedFrames: archived,
-                unarchivedFrames: unarchived,
-                consoleChunks: state.consoleChunksThisSession,
-                rowsPersisted: backfiller?.sessionRowsPersisted ?? 0)
-            let bankedSensorRecords = banking.bankedSensorRecords
-            let bankedNothing = banking.bankedNothing
-            let sustainedEmpty = emptySyncTracker.recordCompletedSync(
-                bankedSensorRecords: bankedSensorRecords, consoleOnly: bankedNothing)
-            if unarchived > 0 {
-                state.lastSyncError = "Synced, but \(archived + unarchived) record(s) couldn't be decoded (unrecognised strap firmware layout), and the on-device archive is full — the \(unarchived) newest weren't preserved. Please share a strap log so the layout can be mapped."
-            } else if archived > 0 {
-                state.lastSyncError = "Synced, but \(archived) record(s) couldn't be decoded (unrecognised strap firmware layout). The raw bytes were saved on this Mac — please share a strap log so the layout can be mapped."
-            } else if bankedNothing {
-                // #77 / #214 family: the offload COMPLETED but the strap handed over no sensor records
-                // at all — either console/diagnostic output across many chunks, OR a near-empty
-                // metadata-only completion (zero rows persisted) — i.e. it isn't banking history to
-                // flash (its RTC has lost sync). Only escalate to the actionable banner once emptiness
-                // is SUSTAINED (#126): a single empty cycle on an otherwise-banking strap stays silent.
-                let detail = state.consoleChunksThisSession >= 3
-                    ? "console-only across \(state.consoleChunksThisSession) chunks"
-                    : "metadata-only, 0 sensor rows persisted"
-                log("Backfill: completed but the strap banked no sensor history (\(detail)); consecutive empty syncs = \(emptySyncTracker.consecutiveEmptySyncs).")
-                state.lastSyncError = sustainedEmpty
-                    ? "Synced, but your strap had no stored history to hand over — only its diagnostic output. This usually means its clock has lost sync, so it isn't saving data to flash. Fully charge it to 100%, then reconnect, and it should start banking again."
-                    : nil
-            } else {
+        // #580: a 5/MG that reaches a real HISTORY_COMPLETE with banked sensor records proves its
+        // history offload IS working — clear the experimental note + empty streak so the home state
+        // stops saying "history sync experimental".
+        if selectedModel.deviceFamily == .whoop5, bankedSensorRecords {
+            whoop5EmptyOffload.reset()
+            state.historySyncExperimental = false
+        }
+        UserDefaults.standard.set(state.lastSyncedAt, forKey: "lastSyncedAt")
+        // NOTE: the auto-continue streak is NOT reset here. A HISTORY_COMPLETE is no longer assumed to
+        // mean "caught up" (#25): a strap whose firmware segments a deep offload into many small
+        // HISTORY_COMPLETE slices keeps ONE streak (and one wall-time budget) across the slices. The streak
+        // is cleared only when maybeAutoContinueBackfill decides to stop, fired below for BOTH exit reasons.
+    }
+
+    /// Idle-watchdog exit: a WHOOP 4 that went quiet is a sync error; an empty WHOOP 5/MG offload is not (#580).
+    private func recordTimedOutSync() {
+        // #580: distinguish a genuine WHOOP-4 "strap went quiet mid-sync" from a WHOOP 5/MG whose
+        // firmware acks SEND_HISTORICAL_DATA but never emits a single type-0x2F offload frame. The
+        // 5/MG case isn't a failure — live HR is streaming fine over 0x2A37, the history offload is
+        // just experimental/empty on that firmware. "Banked" = this offload made ANY offload progress
+        // (chunks acked, rows persisted, or deep packets seen); an empty 5/MG offload has none.
+        let bankedThisOffload = state.syncChunksThisSession > 0
+            || (backfiller?.sessionRowsPersisted ?? 0) > 0
+            || state.deepPacketsThisSession > 0
+        if selectedModel.deviceFamily == .whoop5 {
+            let crossed = whoop5EmptyOffload.recordOffload(bankedRecords: bankedThisOffload)
+            if whoop5EmptyOffload.historyEmpty {
+                // Honest home state (#580): NOT a sync error — connected + live HR, history experimental.
+                state.historySyncExperimental = true
                 state.lastSyncError = nil
-            }
-            // #580: a 5/MG that reaches a real HISTORY_COMPLETE with banked sensor records proves its
-            // history offload IS working — clear the experimental note + empty streak so the home state
-            // stops saying "history sync experimental".
-            if selectedModel.deviceFamily == .whoop5, bankedSensorRecords {
-                whoop5EmptyOffload.reset()
-                state.historySyncExperimental = false
-            }
-            UserDefaults.standard.set(state.lastSyncedAt, forKey: "lastSyncedAt")
-            // NOTE: the auto-continue streak is NOT reset here. A HISTORY_COMPLETE is no longer assumed to
-            // mean "caught up" (#25): a strap whose firmware segments a deep offload into many small
-            // HISTORY_COMPLETE slices keeps ONE streak (and one wall-time budget) across the slices. The streak
-            // is cleared only when maybeAutoContinueBackfill decides to stop, fired below for BOTH exit reasons.
-        } else if reason == "timeout" {
-            // #580: distinguish a genuine WHOOP-4 "strap went quiet mid-sync" from a WHOOP 5/MG whose
-            // firmware acks SEND_HISTORICAL_DATA but never emits a single type-0x2F offload frame. The
-            // 5/MG case isn't a failure — live HR is streaming fine over 0x2A37, the history offload is
-            // just experimental/empty on that firmware. "Banked" = this offload made ANY offload progress
-            // (chunks acked, rows persisted, or deep packets seen); an empty 5/MG offload has none.
-            let bankedThisOffload = state.syncChunksThisSession > 0
-                || (backfiller?.sessionRowsPersisted ?? 0) > 0
-                || state.deepPacketsThisSession > 0
-            if selectedModel.deviceFamily == .whoop5 {
-                let crossed = whoop5EmptyOffload.recordOffload(bankedRecords: bankedThisOffload)
-                if whoop5EmptyOffload.historyEmpty {
-                    // Honest home state (#580): NOT a sync error — connected + live HR, history experimental.
-                    state.historySyncExperimental = true
-                    state.lastSyncError = nil
-                    if crossed {
-                        log("Backfill: WHOOP 5/MG offload empty \(whoop5EmptyOffload.consecutiveEmpty)× — history sync is experimental on 5.0; surfacing 'connected, history experimental' (not a sync error) and backing off the bounce loop.")
-                    }
-                } else {
-                    // Either the first empty cycle (could be the strap waking flash — stay quiet, don't
-                    // cry failure) OR a banking offload that just cleared the streak (recovery — drop the
-                    // experimental note). Both want a clean, error-free state.
-                    state.historySyncExperimental = false
-                    state.lastSyncError = nil
+                if crossed {
+                    log("Backfill: WHOOP 5/MG offload empty \(whoop5EmptyOffload.consecutiveEmpty)× — history sync is experimental on 5.0; surfacing 'connected, history experimental' (not a sync error) and backing off the bounce loop.")
                 }
             } else {
-                state.lastSyncError = "Sync interrupted — the strap went quiet. It will retry on the next sync."
+                // Either the first empty cycle (could be the strap waking flash — stay quiet, don't
+                // cry failure) OR a banking offload that just cleared the streak (recovery — drop the
+                // experimental note). Both want a clean, error-free state.
+                state.historySyncExperimental = false
+                state.lastSyncError = nil
             }
-        }
-        checkStrapLiveness()         // safety-net: strap ahead of us AND our frontier frozen ⇒ stuck?
-        // #364 / #25: a session that ended on the 60s IDLE cap OR on a true HISTORY_COMPLETE while still
-        // connected, with more backlog to fetch and the trim still advancing, immediately re-kicks another
-        // offload instead of tearing down to wait the 15-min floor — so a deep oldest-first backlog drains
-        // in back-to-back ~60s passes rather than one-per-15-min. #25: fire on HISTORY_COMPLETE too — some
-        // straps segment a deep overnight offload into many small HISTORY_COMPLETE slices and would
-        // otherwise stall between slices until the periodic floor. The pure shouldAutoContinue guards make
-        // this safe: a genuinely caught-up strap (newest within behindGapSeconds of the frontier and 0 rows)
-        // returns false and stops; that else path is also where the consecutive streak is cleared. Bounded
-        // by the consecutive-cap and the spin-detector inside the pure predicate either way.
-        if reason == "timeout" || reason == "HISTORY_COMPLETE" {
-            maybeAutoContinueBackfill(trimAdvanced: trimAdvanced,
-                                      rowsPersisted: backfiller?.sessionRowsPersisted ?? 0,
-                                      historyFrontierAdvanced: backfiller?.sessionHistoryFrontierAdvanced ?? false)
+        } else {
+            state.lastSyncError = "Sync interrupted — the strap went quiet. It will retry on the next sync."
         }
     }
 
