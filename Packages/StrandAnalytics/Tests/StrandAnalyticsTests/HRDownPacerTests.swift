@@ -2,8 +2,7 @@ import XCTest
 @testable import StrandAnalytics
 
 /// Pins the L2 `HRDownPacer`: a scripted HR descent → monotone, bounded target intervals that respect the
-/// HR floor and the max-Δ, and stops on settle / timeout. GOLDEN VECTORS the Kotlin `HrDownPacerTest`
-/// mirrors. See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L2).
+/// HR floor and the max-Δ, and stops on settle / timeout.
 final class HRDownPacerTests: XCTestCase {
 
     private let cfg = HRDownPacer.Config.default   // start Δ 3, max Δ 8, ramp 120s, floor 50, calm 60, max 180s.

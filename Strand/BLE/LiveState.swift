@@ -357,8 +357,8 @@ public final class LiveState: ObservableObject {
     }
 
     /// The full, shareable strap log for a bug report (issue #17): a header carrying the app version and
-    /// OS, followed by the live session log. Shared so BOTH the Live screen's log card AND a macOS Settings shortcut (#507 — a 4.0
-    /// owner couldn't find the log on Mac) build the SAME text. Call on the main thread (button taps).
+    /// OS, followed by the live session log. Shared so BOTH the Live screen's log card AND a Settings
+    /// shortcut (#507 — a 4.0 owner couldn't find the log on Mac) build the SAME text. Call on the main thread (button taps).
     func exportableLogText() -> String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let osName = "macOS"

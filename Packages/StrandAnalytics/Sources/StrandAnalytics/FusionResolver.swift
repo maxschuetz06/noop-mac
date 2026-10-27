@@ -2,15 +2,12 @@ import Foundation
 
 // MARK: - FusionResolver (v5 — Local Multi-Device Fusion)
 //
-// Pure, deterministic, on-device fusion per
-// docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md §1–§2. Given the per-source
-// values for ONE (metric, day), it:
+// Pure, deterministic, on-device fusion. Given the per-source values for ONE (metric, day), it:
 //   1. ranks sources by trust tier (MetricArbitrationPolicy), stable tiebreak, and picks the winner's
 //      value VERBATIM (best signal wins — never an average);
 //   2. cross-validates the other sources against the winner and classifies agreement as
 //      single / agree / minorDelta / conflict (the honest part — conflicts are shown, not merged).
-// No I/O — the Repository feeds it rows it already loads. Value-for-value Kotlin twin in
-// android/.../analytics/FusionResolver.kt.
+// No I/O — the Repository feeds it rows it already loads.
 public enum FusionResolver {
 
     /// Resolve one metric for one day from each source's value. `metricKey` is the resolver series key

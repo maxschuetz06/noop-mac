@@ -312,7 +312,7 @@ extension WhoopStore {
         }
 
         // v17 (Lab Book): the Health Records "marker" store — one row per dated reading the USER
-        // entered themselves (spec 2026-06-19-v5-health-records-design.md §"New"). This is the richer
+        // entered themselves. This is the richer
         // source-of-truth behind the daily `metricSeries` projection: a single day can hold several
         // readings, each carries a precise `takenAt` instant and `unit`, and notes / qualitative
         // (`valueText`) results don't fit a REAL-only `metricSeries` cell. Additive only — a NEW table,

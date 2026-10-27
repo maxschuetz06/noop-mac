@@ -2,9 +2,7 @@ import XCTest
 @testable import StrandAnalytics
 import WhoopProtocol
 
-/// Parity tests for the MVP `AutoWorkoutDetector` — mirrors
-/// android/.../AutoWorkoutDetectorTest.kt case-for-case so the two platforms stay byte-parity on
-/// the detection logic.
+/// Tests for the MVP `AutoWorkoutDetector` detection logic.
 ///
 /// Cases: elevated span detected; brief dip tolerated; short/low spans rejected; near windows
 /// merged; window overlapping a saved workout excluded.

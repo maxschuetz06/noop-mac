@@ -126,8 +126,7 @@ public enum WhoopCommand: UInt8, CaseIterable {
     ///
     /// ⚠️ STILL EXPERIMENTAL until a real WHOOP 4.0 owner confirms the strap actually buzzes with this
     /// 9-byte frame. We send the bytes the official app sends, but no strap-driven wake has been
-    /// reported firing on our side yet, so the UI keeps a "keep a backup alarm" caveat (see
-    /// AutomationsView). Do NOT guess additional fields beyond the captured frame.
+    /// reported firing on our side yet. Do NOT guess additional fields beyond the captured frame.
     public static func setAlarmPayload(epochSec: UInt32) -> [UInt8] {
         [0x01,
          UInt8(epochSec & 0xFF),

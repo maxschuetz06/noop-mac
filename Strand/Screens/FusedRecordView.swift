@@ -4,8 +4,7 @@ import StrandAnalytics
 
 // MARK: - FusedRecordView — "Your Data, Fused" (v5 — Local Multi-Device Fusion)
 //
-// The read-only headline screen for the fusion pillar
-// (docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md §UX). For each core
+// The read-only headline screen for the fusion pillar. For each core
 // metric it shows the BEST-sourced value, a provenance pill naming the source, the plain published
 // reason from MetricArbitrationPolicy ("counts directly" / "best stager"), and the inline agreement
 // state from FusionResolver (agree / minor delta / conflict). When two sources disagree it offers a

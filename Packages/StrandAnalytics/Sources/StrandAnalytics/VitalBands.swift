@@ -141,7 +141,7 @@ public enum VitalBands {
         cal.timeZone = TimeZone(secondsFromGMT: 0)!
         let dates = rows.compactMap { f.date(from: $0.day) }
         guard let first = dates.min(), let last = dates.max() else { return [] }
-        // Last write wins for a duplicated day key, matching the dictionary the Kotlin port builds.
+        // Last write wins for a duplicated day key.
         var byDay: [String: Double?] = [:]
         for r in rows where f.date(from: r.day) != nil { byDay[r.day] = r.value }
         var out: [Double?] = []

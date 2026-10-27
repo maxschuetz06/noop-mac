@@ -117,11 +117,10 @@ public enum SleepStageTotals {
         public var midpointSec: Int { start + (end - start) / 2 }
     }
 
-    // MARK: - Selection reason (explainability — WHY this block is the main night) (spec 2026-06-20)
+    // MARK: - Selection reason (explainability — WHY this block is the main night)
 
     /// Why the selector chose the block it did, derived from the EXACT signals the score used, so the UI
-    /// can explain the pick in plain English without re-deriving anything. Identical cases + identical
-    /// ordering as the Kotlin `MainNightReason` (cross-platform parity is mandatory). (spec 2026-06-20)
+    /// can explain the pick in plain English without re-deriving anything.
     public enum MainNightReason: String, Equatable {
         /// The day has a single sleep block, so there is nothing to choose between.
         case onlyBlock
@@ -141,14 +140,14 @@ public enum SleepStageTotals {
     /// A block is treated as having a MEANINGFUL alignment bonus when it earns ANY positive credit, i.e.
     /// its midpoint sits inside the bonus window (circular distance < `alignmentZeroSec`). Outside the
     /// window the bonus is exactly 0 and contributes nothing to the pick. Tiny epsilon so floating-point
-    /// noise at the window edge can't be mistaken for credit. Identical cross-platform. (spec 2026-06-20)
+    /// noise at the window edge can't be mistaken for credit. Identical cross-platform.
     static let meaningfulBonusEpsilon: Double = 1e-9
 
     /// The result of main-night selection enriched with the explainability fields the UI renders: the
     /// chosen block's index, the reason it won, and the chosen block's ASLEEP duration so the copy can
     /// fill {DUR} (Xh Ym) without re-decoding. `asleepSeconds`/`asleepMinutes` are the SAME duration the
     /// score used for that block (clock span for the `NightBlock` overload; decoded asleep minutes for the
-    /// stages overload). Mirrors the Kotlin `MainNightSelection`. (spec 2026-06-20)
+    /// stages overload).
     public struct MainNightSelection: Equatable {
         public let index: Int
         public let reason: MainNightReason
@@ -326,7 +325,7 @@ public enum SleepStageTotals {
     ///     the bonus window).
     /// The "longest" comparison ranks by the SAME duration the score adds (clock span for this overload),
     /// tie-broken by earlier onset exactly like the score, so the duration-only winner is well-defined and
-    /// platform-stable. `asleepSeconds` is the chosen block's clock span. (spec 2026-06-20)
+    /// platform-stable. `asleepSeconds` is the chosen block's clock span.
     public static func mainNightSelection(_ blocks: [NightBlock], offsetSec: Int,
                                           habitualMidsleepSec: Int? = nil) -> MainNightSelection? {
         guard let idx = mainNightIndex(blocks, offsetSec: offsetSec,
@@ -348,7 +347,7 @@ public enum SleepStageTotals {
     /// The onset of the DURATION-ONLY winner among parallel `asleepSecs`/`onsets` arrays: the block with
     /// the greatest asleep figure, ties broken toward the EARLIER onset — the same tie-break the score
     /// uses, so "would duration alone have picked this same block?" is decided identically on both
-    /// platforms. Returns the first onset when empty (callers never pass empty). (spec 2026-06-20)
+    /// platforms. Returns the first onset when empty (callers never pass empty).
     static func durationOnlyWinnerOnset(asleepSecs: [Int], onsets: [Int]) -> Int {
         guard !asleepSecs.isEmpty else { return 0 }
         var bestIdx = 0
@@ -366,11 +365,10 @@ public enum SleepStageTotals {
     }
 
     /// Decide the `MainNightReason` from the chosen block + the duration-only winner, using ONLY signals
-    /// the score already computed. Pure so it is unit-tested directly and shared byte-for-byte with Kotlin.
+    /// the score already computed. Pure so it is unit-tested directly.
     /// `chosenIsDurationWinnerOnset` is the chosen block's onset; the chosen block IS the duration-only
     /// winner iff (its asleep == the longest asleep) AND (its onset == the duration-only winner's onset) —
     /// matching the longest figure and the earlier-onset tie-break the duration-only ranking uses.
-    /// (spec 2026-06-20)
     static func mainNightReason(chosenAsleepSec: Int, chosenOnset: Int, chosenMidLocalSec: Int,
                                 blockCount: Int, longestAsleepSec: Int, longestOnset: Int,
                                 chosenIsDurationWinnerOnset: Int, habitualMidsleepSec: Int?) -> MainNightReason {
@@ -582,7 +580,7 @@ public enum SleepStageTotals {
     /// to `mainNightIndexByStages(...)`. Here the "longest" comparison ranks by DECODED asleep seconds (the
     /// same figure this overload's score adds), tie-broken by effective onset, so the reason matches what
     /// the seam actually scored. Returns the chosen block's decoded asleep seconds for {DUR}; a block whose
-    /// stages don't decode contributes 0 asleep seconds (same as the score). (spec 2026-06-20)
+    /// stages don't decode contributes 0 asleep seconds (same as the score).
     static func mainNightSelectionByStages(_ blocks: [(startTs: Int, stagesJSON: String?)],
                                            onsetByStart: [Int: Int], offsetSec: Int,
                                            habitualMidsleepSec: Int? = nil) -> MainNightSelection? {

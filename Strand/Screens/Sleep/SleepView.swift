@@ -102,7 +102,7 @@ struct SleepView: View {
 
     /// True while the hero's "why this is your main sleep" popover is open. The reason text comes
     /// straight from the foundation `MainNightReason` for the displayed night's blocks — never
-    /// re-derived here — so the explainer says exactly what the selector decided. (spec 2026-06-20 C1)
+    /// re-derived here — so the explainer says exactly what the selector decided.
     @State var showMainSleepWhy = false
     /// The stable detected key of the nap whose "why this is a nap" popover is open, or nil. Keyed by
     /// the nap's own `startTs` so one popover shows at a time even with several nap rows. (C1)

@@ -163,7 +163,7 @@ final class CaffeineDecayTests: XCTestCase {
         XCTAssertFalse(store.estimate().hasActive)
     }
 
-    // MARK: - Cutoff window (PR#566) — parity with the Kotlin CaffeineCutoffTest
+    // MARK: - Cutoff window (PR#566)
 
     func testCutoffLeadIsTwoHalfLivesForQuarterResidual() {
         XCTAssertEqual(CaffeineDecay.cutoffLeadHours(), 2 * hl, accuracy: 1e-9)

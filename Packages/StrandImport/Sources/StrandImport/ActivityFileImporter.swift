@@ -343,11 +343,11 @@ public enum ActivityFileImporter {
         return Int(v.rounded())
     }
 
-    // MARK: - App-layer mapping helpers (shared so Swift + Kotlin agree)
+    // MARK: - App-layer mapping helpers
 
     /// The sport name the imported workout is filed under. A file's free-text/enum sport is mapped to a
     /// NOOP-style Title-Cased label; an unknown/absent sport becomes the neutral "Activity" (we never
-    /// claim a sport the file didn't state). Keep parity with the Kotlin `workoutSport`.
+    /// claim a sport the file didn't state).
     public static func workoutSport(from raw: String?) -> String {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
             return "Activity"
@@ -372,7 +372,7 @@ public enum ActivityFileImporter {
 
     /// A one-line status string for the import UI, e.g.
     /// "Imported a 8.21 km Running activity · 412 GPS points · 1,840 HR samples · 2026-06-01". Only
-    /// states what the file actually carried. Keep parity with the Kotlin `summaryText`.
+    /// states what the file actually carried.
     public static func summaryText(_ a: ActivityFile) -> String {
         var head = "Imported"
         if let d = a.distanceM, d > 0 {

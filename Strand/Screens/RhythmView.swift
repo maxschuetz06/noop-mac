@@ -5,8 +5,6 @@ import StrandAnalytics
 
 // RhythmView.swift — EXPERIMENTAL beat-to-beat regularity VISUALIZATION (v5 "Rhythm").
 //
-// Spec: docs/superpowers/specs/2026-06-19-v5-rhythm-screening-design.md (§6, §9, §11).
-//
 // WHAT THIS SHIPS (and deliberately does NOT):
 //   This is the §11 "ship at most a clearly-labelled visualization" path. It draws the
 //   Poincaré scatter of the night's R-R cloud and the DESCRIPTIVE stats from

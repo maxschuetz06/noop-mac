@@ -1,7 +1,7 @@
 import XCTest
 @testable import Strand
 
-/// Sleep & Recovery guidance / explainability layer — the Today lane pure mappers (spec 2026-06-20).
+/// Sleep & Recovery guidance / explainability layer — the Today lane pure mappers.
 ///
 /// "No bare number without a STATE, a REASON, and a NEXT STEP." These pin the honest precedence and the
 /// verbatim copy of the three Today components implemented in TodayView, so the wording and the honesty

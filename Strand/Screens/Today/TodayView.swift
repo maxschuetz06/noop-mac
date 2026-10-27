@@ -91,7 +91,7 @@ struct TodayView: View {
     // returned (e.g. "my-whoop", "my-whoop-noop", "apple-health"). Resolved once per load via
     // `resolvedSeries` (the same imported-WHOOP > NOOP-computed > Apple-Health precedence the dashboard
     // merge uses), so a provenance badge reflects which source actually supplied that day's number rather
-    // than a blanket "on-device" claim. Absent until loaded / when a day has no value. (spec 2026-06-20)
+    // than a blanket "on-device" claim. Absent until loaded / when a day has no value.
     @State var provenanceByMetric: [String: String] = [:]
 
     // On-device steps ESTIMATE per day (key "steps_est", computed "-noop" source). The Steps tile

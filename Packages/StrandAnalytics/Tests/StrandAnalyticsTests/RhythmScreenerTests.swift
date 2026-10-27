@@ -12,7 +12,7 @@ import WhoopProtocol
 /// No real patient data is ever used — synthetic only.
 final class RhythmScreenerTests: XCTestCase {
 
-    // MARK: - Deterministic synthetic fixtures (mirrored exactly in Kotlin)
+    // MARK: - Deterministic synthetic fixtures
 
     /// A tiny deterministic LCG (Numerical Recipes constants) over UInt32, so Swift and
     /// Kotlin produce the identical sequence. `next(mod:)` returns an Int in [0, mod).

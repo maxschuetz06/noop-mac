@@ -58,7 +58,6 @@ extension RecomputePipeline {
     /// (cold-start). One `HistoryBlock` per stored session in `window` — start/end are the EFFECTIVE
     /// (edited) bounds so a corrected bedtime is learned, dayKey is the LOCAL day of the midpoint — and
     /// `SleepStageTotals.habitualMidsleepSec` keeps the longest block per day (naps drop out). (#547)
-    /// Mirrors the Android `computeHabitualMidsleep`.
     public static func habitualMidsleep(store: WhoopStore, sources: HabitualMidsleepSources,
                                         window: ClosedRange<Int>, offsetSec: Int) async -> Int? {
         let imported = (try? await store.sleepSessions(deviceId: sources.importedId, from: window.lowerBound,

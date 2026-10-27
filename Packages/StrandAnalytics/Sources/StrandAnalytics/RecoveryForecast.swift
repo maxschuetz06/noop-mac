@@ -193,7 +193,7 @@ public enum RecoveryForecaster {
                                 nights: nights, confidence: confidence)
     }
 
-    // MARK: - Stats (self-contained so the Kotlin mirror is line-for-line)
+    // MARK: - Stats
 
     static func mean(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }

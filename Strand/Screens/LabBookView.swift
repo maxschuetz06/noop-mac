@@ -11,7 +11,6 @@ import WhoopStore
 // get from your doctor or pharmacy — bloods, blood pressure, body measurements — and
 // SEE them next to your wearable signals, entirely on this device. NOOP never tests
 // you, never reads a result for you, and never tells you what a number means medically.
-// (Spec: docs/superpowers/specs/2026-06-19-v5-health-records-design.md.)
 //
 // This screen is SELF-CONTAINED: it takes the repo via the environment (the same one
 // every other screen binds to) and reads/writes markers through the Repository's lab-marker

@@ -19,9 +19,6 @@ import Foundation
 //   - The need value is supplied by the caller (AnalyticsEngine.Rest.defaultNeedHours
 //     = 8.0 by default; the caller passes any personal override). Computation here
 //     stays a pure function of (series, need, window).
-//
-// Constant-explicit + dependency-free so the Kotlin mirror (android … SleepDebt.kt)
-// is byte-identical.
 
 /// One night's contribution to the ledger: its day key, minutes slept, and the
 /// signed delta against need (positive = surplus, negative = deficit).
@@ -111,6 +108,6 @@ public enum SleepDebt {
     }
 
     /// Round to 1 decimal place (the ledger is reported in whole/near-whole minutes;
-    /// 1 dp keeps Σ stable without trailing float noise). Mirrors the Kotlin rounding.
+    /// 1 dp keeps Σ stable without trailing float noise).
     static func round1(_ v: Double) -> Double { (v * 10.0).rounded() / 10.0 }
 }

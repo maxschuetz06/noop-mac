@@ -28,10 +28,6 @@ import Foundation
 //     `contradictsPrior` flags the "in your data so far, this doesn't move your Charge" copy.
 //   - Caffeine "dose" is a TIMING proxy (later = stronger), never mg — the priors table & UI say so.
 // Nothing here is a causal/clinical claim; it is association on the user's own logged days.
-//
-// Mirrors the Kotlin DoseResponseEngine twin byte-for-byte. (Spec:
-// 2026-06-19-v5-insights-correlation-engine-design.md — "Personal dose-response with
-// population-prior shrinkage".)
 
 // MARK: - Result
 
@@ -120,7 +116,7 @@ public struct DoseCurvePoint: Equatable, Sendable {
 
 public enum DoseResponseEngine {
 
-    // MARK: Tunables (documented, deterministic — NOT learned). Mirror Kotlin exactly.
+    // MARK: Tunables (documented, deterministic — NOT learned).
 
     /// Pseudo-count of "prior days": the shrinkage constant k in w = n/(n+k). With n_user = k
     /// the estimate is a 50/50 blend; larger k leans harder on the prior for longer.
@@ -219,7 +215,7 @@ public enum DoseResponseEngine {
         return nUser >= solidDoseDays ? .solid : .building
     }
 
-    // MARK: - Helpers (self-contained so the Kotlin mirror is line-for-line)
+    // MARK: - Helpers
 
     /// True when a and b share a sign. Zero is treated as "not the same sign" as a non-zero
     /// value (a flat personal slope DOES contradict a non-zero prior — that's the honest read).

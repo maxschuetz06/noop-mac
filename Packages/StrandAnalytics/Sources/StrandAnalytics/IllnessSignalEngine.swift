@@ -24,7 +24,7 @@ import Foundation
 // IllnessNotifier copy: "On-device estimate (approximate) — not a diagnosis").
 public enum IllnessSignalEngine {
 
-    // MARK: - Tuning constants (pinned by test; mirror the Kotlin twin exactly)
+    // MARK: - Tuning constants (pinned by test)
 
     /// Composite score (0–100) at/above which the heads-up is RAISED. Below this it is "mild" — surfaced
     /// only in a detail view, never a notification (keeps the banner from re-introducing noise).

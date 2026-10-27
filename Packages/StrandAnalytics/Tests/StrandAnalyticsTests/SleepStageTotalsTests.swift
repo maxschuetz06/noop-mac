@@ -797,7 +797,7 @@ final class SleepStageTotalsTests: XCTestCase {
                        "the afternoon 25-min block is classified as the nap")
     }
 
-    // MARK: - Selection reason (explainability — WHY this block is the main night) (spec 2026-06-20)
+    // MARK: - Selection reason (explainability — WHY this block is the main night)
 
     /// `mainNightSelection.index` must always equal `mainNightIndex` (same score, same tie-break) — the
     /// enriched call is the SAME pick, just annotated. Replays it over the realistic cold-start sweep.
@@ -924,7 +924,7 @@ final class SleepStageTotalsTests: XCTestCase {
                        "duration-only (earlier onset) would have picked the night; alignment flipped it")
     }
 
-    // MARK: - Selection reason via the STAGES seam (decoded asleep minutes drive {DUR}) (spec 2026-06-20)
+    // MARK: - Selection reason via the STAGES seam (decoded asleep minutes drive {DUR})
 
     /// The stages-path selection: index matches `mainNightIndexByStages`, the reason is decided on DECODED
     /// asleep minutes, and `asleepSeconds` is the chosen block's decoded asleep span (not clock span).

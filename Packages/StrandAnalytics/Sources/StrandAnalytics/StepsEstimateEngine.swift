@@ -21,8 +21,7 @@ import WhoopProtocol
 /// every day count equally. A user with no phone step history to fit against can set `k` manually with the
 /// calibration slider.
 ///
-/// Pure value type — no I/O, fully unit-tested. The Kotlin twin is StepsEstimateEngine.kt (kept byte-for-byte
-/// equivalent: same motion sum, same median fit, same confidence curve, same clamps).
+/// Pure value type — no I/O, fully unit-tested.
 public enum StepsEstimateEngine {
 
     // MARK: - Tunables
@@ -102,7 +101,7 @@ public enum StepsEstimateEngine {
     /// so the UI can explain WHY the steps tile is (or isn't) showing an estimate without re-deriving the
     /// fit. A positive `manualOverride` always reports `.manual`. Otherwise we count the usable overlapping
     /// days (same filter the fit uses) and report `.calibrated` once `minCalibrationDays` are met, else
-    /// `.needsMoreDays`. Mirror of the Kotlin `status(...)`.
+    /// `.needsMoreDays`.
     public static func status(_ points: [CalibrationPoint], manualOverride: Double? = nil) -> CalibrationStatus {
         let usableDays = points.filter { $0.motion >= minMotionForFit && $0.steps > 0 }.count
         if let k = manualOverride, k > 0 {

@@ -10,8 +10,6 @@ import StrandAnalytics
 // send*, exactly the seam the spec asks for ("a DispatchQueue tick driving each BreathCue / the
 // HapticClock asyncAfter pattern").
 //
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (Architecture & files → Wiring).
-//
 // Buzz path (reused verbatim, hardware-confirmed): `AppModel.buzz(loops:)` → `send(.runHapticsPattern,
 // payload: [2, loops, 0, 0, 0])` — the SAME call the Haptic Clock (`buzzTimeNow`) and the inactivity
 // nudge use. We only schedule WHEN to fire it; the buzz itself is the shipped one.

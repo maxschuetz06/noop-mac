@@ -83,7 +83,6 @@ struct SleepMark: Equatable, Sendable {
     }
 
     /// The confirming toast / transient line shown after a tap, e.g. "Logged bedtime at 23:42."
-    /// Identical copy on both platforms (Kotlin twin: SleepMark.confirmation()).
     var confirmation: String {
         let clock = SleepMark.clockFormatter.string(from: date)
         let what = type == .bedtime ? "bedtime" : "wake-up"

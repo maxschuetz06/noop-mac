@@ -4,8 +4,6 @@ import WhoopProtocol
 // RhythmScreener.swift — beat-to-beat regularity DESCRIPTIVE statistics + Poincaré
 // point cloud for an experimental, non-clinical wellness VISUALIZATION.
 //
-// Spec: docs/superpowers/specs/2026-06-19-v5-rhythm-screening-design.md (§3, §11).
-//
 // SCOPE OF THIS ENGINE (deliberately narrow — read §11 of the spec):
 //   This builds ONLY the pure regularity math and a NEUTRAL categorical label scoped
 //   to a visualization ("looked steady" / "some variation" / "varied a lot" /

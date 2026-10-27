@@ -127,7 +127,7 @@ public enum ReadinessEngine {
         // respRateBpm may be a clean cloud value OR a higher-variance on-device RSA estimate, so gate
         // BOTH the latest value and the baseline mean to the plausible sleeping-RR band (8–25 bpm) and
         // use wider resp-only z thresholds (WATCH 1.5 / BAD 2.0) than HRV/RHR so a single noisy night
-        // can't flip RUNDOWN. Mirrors the Kotlin reference (#78) for cross-platform parity.
+        // can't flip RUNDOWN.
         if let rr = latest.respRateBpm, SleepStager.respPlausibleRangeBpm.contains(rr) {
             let base = history.suffix(baselineWindow).compactMap { $0.respRateBpm }
             if base.count >= minBaseline, let m = mean(base),

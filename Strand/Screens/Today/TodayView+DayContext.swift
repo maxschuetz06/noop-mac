@@ -126,7 +126,7 @@ extension TodayView {
     /// "On-device" (scored on THIS device from the raw strap stream); the imported strap source
     /// (`deviceId`, normally "my-whoop") reads "Whoop"; the Apple-Health source reads "Apple Health".
     /// Any other real source (Mi Band, Health Connect, nutrition) keeps its `FusionSource.displayName`
-    /// — still the genuine merge winner, never a blanket claim. Mirror EXACTLY in Kotlin.
+    /// — still the genuine merge winner, never a blanket claim.
     static func provenanceDisplayLabel(rawSource: String, deviceId: String) -> String {
         if rawSource == deviceId + "-noop" { return "On-device" }
         if rawSource == deviceId || rawSource == Repository.whoopSource { return "Whoop" }

@@ -35,7 +35,7 @@ extension SleepView {
 
     /// The hero's footer: the night's provenance badge (the real merge winner) next to a tappable "why
     /// this is your main sleep" affordance. Tapping reveals the foundation `MainNightReason` copy in a
-    /// popover, so the pick is explainable on the spot without leaving the hero. (spec 2026-06-20 C1/C4)
+    /// popover, so the pick is explainable on the spot without leaving the hero.
     @ViewBuilder
     func mainSleepFooter(_ night: Night) -> some View {
         HStack(spacing: 10) {
@@ -66,7 +66,7 @@ extension SleepView {
 
     /// A compact explainer popover: the verbatim foundation reason text, with the nap suffix appended for a
     /// nap row. Plain English, no jargon, no em-dashes (the words come straight from `mainSleepReasonText`
-    /// and the spec's nap-row suffix). Sized for both macOS and iOS. (spec 2026-06-20 C1)
+    /// and the spec's nap-row suffix). Sized for both macOS and iOS.
     @ViewBuilder
     func whyPopover(text: String, napSuffix: Bool) -> some View {
         VStack(alignment: .leading, spacing: NoopMetrics.space2) {

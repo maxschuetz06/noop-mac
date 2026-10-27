@@ -523,7 +523,7 @@ final class Repository: ObservableObject {
 
     /// The user's learned habitual midsleep (local time-of-day seconds), or nil under
     /// `SleepStageTotals.habitualMinDays` of history (cold-start). Computed EXACTLY as
-    /// `IntelligenceEngine.computeHabitualMidsleep` does — the SAME raw imported + computed ("-noop")
+    /// `RecomputePipeline.habitualMidsleep` does — the SAME raw imported + computed ("-noop")
     /// sleep-session union, one `HistoryBlock` per session (effective bounds, dayKey = the LOCAL calendar
     /// day of the midpoint), deferring to the SAME shared `SleepStageTotals.habitualMidsleepSec` pure
     /// function — so the Sleep tab's main-night pick aligns to the same value the analytics rollup used.
@@ -1216,7 +1216,7 @@ final class Repository: ObservableObject {
     /// Requires `minSamples` (~1 min) so stray samples can't fabricate an average, and caps the per-row
     /// HR reads so a huge history can't jank first paint. NEVER persisted — a read-time projection of the
     /// trace (the workout PK upsert would wipe it anyway), recomputed on every load so display == graph
-    /// == zones == effort by construction. Kotlin twin: `WhoopRepository.fillWorkoutHrFromStrap`.
+    /// == zones == effort by construction.
     private func reconcileWorkoutHrWithTrace(_ rows: [WorkoutRow], store: WhoopStore,
                                              minSamples: Int = 60, cap: Int = 300) async -> [WorkoutRow] {
         var budget = cap

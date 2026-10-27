@@ -1,10 +1,7 @@
 import XCTest
 @testable import StrandAnalytics
 
-/// Pure multi-device fusion contract — the Swift half of the Swift↔Kotlin parity gate. The identical
-/// fixtures + expected output live in android/.../FusionResolverTest.kt. Covers the spec test plan
-/// (docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md §Test plan): trust
-/// ordering, cross-validation boundaries, conflict-never-merges, single-source degradation, and
+/// Pure multi-device fusion contract: trust ordering, cross-validation boundaries, conflict-never-merges, single-source degradation, and
 /// provenance integrity.
 final class FusionResolverTests: XCTestCase {
 

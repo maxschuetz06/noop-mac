@@ -2,11 +2,9 @@ import Foundation
 
 // MARK: - MetricArbitrationPolicy (v5 — Local Multi-Device Fusion)
 //
-// The heart of v5 per docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md:
-// a DATA table (not if/else branches) keyed by metric × source that yields a trust tier + a plain,
-// published reason string, plus the per-metric cross-validation tolerances. It is the single place a
-// future Polar/Garmin/Oura source is registered. Pure constants + two lookups. Value-for-value Kotlin
-// twin in android/.../analytics/MetricArbitrationPolicy.kt.
+// The heart of multi-device fusion: a DATA table (not if/else branches) keyed by metric × source that
+// yields a trust tier + a plain, published reason string, plus the per-metric cross-validation tolerances. It is the single place a
+// future Polar/Garmin/Oura source is registered. Pure constants + two lookups.
 //
 // Trust tiers (lower = more trusted), grounded in what a device MEASURES vs ESTIMATES (spec §1):
 //   0 — Direct dedicated sensor for this metric (WHOOP R-R for HRV; a wrist band's pedometer for

@@ -103,21 +103,13 @@ extension BLEManager {
         }
     }
 
-    /// Arm the strap's firmware alarm for `date` (UTC).
+    /// Arm the strap's firmware alarm for `date` (UTC). The app has no wake alarm and nothing calls this
+    /// today; `WakeAlarmPolicy` keeps a WHOOP 5/MG from ever receiving SET_ALARM_TIME (it sends
+    /// DISABLE_ALARM instead).
     ///
-    /// WHOOP 4.0 sequence: SET_CLOCK first to ensure the strap RTC is UTC-correct, then the
-    /// rev-1 SET_ALARM_TIME. WHOOP 5/MG sends the REVISION_4 body alone — the strap maintains
-    /// its RTC (set during the connect handshake / history sync) and the official app's alarm
-    /// path doesn't re-set it (wire observation; mirrors Android WhoopBleClient.armStrapAlarm).
-    /// Either way the strap will buzz at `date` even if the app is backgrounded or force-quit
-    /// (event STRAP_DRIVEN_ALARM_EXECUTED=57). This is the only alarm path: the strap fires at
-    /// the fixed time — NOOP has no light-sleep early-wake layer.
-    ///
-    /// UNCONFIRMED on 5/MG: the byte-identical Android rev-4 frame has been ACKed by a real 5/MG when
-    /// arming, but a strap-driven wake fire has NOT been captured on our side (no
-    /// STRAP_DRIVEN_ALARM_EXECUTED event observed yet). It is therefore armed whenever the alarm is
-    /// enabled (no Experimental gate) and AppModel runs a Mac-driven haptic fallback for the same
-    /// instant (see `WakeAlarmPolicy`), so the wake does not depend on the firmware firing.
+    /// WHOOP 4.0 sequence: SET_CLOCK first to ensure the strap RTC is UTC-correct, then the rev-1
+    /// SET_ALARM_TIME. The strap buzzes at `date` even if the app is backgrounded or quit (event
+    /// STRAP_DRIVEN_ALARM_EXECUTED=57).
     func armStrapAlarm(at date: Date) {
         // Log the wake time in the user's LOCAL zone. `Date` prints in UTC by default, so an alarm
         // for (say) 07:00 in New York logged as "11:00:00 +0000" reads like a timezone bug — but it

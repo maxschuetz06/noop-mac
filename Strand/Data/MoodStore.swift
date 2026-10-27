@@ -3,8 +3,7 @@ import WhoopStore
 
 // MARK: - MoodStore
 //
-// Daily mood check-ins for the "Mind" section (design:
-// 2026-06-12-noop-mind-mental-health-design.md, Phase 1b).
+// Daily mood check-ins for the "Mind" section.
 //
 // Storage mirrors the native-journal pattern (Repository.journalDeviceId): mood
 // lives in the existing metric-series tall table under a DEDICATED source id, so
