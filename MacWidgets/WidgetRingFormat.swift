@@ -1,7 +1,7 @@
 import Foundation
+import StrandDesign
 
-/// Pure display helpers for the widget rings. Foundation-only so the logic can be compiled and
-/// checked on its own (no SwiftUI / StrandDesign dependency).
+/// Pure display helpers for the widget rings (no SwiftUI), so the logic can be unit-tested on its own.
 enum WidgetRingFormat {
     /// WHOOP's strain scale tops out at 21.
     static let strainScaleMax: Double = 21
@@ -34,11 +34,13 @@ enum WidgetRingFormat {
         return "\(min(max(value, 0), 100))%"
     }
 
-    /// WHOOP recovery zones: green ≥ 67, yellow 34–66, red < 34.
+    /// Ring colour zone for a recovery score, using the shared `RecoveryZone` bands; missing → unknown.
     static func recoveryZone(_ recovery: Int?) -> Zone {
         guard let recovery else { return .unknown }
-        if recovery >= 67 { return .green }
-        if recovery >= 34 { return .yellow }
-        return .red
+        switch RecoveryZone(score: Double(recovery)) {
+        case .high: return .green
+        case .medium: return .yellow
+        case .low: return .red
+        }
     }
 }
