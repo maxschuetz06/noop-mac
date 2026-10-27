@@ -422,8 +422,6 @@ final class RawPPGCaptureWriterTests: XCTestCase {
     }
 
     func testFolderAndFilesAreOwnerOnly() async throws {
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true,
-                                                attributes: [.posixPermissions: 0o755])
         let clock = TestClock(date(2026, 10, 10))
         let cap = makeCapture(clock: clock)
         await cap.append(unix: unix(date(2026, 10, 10)), frame: frame(version: 21, unix: unix(date(2026, 10, 10))))
