@@ -73,10 +73,7 @@ enum AppleDemoSeeder {
         var weight = 79.5
         var fitness = 0.0  // slow upward drift: HRV rises, resting-HR falls, VO2max climbs
 
-        let isoFmt = DateFormatter()
-        isoFmt.locale = Locale(identifier: "en_US_POSIX")
-        isoFmt.timeZone = zone
-        isoFmt.dateFormat = "yyyy-MM-dd"
+        let isoFmt = DayKey.makeFormatter(timeZone: zone)
 
         for i in 0..<DAYS {
             let date = cal.date(byAdding: .day, value: i, to: startDay)!

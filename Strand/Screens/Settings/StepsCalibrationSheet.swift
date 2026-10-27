@@ -359,7 +359,7 @@ struct StepsCalibrationSheet: View {
                                                   sampleDays: profile.stepsCalibrationSampleDays,
                                                   confidence: profile.stepsCalibrationConfidence,
                                                   manual: profile.stepsManualCoefficient > 0)
-        let dayParser = DateFormatter(); dayParser.locale = Locale(identifier: "en_US_POSIX"); dayParser.dateFormat = "yyyy-MM-dd"
+        let dayParser = DayKey.makeFormatter()
         let calendar = Calendar.current
         var rows: [StepsComparisonRow] = []
         var motions: [Double] = []
@@ -395,8 +395,7 @@ struct StepsCalibrationSheet: View {
     }
     /// "yyyy-MM-dd" → "EEE d MMM" for the table's day column.
     private static func shortDay(_ key: String) -> String {
-        let inF = DateFormatter(); inF.locale = Locale(identifier: "en_US_POSIX"); inF.dateFormat = "yyyy-MM-dd"
-        guard let d = inF.date(from: key) else { return key }
+        guard let d = DayKey.date(from: key) else { return key }
         let outF = DateFormatter(); outF.dateFormat = "EEE d MMM"
         return outF.string(from: d)
     }

@@ -245,10 +245,5 @@ enum HomeModel {
         return "\(m / 60) h \(String(format: "%02d", m % 60)) min"
     }
 
-    static let dayParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    static let dayParser = DayKey.makeFormatter()
 }

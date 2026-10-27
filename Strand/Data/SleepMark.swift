@@ -95,12 +95,7 @@ struct SleepMark: Equatable, Sendable {
     static let seriesKey = "sleep_mark"
 
     /// yyyy-MM-dd in the device's local zone, matching how the rest of the store keys days.
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayFormatter = DayKey.makeFormatter()
 
     /// Device-locale clock for the log line ("11:42 PM" / "23:42") — follows the 12-/24-hour setting,
     /// matching the Sleep screen's Asleep/Woke row.

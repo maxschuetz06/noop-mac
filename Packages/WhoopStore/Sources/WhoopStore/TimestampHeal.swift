@@ -41,7 +41,7 @@ extension WhoopStore {
     @discardableResult
     public func healImplausibleTimestamps(
         now: Int = Int(Date().timeIntervalSince1970),
-        todayLocalDayKey: String = WhoopStore.localDayKey(Date())
+        todayLocalDayKey: String = DayKey.string(from: Date())
     ) async throws -> TimestampHealResult {
         let lo = MIN_PLAUSIBLE_UNIX
         let hi = now + FUTURE_MARGIN
@@ -65,7 +65,8 @@ extension WhoopStore {
             // past (before the 2023-11 floor's day). String comparison is correct for the zero-padded
             // yyyy-MM-dd format. The far-past floor key is derived from MIN_PLAUSIBLE_UNIX in UTC so it
             // is a fixed sentinel independent of the device's zone.
-            let floorDayKey = WhoopStore.utcDayKey(MIN_PLAUSIBLE_UNIX)
+            let floorDayKey = DayKey.string(from: Date(timeIntervalSince1970: TimeInterval(MIN_PLAUSIBLE_UNIX)),
+                                            timeZone: DayKey.utc)
             var computedDeleted = 0
             try db.execute(sql: "DELETE FROM dailyMetric WHERE (day > ? OR day < ?) AND deviceId IN (\(computedIds))",
                            arguments: [todayLocalDayKey, floorDayKey])
@@ -87,23 +88,4 @@ extension WhoopStore {
         brand = 'WHOOP' COLLATE NOCASE \
         AND sourceKind IN ('\(SourceKind.liveBLE.rawValue)', '\(SourceKind.historyBLE.rawValue)')
         """
-
-    /// `yyyy-MM-dd` for `date` in the LOCAL calendar — matches how dailyMetric `day` keys are written.
-    public static func localDayKey(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
-    }
-
-    /// `yyyy-MM-dd` for a unix second in UTC — a zone-independent sentinel for the far-past floor day.
-    public static func utcDayKey(_ unix: Int) -> String {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: Date(timeIntervalSince1970: TimeInterval(unix)))
-    }
 }

@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 import UserNotifications
 
@@ -40,8 +41,6 @@ enum IllnessNotifier {
     }
 
     private static func dayKey(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
+        DayKey.string(from: date)
     }
 }

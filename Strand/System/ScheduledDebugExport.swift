@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 
 /// The DAILY scheduled debug auto-export (#510 — maddognik) for Apple, in PARITY with Android's
@@ -161,10 +162,7 @@ enum ScheduledDebugExport {
 
     /// yyyy-MM-dd local-day key for the once-per-day dedup. POSIX locale so the key is stable everywhere.
     private static func dayKey(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
+        DayKey.string(from: date)
     }
 
     // MARK: - iOS background task plumbing

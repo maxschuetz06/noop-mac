@@ -191,10 +191,6 @@ final class Repository: ObservableObject {
         vitalRows.isEmpty ? days.map { SourcedDailyMetric(metric: $0, source: .localCache) } : vitalRows
     }
 
-    /// `yyyy-MM-dd` in the device's local zone, matching how `DailyMetric.day` is stored.
-    private static let dayKeyFormatter: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX"); return f
-    }()
     /// Formatting a `Date` through `DateFormatter` is microseconds, and the Today / Sleep / Trends bodies ask
     /// for day keys dozens of times per pass (selected day, carry-over, window cutoffs). The key is a pure
     /// function of the whole second (and the system time zone), so results are memoized per epoch second.
@@ -202,7 +198,7 @@ final class Repository: ObservableObject {
     private static let dayKeyCache = DayKeyCache()
     static func localDayKey(_ date: Date) -> String {
         dayKeyCache.key(forSecond: Int(date.timeIntervalSince1970.rounded(.down))) {
-            dayKeyFormatter.string(from: date)
+            DayKey.string(from: date)
         }
     }
 
@@ -1467,12 +1463,7 @@ final class Repository: ObservableObject {
 
     /// Shared formatter — created once. Hot read path (called per series window / refresh);
     /// allocating a DateFormatter per call was a measurable waste. Read-only use is thread-safe.
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayFormatter = DayKey.makeFormatter()
 
     static func dayString(_ d: Date) -> String { dayFormatter.string(from: d) }
 

@@ -111,13 +111,7 @@ public enum AnalyticsEngine {
         }
     }
 
-    private static let isoDay: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let isoDay = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     /// Format a unix-seconds timestamp as a UTC YYYY-MM-DD day string.
     public static func dayString(_ ts: Int) -> String {

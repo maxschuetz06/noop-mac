@@ -361,13 +361,7 @@ enum LabBookFormat {
     }
 
     /// The `yyyy-MM-dd` day key the projection uses (LOCAL day of the reading).
-    private static let keyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-    static func dayKey(_ date: Date) -> String { keyFormatter.string(from: date) }
+    static func dayKey(_ date: Date) -> String { DayKey.string(from: date) }
 }
 
 // MARK: - Marker detail (history + trend + "compare with a signal")

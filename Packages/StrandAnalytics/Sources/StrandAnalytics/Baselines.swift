@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 
 // Baselines.swift — personal rolling baselines per nightly metric.
@@ -318,10 +319,7 @@ public enum Baselines {
         guard epoch > 0 else { return foldHistory(values, cfg: cfg) }
 
         // Pre-build the day-start epoch (UTC) for each "yyyy-MM-dd" key once.
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
+        let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
 
         var state: BaselineState? = nil
         for (i, v) in values.enumerated() {

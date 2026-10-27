@@ -122,12 +122,8 @@ enum TrendsReportData {
         // window matches TrendsView (Calendar-based, phone-local), then clamped to the
         // ISO string the engine compares on.
         let startDate = Calendar.current.date(byAdding: .day, value: -(n - 1), to: Date()) ?? Date()
-        // Local-zone "yyyy-MM-dd" matching Repository.localDayKey, but self-contained so this stays a
-        // nonisolated static (localDayKey is @MainActor-isolated and this runs off the main actor).
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        let start = f.string(from: startDate)
+        // DayKey, not Repository.localDayKey: that one is @MainActor-isolated and this runs off the main actor.
+        let start = DayKey.string(from: startDate)
         return (start, end)
     }
 
@@ -536,10 +532,7 @@ struct TrendsReportSheet: View {
 #if DEBUG
 @MainActor
 private func previewDays() -> [DailyMetric] {
-    let fmt = DateFormatter()
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    fmt.timeZone = TimeZone(identifier: "UTC")
-    fmt.dateFormat = "yyyy-MM-dd"
+    let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
     let cal = Calendar(identifier: .gregorian)
     var out: [DailyMetric] = []
     for i in stride(from: 119, through: 0, by: -1) {

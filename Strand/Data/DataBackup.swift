@@ -221,10 +221,7 @@ enum DataBackup {
 
     /// "NOOP-backup-2026-06-07.noopbak"
     private static func defaultBackupName() -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return "NOOP-backup-\(f.string(from: Date())).noopbak"
+        "NOOP-backup-\(DayKey.string(from: Date())).noopbak"
     }
 
     private static func timestamp() -> String {

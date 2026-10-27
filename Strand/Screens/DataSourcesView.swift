@@ -521,10 +521,7 @@ struct DataSourcesView: View {
     }
 
     private var liftingDayFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")   // sessions are stored at UTC; label the same span
-        f.dateFormat = "yyyy-MM-dd"
+        let f = DayKey.makeFormatter(timeZone: DayKey.utc)
         return f
     }
 

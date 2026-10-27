@@ -75,13 +75,7 @@ struct AppleHealthView: View {
     ]
 
     // yyyy-MM-dd → Date (en_US_POSIX / UTC), per the project's date contract.
-    private static let dayParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayParser = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     private static let spanFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -646,10 +640,7 @@ extension AppleHealthView {
 @MainActor
 private func appleHealthPreviewData() -> AppleHealthView.PreviewData {
     let cal = Calendar(identifier: .gregorian)
-    let fmt = DateFormatter()
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    fmt.timeZone = TimeZone(identifier: "UTC")
-    fmt.dateFormat = "yyyy-MM-dd"
+    let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
     let today = Date()
 
     var rows: [AppleDaily] = []

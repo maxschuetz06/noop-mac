@@ -108,8 +108,7 @@ extension RecomputePipeline {
     /// Vitality write to.
     static func saturdayKey(onOrBefore dayStr: String, timeZone: TimeZone) -> String {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = timeZone
-        let fmt = DateFormatter(); fmt.calendar = cal; fmt.timeZone = cal.timeZone
-        fmt.locale = Locale(identifier: "en_US_POSIX"); fmt.dateFormat = "yyyy-MM-dd"
+        let fmt = DayKey.makeFormatter(timeZone: timeZone)
         guard let d = fmt.date(from: dayStr) else { return dayStr }
         let back = cal.component(.weekday, from: d) % 7   // Sat(7)→0, Sun(1)→1 … Fri(6)→6
         let sat = cal.date(byAdding: .day, value: -back, to: d) ?? d

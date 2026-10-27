@@ -606,10 +606,7 @@ struct TrendsView: View {
 private func previewRepo() -> Repository {
     let repo = Repository(deviceId: "preview")
     let cal = Calendar(identifier: .gregorian)
-    let fmt = DateFormatter()
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    fmt.timeZone = TimeZone(identifier: "UTC")
-    fmt.dateFormat = "yyyy-MM-dd"
+    let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
     let today = Date()
     var seeded: [DailyMetric] = []
     let span = 365 * 3
