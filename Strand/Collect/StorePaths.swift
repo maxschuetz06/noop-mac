@@ -1,7 +1,14 @@
 import Foundation
 enum StorePaths {
+    enum PathError: Error {
+        /// The XCTest host runs as the app bundle itself, so the default path is a real user's store.
+        case refusedInTestHost
+    }
+
     /// `<AppSupport>/OpenWhoop/whoop.sqlite`, creating the directory if needed.
+    /// Throws `PathError.refusedInTestHost` inside the XCTest host, before touching the file system.
     static func defaultDatabasePath() throws -> String {
+        guard !AppRuntime.isTestHost else { throw PathError.refusedInTestHost }
         let fm = FileManager.default
         let appSupport = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: true)
