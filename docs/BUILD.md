@@ -130,9 +130,9 @@ NOOP_APP_ENTITLEMENTS = Config/Strand-ExternalDataFolder.entitlements
 
 For a different folder name, copy the variant to `Config/Strand-ExternalDataFolder.local.entitlements`
 (ignored by git), change its `home-relative-path` entry and point `NOOP_APP_ENTITLEMENTS` at it. A
-build phase (`Tools/check-external-data-folder.sh`) fails the build if the folder setting and the
-entitlements disagree, and keeps the default build free of sandbox exceptions. Details:
-[`EXTERNAL_DATA_FOLDER.md`](EXTERNAL_DATA_FOLDER.md).
+build phase (`Tools/check-external-data-folder.sh`) fails the build if the folder name is invalid or a
+well-known home folder, or if the folder setting and the entitlements disagree, and keeps the default
+build free of sandbox exceptions. Details: [`EXTERNAL_DATA_FOLDER.md`](EXTERNAL_DATA_FOLDER.md).
 
 ## 6. Tests
 

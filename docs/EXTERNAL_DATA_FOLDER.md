@@ -51,13 +51,14 @@ NOOP_APP_ENTITLEMENTS = Config/Strand-ExternalDataFolder.entitlements
 
 Use a new, dedicated folder. NOOP sets the data folder itself to mode `0700`, also when it already
 existed, so well-known home folders are refused: `Applications`, `Desktop`, `Documents`, `Downloads`,
-`Library`, `Movies`, `Music`, `Pictures`, `Public` and `Sites`, in any capitalisation. With one of these
-names the feature stays off (as if no folder were set). Other folders that already exist keep their
-permissions; only folders NOOP creates itself (`Import/`, `Done/`, `raw-ppg/`, …) get `0700`.
+`Library`, `Movies`, `Music`, `Pictures`, `Public` and `Sites`, in any capitalisation. Other folders that
+already exist keep their permissions; only folders NOOP creates itself (`Import/`, `Done/`, `raw-ppg/`, …)
+get `0700`.
 
 The two lines belong together. The folder name must be a single folder directly in your home
-directory: letters, digits, `-`, `_` and `.` only, no spaces, no `/`, no `~`, not `.` or `..`. The build
-fails if the name is invalid or does not match the entitlements file.
+directory, made of ASCII letters, digits, `-`, `_` and `.` only (no spaces, no `/`, no `~`), and not `.`,
+`..` or one of the well-known folders above. The build fails if the name is invalid, is a well-known
+folder or does not match the entitlements file.
 
 ### Using a different folder name
 
