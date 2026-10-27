@@ -38,14 +38,20 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         return allCases.first { $0.languageCode == base } ?? .system
     }
 
-    /// The locale content screens render with (strings, dates, numbers): an explicit language forces
-    /// its own locale, `.system` follows the system locale unchanged.
-    func contentLocale(system: Locale) -> Locale {
+    /// The locale an explicit language pins; `nil` for `.system`. Published to the desktop widget,
+    /// whose extension process otherwise follows the system language.
+    var pinnedLocale: Locale? {
         switch self {
-        case .system: return system
+        case .system: return nil
         case .german: return Locale(identifier: "de_DE")
         case .english: return Locale(identifier: "en_US")
         }
+    }
+
+    /// The locale content screens render with (strings, dates, numbers): an explicit language forces
+    /// its own locale, `.system` follows the system locale unchanged.
+    func contentLocale(system: Locale) -> Locale {
+        pinnedLocale ?? system
     }
 
     /// The content locale for the persisted setting; `.system` follows the live system locale.

@@ -17,10 +17,13 @@ public struct WidgetSnapshot: Codable, Equatable {
     public var restingHr: Int?   // Resting heart rate (bpm)
     /// Last completed strap history sync. Optional so older snapshots still decode.
     public var lastSync: Date?
+    /// Locale the app's language setting pins (`de_DE`, `en_US`); nil follows the system language. The
+    /// widget runs in its own process and cannot read the app's language preference itself.
+    public var localeIdentifier: String?
 
     public init(recovery: Int?, bpm: Int?, batteryPct: Int?, bonded: Bool, updated: Date,
                 effort: Int? = nil, rest: Int? = nil, hrv: Int? = nil, restingHr: Int? = nil,
-                lastSync: Date? = nil) {
+                lastSync: Date? = nil, localeIdentifier: String? = nil) {
         self.recovery = recovery
         self.bpm = bpm
         self.batteryPct = batteryPct
@@ -31,6 +34,7 @@ public struct WidgetSnapshot: Codable, Equatable {
         self.hrv = hrv
         self.restingHr = restingHr
         self.lastSync = lastSync
+        self.localeIdentifier = localeIdentifier
     }
 
     /// App Group suite the app and widget both use. Injected from the `MAC_APP_GROUP_ID` build setting
