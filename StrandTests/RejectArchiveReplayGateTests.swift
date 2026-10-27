@@ -16,6 +16,10 @@ final class RejectArchiveReplayGateTests: XCTestCase {
     ]
     private static let deviceId = "replay-test"
 
+    private struct FixtureNotWritten: Error {
+        let result: RawHistoryArchive.Result
+    }
+
     private var directory: URL!
     private var defaults: UserDefaults!
     private var suiteName: String!
@@ -41,9 +45,8 @@ final class RejectArchiveReplayGateTests: XCTestCase {
 
     private func archiveWithV25Frames() throws -> RawHistoryArchive {
         let archive = RawHistoryArchive(directory: directory)
-        guard case .written(3) = archive.archive(Self.v25Frames.map(bytes), trim: 70476, family: .whoop4) else {
-            throw XCTSkip("the fixture archive could not be written")
-        }
+        let result = archive.archive(Self.v25Frames.map(bytes), trim: 70476, family: .whoop4)
+        guard case .written(3) = result else { throw FixtureNotWritten(result: result) }
         return archive
     }
 
