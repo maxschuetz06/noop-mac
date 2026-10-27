@@ -396,8 +396,8 @@ public final class BLEManager: NSObject, ObservableObject {
                                 },
                                 enableRawCapture: enableRawCapture,
                                 log: { [weak self] s in self?.log(s) },
-                                rejectedSink: { [weak self] frames, trim, family in
-                                    self?.archiveRejectedFrames(frames, trim: trim, family: family) ?? true
+                                rejectedSink: Self.rejectedFrameSink(owner: self) { manager, frames, trim, family in
+                                    manager.archiveRejectedFrames(frames, trim: trim, family: family)
                                 },
                                 onChunk: { [weak self] decoded, console in
                                     if decoded { self?.state.decodedChunksThisSession += 1 }

@@ -234,6 +234,18 @@ extension BLEManager {
         }
     }
 
+    /// The Backfiller's reject sink, holding `owner` weakly. Fails closed: once the owner is gone nothing
+    /// was archived, so the chunk must not be acked (the ack frees the strap's only copy).
+    static func rejectedFrameSink<Owner: AnyObject>(
+        owner: Owner,
+        archive: @escaping (Owner, [[UInt8]], UInt32, DeviceFamily) -> Bool
+    ) -> ([[UInt8]], UInt32, DeviceFamily) -> Bool {
+        { [weak owner] frames, trim, family in
+            guard let owner else { return false }
+            return archive(owner, frames, trim, family)
+        }
+    }
+
     /// Pure decision: should the periodic timer kick off another historical offload? Only when
     /// connected + bonded and NOT already mid-backfill. Extracted so the gate is unit-testable
     /// without a CoreBluetooth seam. Note this intentionally does NOT consult `backfillStarted`
