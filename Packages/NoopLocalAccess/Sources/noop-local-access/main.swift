@@ -83,7 +83,8 @@ enum NoopLocalAccessMain {
       NOOP_DB_PATH      Explicit NOOP SQLite path. Optional; otherwise the mirror whoop-latest.sqlite in
                         the external data folder (published by a NOOP build that opted in) is used if it
                         exists, then the app container.
-      NOOP_DATA_FOLDER  Home-relative external data folder. Defaults to NOOP-Data, then NOOP-Daten.
+      NOOP_DATA_FOLDER  Home-relative external data folder. Defaults to NOOP-Data, then NOOP-Daten
+                        while ~/NOOP-Data does not exist (with a warning on stderr).
       NOOP_BUNDLE_ID    Optional non-default bundle id. Not needed for the official app.
       NOOP_DEVICE_ID    Optional source id. Defaults to my-whoop.
 

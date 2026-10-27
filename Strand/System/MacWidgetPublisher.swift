@@ -83,7 +83,8 @@ final class MacWidgetPublisher {
             rest: restScore.map { Int($0.rounded()) },
             hrv: day?.avgHrv.map { Int($0.rounded()) },
             restingHr: day?.restingHr,
-            lastSync: live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) }
+            lastSync: live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) },
+            localeIdentifier: AppLanguage.current().pinnedLocale?.identifier
         )
         snap.save()
         lastReload = now

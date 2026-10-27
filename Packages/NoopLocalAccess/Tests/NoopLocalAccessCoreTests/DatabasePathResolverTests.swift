@@ -50,8 +50,10 @@ final class DatabasePathResolverTests: XCTestCase {
         XCTAssertTrue(FileManager.default.createFile(atPath: path, contents: Data()))
     }
 
+    private var warnings: [String] = []
+
     private func resolve(_ config: LocalAccessConfiguration = LocalAccessConfiguration(), home: URL) throws -> String {
-        try DatabasePathResolver.resolve(configuration: config, home: home.path)
+        try DatabasePathResolver.resolve(configuration: config, home: home.path) { self.warnings.append($0) }
     }
 
     func testDefaultMirrorFolderIsUsedWhenPresent() throws {
@@ -69,7 +71,39 @@ final class DatabasePathResolverTests: XCTestCase {
         try touch(legacy)
         try touch(DatabasePathResolver.candidates(home: home.path)[0])
 
+        let modified = Date(timeIntervalSince1970: 1_700_000_000)
+        try FileManager.default.setAttributes([.modificationDate: modified], ofItemAtPath: legacy)
+
         XCTAssertEqual(try resolve(home: home), legacy)
+        XCTAssertEqual(warnings, [DatabasePathResolver.legacyMirrorWarning(modified: modified)])
+    }
+
+    func testLegacyMirrorIsIgnoredOnceTheDefaultFolderExists() throws {
+        let home = try makeHome()
+        try FileManager.default.createDirectory(atPath: home.path + "/NOOP-Data", withIntermediateDirectories: true)
+        try touch(home.path + "/NOOP-Daten/whoop-latest.sqlite")
+        let container = DatabasePathResolver.candidates(home: home.path)[0]
+        try touch(container)
+
+        XCTAssertEqual(try resolve(home: home), container)
+        XCTAssertEqual(warnings, [])
+    }
+
+    func testConfiguredLegacyFolderIsNotAFallbackAndDoesNotWarn() throws {
+        let home = try makeHome()
+        let legacy = home.path + "/NOOP-Daten/whoop-latest.sqlite"
+        try touch(legacy)
+
+        XCTAssertEqual(try resolve(LocalAccessConfiguration(dataFolder: "NOOP-Daten"), home: home), legacy)
+        XCTAssertEqual(warnings, [])
+    }
+
+    func testLegacyWarningIsOneLineWithTheModificationDate() {
+        let warning = DatabasePathResolver.legacyMirrorWarning(modified: Date(timeIntervalSince1970: 0))
+        XCTAssertTrue(warning.contains("~/NOOP-Daten/whoop-latest.sqlite"), warning)
+        XCTAssertTrue(warning.contains("1970-01-01T00:00:00Z"), warning)
+        XCTAssertFalse(warning.contains("\n"))
+        XCTAssertTrue(DatabasePathResolver.legacyMirrorWarning(modified: nil).contains("unknown"))
     }
 
     func testDefaultMirrorFolderBeatsLegacyFolder() throws {
@@ -78,6 +112,7 @@ final class DatabasePathResolverTests: XCTestCase {
         try touch(home.path + "/NOOP-Data/whoop-latest.sqlite")
 
         XCTAssertEqual(try resolve(home: home), home.path + "/NOOP-Data/whoop-latest.sqlite")
+        XCTAssertEqual(warnings, [])
     }
 
     func testConfiguredDataFolderIsUsedInsteadOfTheDefaults() throws {

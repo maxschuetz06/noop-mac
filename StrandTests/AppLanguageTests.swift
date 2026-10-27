@@ -99,4 +99,12 @@ final class AppLanguageTests: XCTestCase {
             XCTAssertEqual(locale.identifier, "en_US")
         }
     }
+
+    // MARK: - Widget locale
+
+    func testOnlyAnExplicitLanguagePinsALocaleForTheWidget() {
+        XCTAssertNil(AppLanguage.system.pinnedLocale)
+        XCTAssertEqual(AppLanguage.german.pinnedLocale?.identifier, "de_DE")
+        XCTAssertEqual(AppLanguage.english.pinnedLocale?.identifier, "en_US")
+    }
 }

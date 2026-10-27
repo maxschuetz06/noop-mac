@@ -49,8 +49,11 @@ NOOP_APP_ENTITLEMENTS = Config/Strand-ExternalDataFolder.entitlements
 `NOOP_APP_ENTITLEMENTS` is the app's `CODE_SIGN_ENTITLEMENTS`; the tracked variant
 `Config/Strand-ExternalDataFolder.entitlements` grants access to `/NOOP-Data/`.
 
-Use a new, dedicated folder: NOOP sets it to mode `0700`, which would for example break the sharing of
-`~/Public`.
+Use a new, dedicated folder. NOOP sets the data folder itself to mode `0700`, also when it already
+existed, so well-known home folders are refused: `Applications`, `Desktop`, `Documents`, `Downloads`,
+`Library`, `Movies`, `Music`, `Pictures`, `Public` and `Sites`, in any capitalisation. With one of these
+names the feature stays off (as if no folder were set). Other folders that already exist keep their
+permissions; only folders NOOP creates itself (`Import/`, `Done/`, `raw-ppg/`, …) get `0700`.
 
 The two lines belong together. The folder name must be a single folder directly in your home
 directory: letters, digits, `-`, `_` and `.` only, no spaces, no `/`, no `~`, not `.` or `..`. The build
@@ -123,8 +126,11 @@ The CLI/MCP server in `Packages/NoopLocalAccess` resolves the database in this o
 
 1. `--db-path` / `NOOP_DB_PATH` if set. This path must exist; there is no fallback.
 2. The mirror in the external data folder: `~/$NOOP_DATA_FOLDER/whoop-latest.sqlite` when
-   `NOOP_DATA_FOLDER` is set, otherwise `~/NOOP-Data/whoop-latest.sqlite`, then
-   `~/NOOP-Daten/whoop-latest.sqlite` (the folder name of earlier builds).
+   `NOOP_DATA_FOLDER` is set, otherwise `~/NOOP-Data/whoop-latest.sqlite`. The legacy
+   `~/NOOP-Daten/whoop-latest.sqlite` (the folder name of earlier builds) is only used while
+   `~/NOOP-Data` does not exist, because a leftover legacy mirror stops being updated once the app
+   writes to `~/NOOP-Data`. Whenever it is used, a one-line warning with its modification date goes to
+   stderr, which MCP clients show as the server log.
 3. The app's sandbox container (`~/Library/Containers/<bundle id>/…/whoop.sqlite`), which macOS
    usually blocks for other processes.
 

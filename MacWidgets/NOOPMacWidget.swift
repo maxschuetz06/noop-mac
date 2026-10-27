@@ -36,10 +36,18 @@ struct MacWidgetView: View {
     let entry: MacEntry
     /// QA seam: `widgetFamily` is read-only, so offscreen snapshot tests pick the layout through this.
     var familyOverride: WidgetFamily? = nil
+    /// QA seam: the bundle carrying the widget's string catalog (the test bundle in snapshot tests).
+    var catalog: Bundle = .main
 
     private var family: WidgetFamily { familyOverride ?? environmentFamily }
 
     private var snap: WidgetSnapshot { entry.snapshot }
+
+    private var localization: WidgetLocalization {
+        .resolve(localeIdentifier: snap.localeIdentifier, catalog: catalog)
+    }
+
+    private var strings: Bundle { localization.bundle }
 
     var body: some View {
         Group {
@@ -50,6 +58,7 @@ struct MacWidgetView: View {
             }
         }
         .redacted(reason: entry.isPlaceholder ? .placeholder : [])
+        .environment(\.locale, localization.locale)
     }
 
     // MARK: Layouts
@@ -105,14 +114,16 @@ struct MacWidgetView: View {
         HStack(spacing: 8) {
             MetricRingColumn(
                 label: "Effort",
+                bundle: strings,
                 fill: WidgetRingFormat.fill(snap.effort),
                 color: StrandPalette.accent,
-                valueText: WidgetRingFormat.strainText(effort: snap.effort),
+                valueText: WidgetRingFormat.strainText(effort: snap.effort, locale: localization.locale),
                 isEmpty: snap.effort == nil
             )
             recoveryRingColumn
             MetricRingColumn(
                 label: "Sleep",
+                bundle: strings,
                 fill: WidgetRingFormat.fill(snap.rest),
                 color: StrandPalette.sleepAwake,
                 valueText: WidgetRingFormat.percentText(snap.rest),
@@ -124,6 +135,7 @@ struct MacWidgetView: View {
     private var recoveryRingColumn: some View {
         MetricRingColumn(
             label: "Recovery",
+            bundle: strings,
             fill: WidgetRingFormat.fill(snap.recovery),
             color: recoveryColor,
             valueText: WidgetRingFormat.percentText(snap.recovery),
@@ -135,6 +147,7 @@ struct MacWidgetView: View {
     private var recoveryRing: some View {
         MetricRingColumn(
             label: "Recovery",
+            bundle: strings,
             fill: WidgetRingFormat.fill(snap.recovery),
             color: recoveryColor,
             valueText: WidgetRingFormat.percentText(snap.recovery),
@@ -158,16 +171,16 @@ struct MacWidgetView: View {
             Circle()
                 .fill(snap.bonded ? StrandPalette.statusPositive : StrandPalette.textTertiary)
                 .frame(width: 7, height: 7)
-                .accessibilityLabel(snap.bonded ? "Connected" : "Not connected")
+                .accessibilityLabel(Text(snap.bonded ? "Connected" : "Not connected", bundle: strings))
         }
     }
 
     @ViewBuilder private var syncLine: some View {
         if let sync = snap.lastSync {
-            Text("Sync \(sync, style: .relative)")
+            Text("Sync \(sync, style: .relative)", bundle: strings)
                 .font(.caption2).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
         } else {
-            Text("No sync yet").font(.caption2).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+            Text("No sync yet", bundle: strings).font(.caption2).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
         }
     }
 
@@ -183,7 +196,7 @@ struct MacWidgetView: View {
                     Text(unit).font(.caption2).foregroundStyle(StrandPalette.textTertiary)
                 }
             }
-            Text(label).font(.caption2).foregroundStyle(StrandPalette.textTertiary)
+            Text(label, bundle: strings).font(.caption2).foregroundStyle(StrandPalette.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -202,12 +215,14 @@ struct NOOPMacWidget: Widget {
     let kind = "NOOPMacWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MacProvider()) { entry in
+        // The widget gallery also shows these in the app's language.
+        let strings = WidgetLocalization.resolve(localeIdentifier: WidgetSnapshot.load()?.localeIdentifier).bundle
+        return StaticConfiguration(kind: kind, provider: MacProvider()) { entry in
             MacWidgetView(entry: entry)
                 .containerBackground(StrandPalette.surfaceBase, for: .widget)
         }
-        .configurationDisplayName("WHOOP Metrics")
-        .description("Recovery, effort, sleep, HRV and resting pulse at a glance.")
+        .configurationDisplayName(Text("WHOOP Metrics", bundle: strings))
+        .description(Text("Recovery, effort, sleep, HRV and resting pulse at a glance.", bundle: strings))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

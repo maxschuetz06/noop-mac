@@ -32,7 +32,7 @@ extension AutoBackupEngine {
     @discardableResult
     static func mirror(sourcePath: String, into directory: URL) throws -> URL {
         guard FileManager.default.fileExists(atPath: sourcePath) else { throw AutoBackupError.missingDatabase(sourcePath) }
-        try PrivateFiles.ensureDirectory(directory)
+        try PrivateFiles.ensureDirectory(directory, tighteningExisting: true)
         let finalURL = directory.appendingPathComponent(CodexMirrorPolicy.fileName)
         try snapshot(sourcePath: sourcePath, to: finalURL, filePermissions: PrivateFiles.fileMode)
 

@@ -20,7 +20,7 @@ import StrandDesign
 ///       CODE_SIGN_IDENTITY=- -only-testing:StrandTests/ScreenSnapshotQATests
 ///
 /// Per screen: `<name>.png` (1280×900 window) and `<name>_tall.png` (1280×2600, shows long screens in full).
-/// Widgets: `widget_<family>_<full|sparse>.png` at the native macOS widget sizes.
+/// Widgets: `widget_<family>_<full|full_de|full_en|sparse>.png` at the native macOS widget sizes.
 @MainActor
 final class ScreenSnapshotQATests: XCTestCase {
 
@@ -79,12 +79,19 @@ final class ScreenSnapshotQATests: XCTestCase {
             ("medium", .systemMedium, CGSize(width: 364, height: 170)),
             ("large", .systemLarge, CGSize(width: 364, height: 382)),
         ]
+        func full(localeIdentifier: String?) -> MacEntry {
+            MacEntry(date: Date(),
+                     snapshot: WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true,
+                                              updated: Date(), effort: 59, rest: 84, hrv: 64, restingHr: 52,
+                                              lastSync: Date().addingTimeInterval(-12 * 60),
+                                              localeIdentifier: localeIdentifier),
+                     isPlaceholder: false)
+        }
+        // `full` follows the system language; `full_de` / `full_en` pin the app language like the publisher.
         let entries: [(String, MacEntry)] = [
-            ("full", MacEntry(date: Date(),
-                              snapshot: WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true,
-                                                       updated: Date(), effort: 59, rest: 84, hrv: 64,
-                                                       restingHr: 52, lastSync: Date().addingTimeInterval(-12 * 60)),
-                              isPlaceholder: false)),
+            ("full", full(localeIdentifier: nil)),
+            ("full_de", full(localeIdentifier: "de_DE")),
+            ("full_en", full(localeIdentifier: "en_US")),
             ("sparse", MacEntry(date: Date(),
                                 snapshot: WidgetSnapshot(recovery: 28, bpm: nil, batteryPct: nil, bonded: false,
                                                          updated: Date()),
@@ -93,7 +100,8 @@ final class ScreenSnapshotQATests: XCTestCase {
         if only == nil || only?.contains("Widgets") == true {
             for (famName, family, size) in families {
                 for (entryName, entry) in entries {
-                    let view = MacWidgetView(entry: entry, familyOverride: family)
+                    let view = MacWidgetView(entry: entry, familyOverride: family,
+                                             catalog: Bundle(for: ScreenSnapshotQATests.self))
                         .padding(16)
                         .frame(width: size.width, height: size.height)
                         .background(StrandPalette.surfaceBase)

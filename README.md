@@ -27,6 +27,13 @@ An optional external data folder (database mirror for local scripts, import inbo
 is off by default and must be enabled at build time. See
 [`docs/EXTERNAL_DATA_FOLDER.md`](docs/EXTERNAL_DATA_FOLDER.md).
 
+## Versions
+
+This fork has its own release line, starting at 8.0.0; the upstream history up to 7.0.1 is kept in
+[`CHANGELOG.md`](CHANGELOG.md). "Check for updates" compares the installed version with the newest
+`v<version>` release of this repository, and an update that adds a release note shows "What's new"
+once.
+
 ## Build from source
 
 There are no prebuilt downloads. You need macOS 13 or newer, a current Xcode and
