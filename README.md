@@ -31,7 +31,8 @@ is off by default and must be enabled at build time. See
 
 This fork has its own release line, starting at 8.0.0; the upstream history up to 7.0.1 is kept in
 [`CHANGELOG.md`](CHANGELOG.md). "Check for updates" compares the installed version with the newest
-`v<version>` release of this repository, and after an update the app shows "What's new" once.
+`v<version>` release of this repository, and an update that adds a release note shows "What's new"
+once.
 
 ## Build from source
 

@@ -29,7 +29,7 @@ This fork has its own release line, starting at 8.0.0. Everything below
 - **Removed:** the AI Coach, the Intelligence screen and the Smart Alarm / wake alarm.
 - **Optional external data folder** (build-time opt-in): database mirror for local tools, import
   inbox and raw PPG capture. Well-known home folders such as `Documents` or `Public` are refused, and
-  NOOP no longer changes the permissions of existing folders it did not create.
+  apart from the data folder itself NOOP no longer changes the permissions of existing folders.
 - **Strap safety.** A WHOOP 5.0/MG only receives an allowlisted command set, never a strap-held alarm
   or a looping vibration.
 - **The desktop widget follows the in-app language setting.**
