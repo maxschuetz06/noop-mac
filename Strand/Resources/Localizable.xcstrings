@@ -21046,12 +21046,12 @@
         }
       }
     },
-    "**Local only.** No account, no cloud, no telemetry. The only network request is “Check for updates”, and only when you click it. The AI Coach, the Intelligence screen and the Smart Alarm were removed.": {
+    "**Local only.** No account, no cloud, no telemetry. The only network request NOOP makes is “Check for updates”, and only when you click it; a workout’s route map loads map tiles for the route’s area from Apple Maps, without any health data. The AI Coach, the Intelligence screen and the Smart Alarm were removed.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Nur lokal.** Kein Konto, keine Cloud, keine Telemetrie. Die einzige Netzwerkanfrage ist „Nach Updates suchen“, und nur, wenn du darauf klickst. Der KI-Coach, der Bereich Intelligenz und der Smart Alarm wurden entfernt."
+            "value": "**Nur lokal.** Kein Konto, keine Cloud, keine Telemetrie. Die einzige Netzwerkanfrage von NOOP ist „Nach Updates suchen“, und nur, wenn du darauf klickst; die Routenkarte eines Trainings lädt Kartenkacheln für die Umgebung der Route von Apple Karten, ohne Gesundheitsdaten. Der KI-Coach, der Bereich Intelligenz und der Smart Alarm wurden entfernt."
           }
         }
       }

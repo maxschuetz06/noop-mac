@@ -20,8 +20,9 @@ everything on your Mac. No account, no cloud, no subscription.
 ## Local-only by design
 
 NOOP has no server, no telemetry and no account. Your strap data, imports and computed metrics never
-leave your Mac. Only one feature makes a network request: "Check for updates" (one read of the latest
-GitHub release, only when you tap it).
+leave your Mac. NOOP itself makes one network request: "Check for updates" (one read of the latest
+GitHub release, only when you tap it). A workout's route map loads map tiles for the route's area from
+Apple Maps; no health data is sent.
 
 An optional external data folder (database mirror for local scripts, import inbox, raw PPG capture)
 is off by default and must be enabled at build time. See

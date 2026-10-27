@@ -27,8 +27,9 @@ no login, no cloud sync, and no telemetry. Everything NOOP computes about you li
 single SQLite file on your own device.
 
 There is exactly **one** exception, started by you: **Check for updates** (§1.1a) reads the latest
-release version from GitHub only when you tap it. Nothing else in the app ever touches the
-network, and your raw data never does.
+release version from GitHub only when you tap it. Nothing else in NOOP's own code touches the
+network, and your raw data never does. The one system service involved: a workout's route map is an
+Apple Maps view, so macOS loads map tiles for the route's area from Apple; no health data is sent.
 
 Data enters NOOP two ways:
 
@@ -64,7 +65,8 @@ for this repository and compares the latest release version with the installed o
 when you tap the button: no background polling, no auto-update, and nothing about you or your data
 is sent.
 
-If you never tap Check for updates, NOOP makes zero network connections.
+If you never tap Check for updates, NOOP itself makes zero network connections (map tiles for a
+workout's route map come from Apple Maps, see above).
 
 ### 1.2 The macOS sandbox
 

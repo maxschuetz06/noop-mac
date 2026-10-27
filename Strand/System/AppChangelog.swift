@@ -28,7 +28,7 @@ enum AppChangelog {
             localizedDate: "October 2026",
             localizedItems: [
                 "**A fork with its own release line.** NOOP for Mac is an unofficial, macOS-only fork of NOOP and starts its own versions at 8.0.0. The iPhone and Android apps, prebuilt downloads and donation links are gone; you build the app from source.",
-                "**Local only.** No account, no cloud, no telemetry. The only network request is “Check for updates”, and only when you click it. The AI Coach, the Intelligence screen and the Smart Alarm were removed.",
+                "**Local only.** No account, no cloud, no telemetry. The only network request NOOP makes is “Check for updates”, and only when you click it; a workout’s route map loads map tiles for the route’s area from Apple Maps, without any health data. The AI Coach, the Intelligence screen and the Smart Alarm were removed.",
                 "**Optional external data folder.** A build can opt into one folder in your home directory for a database mirror for local tools, an import inbox and raw PPG capture. It is off by default, and well-known folders such as Documents or Public are refused.",
                 "**Strap safety.** A WHOOP 5.0/MG only receives an allowlisted set of commands, and never a strap-held alarm or a looping vibration.",
                 "**The desktop widget follows the app language** you choose in Settings, not only the system language.",

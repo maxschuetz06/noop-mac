@@ -24,8 +24,10 @@ This fork has its own release line, starting at 8.0.0. Everything below
 
 - **A fork with its own release line.** macOS only; the iPhone and Android apps, prebuilt downloads,
   AltStore/Homebrew distribution and donation links are gone. You build the app from source.
-- **Local only.** No account, cloud or telemetry. The only network request is the user-initiated
-  "Check for updates", which now reads this fork's GitHub releases (tags `v8.0.0` and later).
+- **Local only.** No account, cloud or telemetry. The only network request NOOP makes is the
+  user-initiated "Check for updates", which now reads this fork's GitHub releases (tags `v8.0.0` and
+  later). A workout's route map loads map tiles for the route's area from Apple Maps; no health data
+  is sent.
 - **Removed:** the AI Coach, the Intelligence screen and the Smart Alarm / wake alarm.
 - **Optional external data folder** (build-time opt-in): database mirror for local tools, import
   inbox and raw PPG capture. Well-known home folders such as `Documents` or `Public` are refused, and
