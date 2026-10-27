@@ -40,18 +40,38 @@ public enum DatabasePathResolver {
     public static let legacyDataFolder = "NOOP-Daten"
 
     /// Mirror locations to try, in order: only the configured folder when one is set, otherwise the
-    /// default folder and then the legacy one.
+    /// default folder and, only while that folder does not exist, the legacy one. Once `~/NOOP-Data`
+    /// exists the app writes there, so a leftover legacy mirror would be stale.
     public static func mirrorPaths(dataFolder: String?,
                                    home: String = FileManager.default.homeDirectoryForCurrentUser.path) -> [String] {
-        let folders = dataFolder.map { [$0] } ?? [defaultDataFolder, legacyDataFolder]
+        let folders: [String]
+        if let dataFolder {
+            folders = [dataFolder]
+        } else if FileManager.default.fileExists(atPath: "\(home)/\(defaultDataFolder)") {
+            folders = [defaultDataFolder]
+        } else {
+            folders = [defaultDataFolder, legacyDataFolder]
+        }
         return folders.map { "\(home)/\($0)/\(mirrorFileName)" }
     }
 
+    /// One stderr line (the MCP server log for stdio clients) whenever the legacy mirror is read.
+    public static func legacyMirrorWarning(modified: Date?) -> String {
+        let date = modified.map { ISO8601DateFormatter().string(from: $0) } ?? "unknown"
+        return "[noop-local-access] warning: reading the legacy mirror ~/\(legacyDataFolder)/\(mirrorFileName) "
+            + "(last modified \(date)); it may be stale. Set NOOP_DATA_FOLDER or NOOP_DB_PATH to choose the mirror."
+    }
+
+    public static func writeToStandardError(_ line: String) {
+        FileHandle.standardError.write(Data((line + "\n").utf8))
+    }
+
     /// Precedence: explicit path (`--db-path` / `NOOP_DB_PATH`, never falls back) → existing mirror in the
-    /// external data folder (`NOOP_DATA_FOLDER`, else `~/NOOP-Data`, then `~/NOOP-Daten`) → official app
-    /// container candidates.
+    /// external data folder (`NOOP_DATA_FOLDER`, else `~/NOOP-Data`, then `~/NOOP-Daten` while
+    /// `~/NOOP-Data` does not exist; `warn` reports that case) → official app container candidates.
     public static func resolve(configuration: LocalAccessConfiguration,
-                               home: String = FileManager.default.homeDirectoryForCurrentUser.path) throws -> String {
+                               home: String = FileManager.default.homeDirectoryForCurrentUser.path,
+                               warn: (String) -> Void = writeToStandardError) throws -> String {
         let fm = FileManager.default
         if let explicit = configuration.databasePath {
             let expanded = expandHome(explicit, home: home)
@@ -61,7 +81,12 @@ public enum DatabasePathResolver {
             return expanded
         }
 
+        let legacyMirror = "\(home)/\(legacyDataFolder)/\(mirrorFileName)"
         for mirror in mirrorPaths(dataFolder: configuration.dataFolder, home: home) where fm.fileExists(atPath: mirror) {
+            if configuration.dataFolder == nil, mirror == legacyMirror {
+                let modified = (try? fm.attributesOfItem(atPath: mirror))?[.modificationDate] as? Date
+                warn(legacyMirrorWarning(modified: modified))
+            }
             return mirror
         }
 

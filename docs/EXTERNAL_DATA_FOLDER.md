@@ -126,8 +126,11 @@ The CLI/MCP server in `Packages/NoopLocalAccess` resolves the database in this o
 
 1. `--db-path` / `NOOP_DB_PATH` if set. This path must exist; there is no fallback.
 2. The mirror in the external data folder: `~/$NOOP_DATA_FOLDER/whoop-latest.sqlite` when
-   `NOOP_DATA_FOLDER` is set, otherwise `~/NOOP-Data/whoop-latest.sqlite`, then
-   `~/NOOP-Daten/whoop-latest.sqlite` (the folder name of earlier builds).
+   `NOOP_DATA_FOLDER` is set, otherwise `~/NOOP-Data/whoop-latest.sqlite`. The legacy
+   `~/NOOP-Daten/whoop-latest.sqlite` (the folder name of earlier builds) is only used while
+   `~/NOOP-Data` does not exist, because a leftover legacy mirror stops being updated once the app
+   writes to `~/NOOP-Data`. Whenever it is used, a one-line warning with its modification date goes to
+   stderr, which MCP clients show as the server log.
 3. The app's sandbox container (`~/Library/Containers/<bundle id>/…/whoop.sqlite`), which macOS
    usually blocks for other processes.
 
