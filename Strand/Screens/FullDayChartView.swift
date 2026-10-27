@@ -184,7 +184,6 @@ struct FullDayChartView: View {
             valueFormat: { format($0) },
             dateFormat: { Self.timeFmt.string(from: $0) }
         )
-        #if os(macOS)
         // macOS has no pinch here, so wheel/trackpad scroll zooms about the cursor-agnostic centre.
         // (DeepTimeline owns the scroll handler; the chart's own gesture covers drag-pan.)
         .modifier(ScrollToZoomModifier(
@@ -192,7 +191,6 @@ struct FullDayChartView: View {
             bounds: dayBounds,
             apply: { zoomDomain = $0 }
         ))
-        #endif
     }
 
     // MARK: States
@@ -232,11 +230,7 @@ struct FullDayChartView: View {
         HStack(spacing: NoopMetrics.space2) {
             Image(systemName: zoomDomain == nil ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
                 .font(StrandFont.footnote.weight(.semibold))
-            #if os(macOS)
             Text(zoomDomain == nil ? "Scroll to zoom · drag to pan" : "Zoomed in — drag to pan")
-            #else
-            Text(zoomDomain == nil ? "Pinch to zoom · drag to pan" : "Zoomed in — drag to pan")
-            #endif
             Spacer()
             if zoomDomain != nil {
                 Button("Reset") { withAnimation(StrandMotion.interactive) { zoomDomain = nil } }
@@ -348,7 +342,6 @@ struct FullDayChartView: View {
     }()
 }
 
-#if os(macOS)
 import AppKit
 // MARK: - macOS scroll-to-zoom
 //
@@ -389,4 +382,3 @@ private struct ScrollCatcher: NSViewRepresentable {
         }
     }
 }
-#endif

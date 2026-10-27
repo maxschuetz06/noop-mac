@@ -1,8 +1,5 @@
 import SwiftUI
 import StrandDesign
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Visible feedback for a strap scan (Settings → Re-scan, Live → Scan & connect, the menu bar): a
 /// "Searching…" pill while scanning, a blocker explanation when Bluetooth is unavailable (with a button
@@ -16,13 +13,7 @@ struct ScanFeedbackView: View {
 
     /// System Settings → Privacy & Security → Bluetooth (macOS) / this app's settings page (iOS).
     static var bluetoothSettingsURL: URL? {
-        #if os(macOS)
         URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth")
-        #elseif canImport(UIKit)
-        URL(string: UIApplication.openSettingsURLString)
-        #else
-        nil
-        #endif
     }
 
     private var content: (title: String, tone: StrandTone, detail: String?, spinner: Bool)? {

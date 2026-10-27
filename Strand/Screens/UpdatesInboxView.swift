@@ -8,8 +8,8 @@ import StrandDesign
 // can be restored from here). Tapping an actionable row routes via NavRouter; a dismissed-card row
 // offers "Restore to Today". Everything is on-device and non-clinical — informational, never a verdict.
 //
-// Sheet idiom matches WhatsNewView: a FIXED macOS frame (a macOS sheet hosting a ScrollView collapses
-// without one) and iOS presentationDetents via `noopSheetPresentation`.
+// Sheet idiom matches WhatsNewView: a FIXED frame (a macOS sheet hosting a ScrollView collapses
+// without one).
 struct UpdatesInboxView: View {
     @EnvironmentObject var updateStore: UpdateStore
     @EnvironmentObject var router: NavRouter
@@ -29,14 +29,9 @@ struct UpdatesInboxView: View {
                 footer
             }
         }
-        #if os(macOS)
         // A fixed frame is mandatory — a macOS sheet hosting a ScrollView collapses to nothing without
         // one (same reason WhatsNewView pins 560×640).
         .frame(width: 460, height: 640)
-        #else
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .noopSheetPresentation(largeFirst: true)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 

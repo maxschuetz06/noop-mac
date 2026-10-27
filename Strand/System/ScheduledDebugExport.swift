@@ -1,7 +1,4 @@
 import Foundation
-#if os(iOS)
-import BackgroundTasks
-#endif
 
 /// The DAILY scheduled debug auto-export (#510 — maddognik) for Apple, in PARITY with Android's
 /// `DebugExportScheduler`.
@@ -12,15 +9,8 @@ import BackgroundTasks
 /// intermittent overnight fault gets a dated log waiting each morning instead of having to remember to hit
 /// "Save strap log" at the right moment.
 ///
-/// HONEST about platform limits (the whole point of doing this carefully on Apple):
-/// - **macOS** — the app is usually running, so a foreground `DispatchSourceTimer` fires reliably at the
-///   chosen minute, and `catchUpIfDue()` covers the case where the time passed while the app wasn't open.
-///   This path is dependable.
-/// - **iOS** — a sideloaded, backgrounded app can't guarantee a drop to the exact minute. We submit a
-///   `BGAppRefreshTaskRequest` for *no earlier than* the chosen time and write when iOS next wakes us near
-///   it. The Settings copy says exactly that — we never promise an exact background drop. (The app entry
-///   point registers the handler id below via `register(perform:)`; if it isn't registered/permitted yet,
-///   `submit` fails gracefully and the in-app "Run now" + the macOS path still work.)
+/// The app is usually running, so a foreground `DispatchSourceTimer` fires at the chosen minute, and
+/// `catchUpIfDue()` covers the case where the time passed while the app wasn't open.
 ///
 /// Opt-in, default OFF — like every NOOP automation. Everything is on-device; nothing is sent anywhere.
 @MainActor
@@ -37,10 +27,6 @@ enum ScheduledDebugExport {
     /// 07:00 — a log waiting when you wake (matches Android's `DEFAULT_TIME`).
     static let defaultTimeMinutes = 7 * 60
     private static let minutesPerDay = 24 * 60
-
-    /// iOS BGTask identifier. Must also appear in the iOS target's `BGTaskSchedulerPermittedIdentifiers`
-    /// (Info.plist) and be registered at launch for `submit` to succeed — wired in the app entry point.
-    static let bgTaskIdentifier = "com.noopapp.noop.debugexport"
 
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: K.enabled) }
 
@@ -95,7 +81,6 @@ enum ScheduledDebugExport {
     /// (Re)arm the next occurrence. macOS uses a foreground `DispatchSourceTimer`; iOS submits a
     /// background-refresh request. Both target the next wall-clock occurrence of `timeMinutes`.
     private static func scheduleNext() {
-        #if os(macOS)
         macTimer?.cancel()
         let timer = DispatchSource.makeTimerSource(queue: .main)
         let delay = secondsToNextOccurrence(timeMinutes)
@@ -108,19 +93,12 @@ enum ScheduledDebugExport {
         }
         timer.resume()
         macTimer = timer
-        #elseif os(iOS)
-        submitBackgroundRequest()
-        #endif
     }
 
     /// Cancel any armed schedule.
     private static func cancel() {
-        #if os(macOS)
         macTimer?.cancel()
         macTimer = nil
-        #elseif os(iOS)
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: bgTaskIdentifier)
-        #endif
     }
 
     /// If today's drop is due (we're at/after the chosen time and haven't written today), write it once.
@@ -191,27 +169,4 @@ enum ScheduledDebugExport {
 
     // MARK: - iOS background task plumbing
 
-    #if os(iOS)
-    /// Register the BGTask handler. MUST be called from the app's launch (before launch finishes) AND the
-    /// identifier MUST be listed in `BGTaskSchedulerPermittedIdentifiers` (Info.plist) for iOS to deliver
-    /// the task. Both live in the iOS app target — call this from `StrandiOSApp.init()`. Safe to leave
-    /// uncalled: `submitBackgroundRequest()` fails gracefully and the macOS path + "Run now" still work.
-    static func register() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: bgTaskIdentifier, using: nil) { task in
-            // Write the drop, then immediately request the next one (BGAppRefresh is single-shot).
-            if isEnabled { catchUpIfDue() }
-            submitBackgroundRequest()
-            task.setTaskCompleted(success: true)
-        }
-    }
-
-    /// Submit a background-refresh request for *no earlier than* the next chosen time. Honest: iOS decides
-    /// when (and whether) to actually run it, so this is best-effort. `try?` swallows the
-    /// "identifier not permitted/registered" error so a build that hasn't wired Info.plist still behaves.
-    private static func submitBackgroundRequest() {
-        let request = BGAppRefreshTaskRequest(identifier: bgTaskIdentifier)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: secondsToNextOccurrence(timeMinutes))
-        try? BGTaskScheduler.shared.submit(request)
-    }
-    #endif
 }

@@ -324,11 +324,7 @@ public final class LiveState: ObservableObject {
     /// (this is a `static` so a background task needs no main-actor instance).
     nonisolated public static func scheduledExportText() -> String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        #if os(iOS)
-        let osName = "iOS"
-        #else
         let osName = "macOS"
-        #endif
         var header = "NOOP strap log (scheduled export) — \(osName)\nApp: \(v)\n\(osName): "
             + ProcessInfo.processInfo.operatingSystemVersionString + "\n"
         header += String(repeating: "-", count: 40) + "\n"
@@ -360,23 +356,14 @@ public final class LiveState: ObservableObject {
         return out
     }
 
-    /// The full, shareable strap log for a bug report (issue #17): a header carrying the app version,
-    /// OS, and — on iOS — the environment diagnostics that actually cause issues, followed by the live
-    /// session log. Shared so BOTH the Live screen's log card AND a macOS Settings shortcut (#507 — a 4.0
+    /// The full, shareable strap log for a bug report (issue #17): a header carrying the app version and
+    /// OS, followed by the live session log. Shared so BOTH the Live screen's log card AND a macOS Settings shortcut (#507 — a 4.0
     /// owner couldn't find the log on Mac) build the SAME text. Call on the main thread (button taps).
     func exportableLogText() -> String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        #if os(iOS)
-        let osName = "iOS"
-        #else
         let osName = "macOS"
-        #endif
         var header = "NOOP strap log — \(osName)\nApp: \(v)\n\(osName): "
             + ProcessInfo.processInfo.operatingSystemVersionString + "\n"
-        #if os(iOS)
-        let diagLines = IOSDiagnostics.capture().summaryLines()
-        if !diagLines.isEmpty { header += diagLines.joined(separator: "\n") + "\n" }
-        #endif
         header += String(repeating: "-", count: 40) + "\n"
         return header + log.joined(separator: "\n")
     }

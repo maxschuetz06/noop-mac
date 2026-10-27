@@ -1,10 +1,11 @@
 import SwiftUI
 
-// MARK: - Dashboard components (macOS Home + Sleep overview)
+// MARK: - Dashboard components (Home + Sleep overview)
 //
-// Small pieces of the calm dashboard look that the instrument components above don't cover:
-// a card title row with an "open in detail" button, a prominent delta chip, round icon buttons,
-// mini bar / arc / ring ornaments. All colours come from `StrandPalette`.
+// Small pieces of the calm dashboard look that the instrument components (`RecoveryRing`,
+// `StrainGauge`, `Sparkline`, …) don't cover: a card title row with an "open in detail" button, a
+// prominent delta chip, round icon buttons, mini bar / arc / ring ornaments. All colours come from
+// `StrandPalette`.
 
 /// Pressed feedback for plain buttons: a quick dim without changing layout bounds.
 public struct DimPressButtonStyle: ButtonStyle {

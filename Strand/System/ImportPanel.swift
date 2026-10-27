@@ -1,4 +1,3 @@
-#if os(macOS)
 import AppKit
 import UniformTypeIdentifiers
 
@@ -55,4 +54,3 @@ enum ImportPanel {
         }
     }
 }
-#endif

@@ -118,11 +118,7 @@ struct FusedRecordView: View {
         // reason. Opening it never changes the resolved value — it only explains it.
         .sheet(item: $comparing) { row in
             ConflictCompareSheet(row: row)
-                #if os(iOS)
-                .noopSheetPresentation(largeFirst: false)
-                #else
                 .frame(width: 480, height: 600)
-                #endif
         }
     }
 
@@ -136,11 +132,7 @@ struct FusedRecordView: View {
     /// "this Mac" / "this device" without pulling in the app's Platform helper (keeps the view's deps
     /// minimal — the helper lives in the main target, not the design package).
     private var deviceNoun: String {
-        #if os(macOS)
         return "this Mac"
-        #else
-        return "this device"
-        #endif
     }
 
     /// "Today's record owned by WHOOP" — the scores' single-owner, made honest. Only shown when the

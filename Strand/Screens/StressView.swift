@@ -143,9 +143,7 @@ struct StressView: View {
                         }
                     }
             }
-            #if os(macOS)
             .frame(width: 520, height: 760)
-            #endif
         }
     }
 

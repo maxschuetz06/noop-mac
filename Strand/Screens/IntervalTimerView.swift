@@ -37,19 +37,6 @@ struct IntervalTimerView: View {
     @State private var running: Bool = false
     @State private var elapsed: Int = 0             // total elapsed seconds across the session
 
-    // MARK: iPhone haptics (iOS only)
-    //
-    // The strap buzz (`buzz`) only fires when a strap is bonded; on iPhone the device in
-    // the user's hand has a Taptic Engine, so we mirror every transition cue with native
-    // haptics that fire regardless of bond state. A monotonically-bumped Int token drives a
-    // single `.sensoryFeedback`, so even a repeated cue (the 3-2-1 tick three seconds running)
-    // re-fires because the trigger value always changes.
-    #if os(iOS)
-    private enum HapticCue { case work, rest, tick, done }
-    @State private var lastHaptic: HapticCue = .work
-    @State private var hapticTick: Int = 0
-    #endif
-
     // 1Hz tick.
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -121,24 +108,6 @@ struct IntervalTimerView: View {
             if !running { resetToStart() }
         }
         .onAppear { if remaining == 0 { resetToStart() } }
-        // Keep the screen awake while a session runs (no-op on macOS). One onChange covers
-        // every running→false transition — manual pause, auto-finish, and reset — and the
-        // onDisappear is a safety net so navigating away mid-run never leaves the idle timer
-        // disabled app-wide.
-        .onChangeCompat(of: running) { ScreenIdle.keepAwake($0) }
-        .onDisappear { ScreenIdle.keepAwake(false) }
-        #if os(iOS)
-        // iPhone haptics: one modifier emits a different feel per cue, re-firing on every
-        // token bump. Fires regardless of strap bond so the timer is fully usable unstrapped.
-        .sensoryFeedback(trigger: hapticTick) { _, _ in
-            switch lastHaptic {
-            case .work: return .impact(weight: .heavy)      // strong cue into WORK
-            case .rest: return .impact(weight: .light)      // soft cue into REST
-            case .tick: return .selection                   // 3-2-1 countdown tick
-            case .done: return .success                     // session complete
-            }
-        }
-        #endif
     }
 
     // MARK: Status row
@@ -375,9 +344,6 @@ struct IntervalTimerView: View {
         // Optional 3-2-1 countdown tick on the last seconds of the current phase.
         if remaining <= 3 && remaining >= 1 {
             buzz(loops: 1)
-            #if os(iOS)
-            haptic(.tick)
-            #endif
         }
 
         if remaining > 1 {
@@ -402,9 +368,6 @@ struct IntervalTimerView: View {
                 phase = .rest
                 remaining = max(1, restSeconds)
                 buzz(loops: 1)              // short cue into rest
-                #if os(iOS)
-                haptic(.rest)
-                #endif
             }
         case .rest:
             // Rest done → next round's work.
@@ -412,9 +375,6 @@ struct IntervalTimerView: View {
             phase = .work
             remaining = max(1, workSeconds)
             buzz(loops: 3)                  // strong cue into work
-            #if os(iOS)
-            haptic(.work)
-            #endif
         case .done:
             break
         }
@@ -427,9 +387,6 @@ struct IntervalTimerView: View {
             running = false
         }
         buzz(loops: 5)                      // long completion cue
-        #if os(iOS)
-        haptic(.done)
-        #endif
     }
 
     private func toggleRunning() {
@@ -443,9 +400,6 @@ struct IntervalTimerView: View {
             running = true
             if startingFresh {
                 buzz(loops: 3)
-                #if os(iOS)
-                haptic(.work)
-                #endif
             }
         }
     }
@@ -470,15 +424,6 @@ struct IntervalTimerView: View {
         model.buzz(loops: loops)
     }
 
-    #if os(iOS)
-    /// Fire an iPhone haptic cue. Additive to `buzz` and unguarded by bond state, so the
-    /// timer gives tactile feedback even with no strap. Bumping the token re-triggers
-    /// `.sensoryFeedback` even when the same cue repeats.
-    private func haptic(_ cue: HapticCue) {
-        lastHaptic = cue
-        hapticTick &+= 1
-    }
-    #endif
 
     // MARK: Formatting
 

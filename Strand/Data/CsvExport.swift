@@ -1,9 +1,5 @@
 import Foundation
-#if canImport(AppKit)
 import AppKit
-#elseif canImport(UIKit)
-import UIKit
-#endif
 import UniformTypeIdentifiers
 import WhoopStore
 import StrandImport
@@ -109,7 +105,6 @@ enum CsvExport {
                 ("journal_entries.csv", Data(WhoopCsvExporter.journalCSV(journal).utf8)),
                 ("noop_metric_series.json", WhoopCsvExporter.metricSeriesJSON(sidecar)),
             ]
-            #if os(macOS)
             // Save panel — DataBackup.runExport precedent (NSSavePanel + .zip content type).
             let panel = NSSavePanel()
             panel.title = "Export NOOP data as CSV"
@@ -130,18 +125,6 @@ enum CsvExport {
                 try FileManager.default.moveItem(at: tmp, to: dest)
             }
             return .exported(dest)
-            #else
-            // iOS: stage the zip in a temp dir, then hand it to the system document picker so the
-            // user can save it into Files / iCloud Drive (DataBackup.runExport precedent). Archive
-            // appends to an existing file, so clear any stale staged copy first.
-            let staged = FileManager.default.temporaryDirectory.appendingPathComponent(defaultName())
-            if FileManager.default.fileExists(atPath: staged.path) {
-                try FileManager.default.removeItem(at: staged)
-            }
-            try WhoopCsvExporter.writeArchive(entries: entries, to: staged)
-            guard let dest = await DocumentPicker.export(staged) else { return .cancelled }
-            return .exported(dest)
-            #endif
         } catch {
             return .failure("CSV export failed: \(error.localizedDescription)")
         }

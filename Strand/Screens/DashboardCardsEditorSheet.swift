@@ -22,11 +22,6 @@ struct DashboardCardsEditorSheet: View {
 
     /// Working copy: the full ordered list with an enabled flag per card.
     @State private var items: [Item]
-    #if os(iOS)
-    /// Drag-to-reorder mode for the List (.onMove only fires under .active EditMode on iOS). macOS Lists
-    /// drag-reorder without an explicit EditMode, so this is iOS-only.
-    @State private var editMode: EditMode = .active
-    #endif
 
     private struct Item: Identifiable, Equatable {
         let card: DashboardCard
@@ -66,10 +61,6 @@ struct DashboardCardsEditorSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(StrandPalette.surfaceBase)
-            #if os(iOS)
-            .environment(\.editMode, $editMode)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .navigationTitle("My Dashboard")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -91,10 +82,8 @@ struct DashboardCardsEditorSheet: View {
             .onChange(of: items) { _ in commit() }
         }
         .tint(StrandPalette.accent)
-        #if os(macOS)
-        // macOS sheets don't auto-size to content the way iOS does — give it a usable frame.
+        // macOS sheets don't auto-size to content — give it a usable frame.
         .frame(width: 420, height: 540)
-        #endif
     }
 
     // MARK: Row

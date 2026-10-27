@@ -172,11 +172,7 @@ struct SleepView: View {
             if let resolved {
                 // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
                 VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                    #if os(macOS)
                     softOverview(resolved).staggeredAppear(index: 0)
-                    #else
-                    restHero(resolved).staggeredAppear(index: 0)
-                    #endif
                     sleepMarkCard.staggeredAppear(index: 1)
                     hero(resolved).staggeredAppear(index: 2)
                     metricGrid(resolved).staggeredAppear(index: 3)

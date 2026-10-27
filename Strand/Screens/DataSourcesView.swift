@@ -265,23 +265,12 @@ struct DataSourcesView: View {
     }
 
     private func presentImporter(_ target: ImportTarget) {
-        #if os(iOS)
-        // iOS: go through UIDocumentPickerViewController with asCopy:true (DocumentPicker) rather than
-        // SwiftUI's `.fileImporter` (#179). asCopy makes iOS DOWNLOAD an iCloud-Drive placeholder and
-        // hand us a readable local copy — `.fileImporter` instead returns a security-scoped URL that,
-        // for an undownloaded iCloud file, can't be read, and the whole import silently did nothing.
-        Task {
-            guard let url = await DocumentPicker.importFile(target.allowedContentTypes) else { return } // cancelled
-            handlePickedURL(url, for: target)
-        }
-        #else
         // macOS: an explicit NSOpenPanel built per target at click time (see ImportPanel). SwiftUI's
         // `.fileImporter` left the .zip export and its unzipped folder both greyed out on the mixed
         // `[.zip, .folder]` list, and read its types from a view update that raced the target switch.
         ImportPanel.present(for: target) { url in
             handlePickedURL(url, for: target)
         }
-        #endif
     }
 
     private func handlePickedURL(_ url: URL, for target: ImportTarget) {
@@ -697,32 +686,17 @@ enum ImportTarget {
     case wearable
 
     var allowedContentTypes: [UTType] {
-        // `.folder` lets macOS users point at an *unzipped* export directory. On iOS the Files
-        // picker can't meaningfully pick a folder here, and including `UTType.folder` in the type
-        // list greys out the .zip itself — so the picker opens but nothing is selectable
-        // (issue #179). iOS therefore offers only the concrete file types.
+        // `.folder` lets the user point at an *unzipped* export directory.
         switch self {
         case .whoop:
-            #if os(macOS)
             return [.zip, .folder]
-            #else
-            return [.zip]
-            #endif
         case .appleHealth:
-            #if os(macOS)
             return [.zip, .xml, .folder]
-            #else
-            return [.zip, .xml]
-            #endif
         case .xiaomi:
-            // The Mi Fitness sandbox is shared as a .zip (or, on macOS, an unzipped
-            // folder); the bare `<user_id>.db` is also accepted directly.
+            // The Mi Fitness sandbox is shared as a .zip (or an unzipped folder); the bare
+            // `<user_id>.db` is also accepted directly.
             let db = UTType(filenameExtension: "db") ?? .data
-            #if os(macOS)
             return [.zip, .folder, db]
-            #else
-            return [.zip, db]
-            #endif
         case .nutrition:
             return [.commaSeparatedText, .plainText]
         case .lifting:
@@ -740,11 +714,7 @@ enum ImportTarget {
         case .wearable:
             // Oura is a single .json; Fitbit (Google Takeout) and Garmin (GDPR) are .zip bundles.
             // On macOS an unzipped folder is also accepted. The importer sniffs the brand by content.
-            #if os(macOS)
             return [.json, .zip, .folder, .data]
-            #else
-            return [.json, .zip, .data]
-            #endif
         }
     }
 }

@@ -100,9 +100,6 @@ extension TodayView {
             // The whole card is tappable as the primary action; the ✕ stops the tap from also firing.
             .contentShape(Rectangle())
             .onTapGesture {
-                #if os(iOS)
-                StrandHaptic.selection.play()
-                #endif
                 scoringGuideCardSeen = true
                 showGuideTop = true
             }

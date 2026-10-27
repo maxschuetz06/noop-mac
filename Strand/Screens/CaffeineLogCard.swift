@@ -52,9 +52,6 @@ struct CaffeineLogCard: View {
                     HStack {
                         TextField("Amount in mg (optional)", text: $mgDraft)
                             .textFieldStyle(.roundedBorder)
-                        #if os(iOS)
-                            .keyboardType(.numberPad)
-                        #endif
                         Text("mg")
                             .font(StrandFont.footnote)
                             .foregroundStyle(StrandPalette.textTertiary)

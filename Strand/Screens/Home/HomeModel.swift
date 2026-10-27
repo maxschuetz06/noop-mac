@@ -1,4 +1,3 @@
-#if os(macOS)
 import Foundation
 import WhoopStore
 
@@ -253,4 +252,3 @@ enum HomeModel {
         return f
     }()
 }
-#endif

@@ -129,7 +129,6 @@ final class BiofeedbackController: ObservableObject {
     /// Stop whatever is running, cancel every queued pulse, restore auto-lock. Idempotent.
     func stop() {
         clearSchedule()
-        ScreenIdle.keepAwake(false)
         running = false
         session = .none
         sweepLabel = nil
@@ -146,7 +145,6 @@ final class BiofeedbackController: ObservableObject {
         stop()
         session = .resonanceSession(bpm: bpm)
         running = true
-        ScreenIdle.keepAwake(true)
         startSecondTimer()
         walkCues(BreathPacer.schedule(bpm: bpm, cycles: cycles)) { [weak self] in
             self?.stop()
@@ -187,7 +185,6 @@ final class BiofeedbackController: ObservableObject {
         stop()
         let paces = quick ? ResonanceEngine.quickSweepPaces : ResonanceEngine.fullSweepPaces
         running = true
-        ScreenIdle.keepAwake(true)
         startSecondTimer()
         sweepProgress = 0
         lastSweep = nil
@@ -262,7 +259,6 @@ final class BiofeedbackController: ObservableObject {
         calmStartHR = h0
         calmOutcome = nil
         calmDidNotFall = false
-        ScreenIdle.keepAwake(true)
         startSecondTimer()
         scheduleCalmStep(config: config)
     }

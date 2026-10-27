@@ -409,13 +409,9 @@ private struct MarkerDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        #if os(iOS)
-        .presentationDragIndicator(.visible)
-        #else
         // Fixed frame — a macOS sheet around a ScrollView needs a definite height or its rows
         // collapse to the top and overlap (the "Add a reading" layout bug).
         .frame(width: 520, height: 720)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 
@@ -773,11 +769,7 @@ private struct LabBookDisclaimerView: View {
                     .padding(.top, 4)
             }
         }
-        #if os(iOS)
-        .presentationDragIndicator(.visible)
-        #else
         .frame(width: 480, height: 560)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 

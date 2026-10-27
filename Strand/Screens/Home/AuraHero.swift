@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import StrandDesign
 
@@ -168,4 +167,3 @@ private struct AuraMarker: View {
         .shadow(color: .black.opacity(0.08), radius: 4, y: 1)
     }
 }
-#endif

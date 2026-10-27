@@ -200,14 +200,10 @@ final class SyncActivityHold {
 
     /// `.userInitiatedAllowingIdleSystemSleep`: opts out of App Nap (and automatic/sudden termination) WITHOUT
     /// keeping the Mac awake — a sleeping Mac drops the BLE link anyway, and a multi-hour drain must not pin
-    /// the machine on. macOS only; iOS has its own `bluetooth-central` background mode.
+    /// the machine on.
     nonisolated static func systemBegin() -> NSObjectProtocol? {
-        #if os(macOS)
         return ProcessInfo.processInfo.beginActivity(options: [.userInitiatedAllowingIdleSystemSleep],
                                                      reason: "NOOP strap history offload")
-        #else
-        return nil
-        #endif
     }
 
     nonisolated static func systemEnd(_ token: NSObjectProtocol) {

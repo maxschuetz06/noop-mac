@@ -152,9 +152,7 @@ struct RhythmConsentGate: View {
                             .foregroundStyle(StrandPalette.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    #if os(macOS)
                     .toggleStyle(.checkbox)
-                    #endif
 
                     Button(action: onAccept) {
                         Text("Turn on Rhythm")

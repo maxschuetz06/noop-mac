@@ -4,7 +4,6 @@ import StrandDesign
 import StrandAnalytics
 import WhoopStore
 
-#if os(macOS)
 // MARK: - Soft overview (macOS redesign)
 //
 // The calm top of the Sleep screen in the style of the home dashboard: score with gradient scale,
@@ -451,4 +450,3 @@ private struct SleepNightBar: View {
         }
     }
 }
-#endif

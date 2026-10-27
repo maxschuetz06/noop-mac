@@ -667,9 +667,7 @@ private struct FitnessAgeSection: View {
                     SettingsView()
                 }
             }
-            #if os(macOS)
             .frame(width: 900, height: 820)
-            #endif
         }
         .task(id: repo.refreshSeq) { await load() }
     }
@@ -1163,7 +1161,6 @@ enum HealthVitalsOverlay {
     }
 
     static func spo2Reading(_ base: BodyVitalReading) -> BodyVitalReading {
-        #if os(macOS)
         guard base.value == nil else { return base }
         return BodyVitalReading(
             key: base.key,
@@ -1178,9 +1175,6 @@ enum HealthVitalsOverlay {
             missingCaption: String(localized: "Not yet available from WHOOP 5.0 on this Mac"),
             sparkline: base.sparkline
         )
-        #else
-        return base
-        #endif
     }
 }
 

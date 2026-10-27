@@ -10,27 +10,6 @@ enum StorePaths {
         try fm.createDirectory(at: base, withIntermediateDirectories: true)
         let dbURL = base.appendingPathComponent("whoop.sqlite")
 
-        #if os(iOS)
-        // iOS files default to NSFileProtectionComplete, which makes the SQLite DB and its `-wal`/`-shm`
-        // sidecars cryptographically UNREADABLE while the device is locked. We run background BLE
-        // (UIBackgroundModes: bluetooth-central), so the strap reconnects and opens the store while the
-        // phone is locked — the open then throws SQLITE_IOERR and the strap never syncs; imported data
-        // also appears to "vanish" because every store handle (backfill + import) hits the same wall.
-        // (#222 — NoahMcE.) Drop the store to completeUntilFirstUserAuthentication: readable after the
-        // first unlock-since-boot (the correct level for background collection) and still encrypted at
-        // rest. Set it on the directory so SQLite's freshly-created files inherit it, AND on any
-        // pre-existing files from an install created before this fix (the set only succeeds while
-        // unlocked, which the foreground import provides — from then on the files stay accessible).
-        let protection: [FileAttributeKey: Any] =
-            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
-        try? fm.setAttributes(protection, ofItemAtPath: base.path)
-        for suffix in ["", "-wal", "-shm"] {
-            let p = dbURL.path + suffix
-            if fm.fileExists(atPath: p) { try? fm.setAttributes(protection, ofItemAtPath: p) }
-        }
-        #endif
-
-        #if os(macOS)
         // If we redirected into the sandbox container but the container store is
         // absent/empty while a legacy non-container store exists, migrate the old
         // data in once so existing macOS users don't appear to lose everything.
@@ -38,7 +17,6 @@ enum StorePaths {
             migrateLegacyStoreIfNeeded(from: appSupport.appendingPathComponent("OpenWhoop", isDirectory: true),
                                        to: base, dbURL: dbURL)
         }
-        #endif
 
         return dbURL.path
     }
@@ -46,10 +24,9 @@ enum StorePaths {
     /// On signed/production macOS builds the app runs sandboxed, so the real
     /// on-disk location is inside `~/Library/Containers/<bundle-id>/Data`. We pin
     /// the store there explicitly so the path is stable regardless of whether the
-    /// sandbox is fully engaged when this runs. Non-production bundle IDs and all
-    /// other platforms keep the plain Application Support directory.
+    /// sandbox is fully engaged when this runs. Non-production bundle IDs keep the
+    /// plain Application Support directory.
     private static func macOSProductionContainerAppSupport(defaultingTo appSupport: URL) -> URL {
-        #if os(macOS)
         let productionBundleID = "com.noopapp.noop"
         guard Bundle.main.bundleIdentifier == productionBundleID else { return appSupport }
 
@@ -71,12 +48,8 @@ enum StorePaths {
             .appendingPathComponent("Library/Containers", isDirectory: true)
             .appendingPathComponent(productionBundleID, isDirectory: true)
             .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
-        #else
-        return appSupport
-        #endif
     }
 
-    #if os(macOS)
     /// One-time move of a legacy `OpenWhoop` store (DB + `-wal`/`-shm` sidecars)
     /// into the container. Only runs when the destination DB is missing or empty
     /// and the source DB is non-empty, so it never clobbers live container data.
@@ -117,5 +90,4 @@ enum StorePaths {
               let size = attrs[.size] as? Int else { return 0 }
         return size
     }
-    #endif
 }

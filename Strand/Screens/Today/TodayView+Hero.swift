@@ -15,29 +15,11 @@ extension TodayView {
     /// stay crisp and high-contrast.
     @ViewBuilder
     var heroCard: some View {
-        #if os(iOS)
-        // Pull the rings up under the compact top bar — the full section gap left too much air
-        // above them now the big "Today's Synthesis" header is gone. The hero now sits over the
-        // day-cycle SCENE wash (picked by the local hour), which fades top-down behind the rings;
-        // the scene IS the atmosphere here, replacing the procedural time-of-day backdrop. It caps
-        // at ~0.42 opacity with a bottom dark scrim so the white ring numbers + labels stay crisp.
-        heroSection
-            .padding(.vertical, NoopMetrics.space4)
-            .frame(maxWidth: .infinity)
-            // The dark hero CARD floats over the vivid day-scene so the rings + white numbers stay
-            // crisp — the card does the contrast work, not a muted scene (Aaron 2026-06-23).
-            .background(
-                RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
-                    .fill(StrandPalette.surfaceBase.opacity(0.72))
-            )
-            .staggeredAppear(index: 0)
-        #else
         heroSection
             .padding(.vertical, NoopMetrics.space4)
             .frame(maxWidth: .infinity)
             .frostedCardSurface(cornerRadius: NoopMetrics.cardRadius)
             .staggeredAppear(index: 0)
-        #endif
     }
 
     @ViewBuilder

@@ -1,6 +1,8 @@
-import XCTest
-import SwiftUI
+// Resolves dynamic colours through NSAppearance, so the suite only builds where AppKit exists.
+#if canImport(AppKit)
 import AppKit
+import SwiftUI
+import XCTest
 @testable import StrandDesign
 
 /// The dashboard tokens and primitives that replaced the app's former `SoftTheme`.
@@ -61,3 +63,4 @@ final class DashboardDesignTests: XCTestCase {
         XCTAssertEqual(MiniBars.heightFraction(0, max: 0), 0.12, accuracy: 0.0001)
     }
 }
+#endif

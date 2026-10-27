@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import AppKit
 import StrandDesign
@@ -633,4 +632,3 @@ struct HomeTimelineBar: View {
         }
     }
 }
-#endif

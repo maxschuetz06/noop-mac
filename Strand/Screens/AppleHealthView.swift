@@ -20,13 +20,6 @@ import Foundation
 struct AppleHealthView: View {
     @EnvironmentObject var repo: Repository
 
-    // iOS-only: the live two-way HealthKit bridge, injected at StrandiOSApp. macOS has no HealthKit
-    // (HealthKitBridge is `#if os(iOS)` in its own file and isn't in the macOS environment), so this
-    // property and every `health.*` use below MUST stay inside `#if os(iOS)`.
-    #if os(iOS)
-    @EnvironmentObject private var health: HealthKitBridge
-    #endif
-
     // Imperial/Metric display preference (D#103). Weight and lean mass (stored kg) re-label to lb here;
     // every other Apple Health metric is unit-agnostic. Display-only.
     @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
@@ -174,29 +167,11 @@ struct AppleHealthView: View {
         ScreenScaffold(title: "Apple Health", subtitle: spanSubtitle.map { "\($0)" },
                        onRefresh: { await repo.refresh() }) {
             if loaded && !hasAnyData {
-                #if os(iOS)
-                // No data yet, but iOS can grant live access right here — keep the Enable card above
-                // the (now live-aware) empty-state copy so the richer path isn't hidden behind a
-                // manual .zip export.
-                VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                    liveSyncCard
-                    // #348 — when the build can't carry the HealthKit entitlement there's no "Enable"
-                    // button to tap, so the empty-state copy must point at the file/Shortcuts path
-                    // instead of telling the user to tap a control that isn't shown.
-                    ComingSoon(what: health.auth == .entitlementMissing
-                               ? "Nothing here yet. This sideloaded install can't read Apple Health directly — import a Health export .zip in Data Sources, or turn on Shortcuts Export to bring your strap data into Health."
-                               : "Nothing here yet. Tap Enable Apple Health above to read your data live, or import a Health export .zip in Data Sources.")
-                }
-                #else
                 ComingSoon(what: "Nothing imported yet. On an iPhone: Health app, tap your photo, Export All Health Data, then import the .zip here in Data Sources.")
-                #endif
             } else if !loaded {
                 loadingState
             } else {
                 VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                    #if os(iOS)
-                    liveSyncCard
-                    #endif
                     rangeControl
                     tileGrid
                     heartSection
@@ -329,114 +304,6 @@ struct AppleHealthView: View {
             }
         }
     }
-
-    // MARK: - Live Apple Health (iOS only)
-    //
-    // The opt-in entry point for the two-way HealthKitBridge. macOS has no HealthKit, so this whole
-    // card — and every `health.*` reference — is `#if os(iOS)`-gated. Tapping "Enable Apple Health"
-    // shows the system permission sheet (rationale strings ship in the iOS target's Info.plist), then
-    // runs the first read + write-back and refreshes this screen. Once authorized, a "Sync now"
-    // control and last-synced/status line take its place.
-    #if os(iOS)
-    @ViewBuilder
-    private var liveSyncCard: some View {
-        StrandCard(padding: 20, tint: StrandPalette.metricCyan) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: "heart.text.square.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(StrandPalette.metricCyan)
-                        .frame(width: 30, height: 30)
-                        .background(StrandPalette.metricCyan.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                        .accessibilityHidden(true)
-                    Text("Apple Health (Live)")
-                        .font(StrandFont.headline)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    Spacer()
-                    if health.auth == .authorized {
-                        StatePill(health.syncing ? "Syncing" : "Connected",
-                                  tone: .positive, pulsing: health.syncing)
-                    }
-                }
-
-                switch health.auth {
-                case .unavailable:
-                    Text("Apple Health isn't available on \(Platform.deviceNounPhrase).")
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                case .entitlementMissing:
-                    // #348 — a free-signed sideload (AltStore / Sideloadly / free Apple ID) was re-signed
-                    // WITHOUT the HealthKit entitlement, so "Enable Apple Health" can never work and the
-                    // app can never appear under Settings › Health › Data Access & Devices. Give the
-                    // honest path instead of impossible Settings instructions: bring data in via a file
-                    // import or the HealthKit-free Shortcuts export.
-                    Text("This install can't connect to Apple Health directly. It was sideloaded with a free signing profile, which doesn't include Apple's Health permission — so there's nothing to enable, and NOOP won't appear under Settings › Health.")
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("To get your Apple Health data in anyway: import a Health export .zip in Data Sources, or turn on Shortcuts Export to feed your strap data into Health without the entitlement. (A build installed from the App Store or signed with a paid Apple Developer account connects directly.)")
-                        .font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                case .unknown, .denied:
-                    Text("Read your heart rate, HRV, blood oxygen, respiratory rate, sleep, steps and energy straight from Apple Health, and write NOOP's strap-derived metrics back. Everything stays on \(Platform.deviceNounPhrase).")
-                        .font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button {
-                        Task {
-                            await health.requestAuthorization()
-                            await health.sync()
-                            await load()
-                        }
-                    } label: {
-                        Label("Enable Apple Health", systemImage: "heart.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(StrandPalette.metricCyan)
-                    if health.auth == .denied {
-                        Text("If you don't see the prompt, enable NOOP under Settings › Health › Data Access & Devices.")
-                            .font(StrandFont.footnote)
-                            .foregroundStyle(StrandPalette.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                case .authorized:
-                    if let last = health.lastSync {
-                        Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    } else {
-                        Text("Connected. Reading on launch and when you return to NOOP.")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    }
-                    Button {
-                        Task {
-                            await health.sync()
-                            await load()
-                        }
-                    } label: {
-                        Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(StrandPalette.metricCyan)
-                    .disabled(health.syncing)
-                }
-
-                if let err = health.lastError {
-                    Text(err)
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.statusCritical)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-    #endif
 
     // MARK: - Metric tiles (uniform 104pt StatTiles in an adaptive grid)
 
