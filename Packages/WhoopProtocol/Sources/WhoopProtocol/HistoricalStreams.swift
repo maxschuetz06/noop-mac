@@ -8,8 +8,7 @@ import Foundation
 ///
 /// MIN_PLAUSIBLE_UNIX = 2023-11 — the same 1.7B floor `BLEManager.strapDataBounds` already uses.
 /// FUTURE_MARGIN = 1 day — a historical record can never post-date its own capture, so anything more
-/// than a day ahead of wall time is a bad-clock artefact. Keep these in lockstep with the Android
-/// `HistoricalStreams.kt` MIN_PLAUSIBLE_UNIX / FUTURE_MARGIN.
+/// than a day ahead of wall time is a bad-clock artefact.
 public let MIN_PLAUSIBLE_UNIX = 1_700_000_000   // 2023-11
 public let FUTURE_MARGIN = 86_400               // 1 day
 
@@ -19,7 +18,7 @@ public let FUTURE_MARGIN = 86_400               // 1 day
 /// post-date the newest by more than benign skew, so a record dated MONTHS off the strap's OWN window is a
 /// wandering-clock artefact even when it clears the absolute 2023-11 floor (e.g. a 2024-12-25 record against
 /// a 2026 strap window). 7 days absorbs marker jitter / a still-banking newest edge / DST while still
-/// catching the months-off garbage. Kept in lockstep with Android `HistoricalStreams.kt` SESSION_RANGE_MARGIN.
+/// catching the months-off garbage.
 public let SESSION_RANGE_MARGIN = 7 * 86_400    // 7 days
 
 /// True when `ts` is a plausible capture time for a historical record given `wallNow` (#547): on or

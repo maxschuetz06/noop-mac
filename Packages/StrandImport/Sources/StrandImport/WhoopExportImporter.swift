@@ -23,7 +23,6 @@ public struct WhoopExportImporter {
     ///
     /// This is applied at the WRITE boundary (WhoopImporter → store) — NOT at parse time — so the
     /// verbatim parsed value (`WhoopCycleRow.dayStrain`) and the CSV round-trip contract are preserved.
-    /// Keep this factor byte-identical to the Android importer (WhoopCsvImporter.kt).
     public static let dayStrainToEffortScale = 100.0 / 21.0
 
     /// Rescale an imported WHOOP Day Strain (0–21) onto NOOP's 0–100 Effort axis. `nil` passes through.

@@ -20,7 +20,7 @@ import Foundation
 // never "you must"). Irregular schedules get an honest "your rhythm is hard to read right now."
 public enum CircadianEngine {
 
-    // MARK: - Tuning constants (pinned by test; mirror the Kotlin twin exactly)
+    // MARK: - Tuning constants (pinned by test)
 
     /// Minimum days with a usable activity profile before a stable cosinor fit is reported.
     public static let minDaysForFit: Int = 7

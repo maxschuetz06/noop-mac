@@ -259,7 +259,7 @@ struct TrendsView: View {
             }
         }
         .task(id: repo.refreshSeq) {
-            let series = await repo.exploreSeries(key: "sleep_performance", source: Repository.whoopSource)
+            let series = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
             restByDay = Dictionary(series.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
         }
         // #436 — present the offline trends-report exporter (range picker + PDF export).
@@ -606,10 +606,7 @@ struct TrendsView: View {
 private func previewRepo() -> Repository {
     let repo = Repository(deviceId: "preview")
     let cal = Calendar(identifier: .gregorian)
-    let fmt = DateFormatter()
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    fmt.timeZone = TimeZone(identifier: "UTC")
-    fmt.dateFormat = "yyyy-MM-dd"
+    let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
     let today = Date()
     var seeded: [DailyMetric] = []
     let span = 365 * 3

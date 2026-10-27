@@ -38,7 +38,7 @@ public enum HydrationGoal {
     public static let cupML = 237     // a US cup (8 fl oz)
     public static let bottleML = 500  // a standard small water bottle
 
-    // MARK: - Pieces (each pure + independently testable; mirror the Kotlin twin)
+    // MARK: - Pieces (each pure + independently testable)
 
     /// Baseline ml for a sex token. Case- and whitespace-insensitive; "male"/"m" and "female"/"f" map to
     /// their baselines, anything else ("nonbinary", "other", "", unknown) maps to the unspecified baseline

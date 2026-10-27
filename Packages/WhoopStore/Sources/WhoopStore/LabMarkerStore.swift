@@ -4,8 +4,7 @@ import GRDB
 // MARK: - v17 store: Lab Book markers
 //
 // LabMarkerStore.swift — GRDB CRUD over the `labMarker` table (migration v17), the
-// source-of-truth for the Health Records "Lab Book" pillar
-// (spec 2026-06-19-v5-health-records-design.md §"New").
+// source-of-truth for the Health Records "Lab Book" pillar.
 //
 // The book is `labMarker` (one row per dated reading the user entered themselves);
 // the daily `metricSeries` projection under source id `lab-book` is HOW the book talks

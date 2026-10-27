@@ -8,8 +8,6 @@ import StrandDesign
 // on `StressNudgeCenter`; this dismissible card surfaces it. NEVER an alarm, NEVER a push (unless the
 // user separately opted into notifications), NEVER a diagnosis — "HRV dipped while you were still", with
 // Breathe now / Not now / Turn off, matching DaytimeStress's "passive suggestion" stance.
-//
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L3 / UX → "Auto-nudge (passive)").
 
 /// The single observable the L3 hook posts to and the card observes. Self-contained — the central wiring
 /// (Wave 3) holds one instance and calls `present()` when `StressOnsetDetector.evaluate` returns

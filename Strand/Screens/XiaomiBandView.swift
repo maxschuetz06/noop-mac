@@ -48,13 +48,7 @@ struct XiaomiBandView: View {
         "stress", "vitality",
     ]
 
-    private static let dayParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayParser = DayKey.makeFormatter(timeZone: DayKey.utc)
     private static let spanFormatter: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM yyyy"; return f
     }()
@@ -193,11 +187,7 @@ struct XiaomiBandView: View {
         for key in Self.seriesKeys {
             fetched[key] = await repo.series(key: key, source: Self.source)
         }
-        var loadedSleeps: [CachedSleepSession] = []
-        if let store = await repo.storeHandle() {
-            let far = Int(Date.distantFuture.timeIntervalSince1970)
-            loadedSleeps = (try? await store.sleepSessions(deviceId: Self.source, from: 0, to: far, limit: 4000)) ?? []
-        }
+        let loadedSleeps = await repo.sleepSessions(source: Self.source) ?? []
         await MainActor.run {
             series = fetched
             sleeps = loadedSleeps

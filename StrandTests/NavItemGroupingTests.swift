@@ -17,59 +17,30 @@ final class NavItemGroupingTests: XCTestCase {
         XCTAssertEqual(Set(NavItem.core).count, NavItem.core.count)
     }
 
-    func testRemovedItemsAreIntelligenceCoachAndSmartAlarm() {
-        XCTAssertEqual(NavItem.removed, [.intelligence, .coach, .smartAlarm])
-    }
-
-    func testCoreMoreAndRemovedPartitionAllCasesExactlyOnce() {
+    func testCoreAndMorePartitionAllCasesExactlyOnce() {
         XCTAssertTrue(Set(NavItem.core).isDisjoint(with: NavItem.more))
-        XCTAssertTrue(Set(NavItem.core).isDisjoint(with: NavItem.removed))
-        XCTAssertTrue(Set(NavItem.more).isDisjoint(with: NavItem.removed))
         XCTAssertEqual(Set(NavItem.more).count, NavItem.more.count)
-        XCTAssertEqual(Set(NavItem.core + NavItem.more + NavItem.removed), Set(NavItem.allCases))
-        XCTAssertEqual(NavItem.core.count + NavItem.more.count + NavItem.removed.count,
-                       NavItem.allCases.count)
+        XCTAssertEqual(Set(NavItem.core + NavItem.more), Set(NavItem.allCases))
+        XCTAssertEqual(NavItem.core.count + NavItem.more.count, NavItem.allCases.count)
     }
 
     func testCountsMatchDefaultSidebar() {
         XCTAssertEqual(NavItem.core.count, 12)
         XCTAssertEqual(NavItem.more.count, 13)
-        XCTAssertEqual(NavItem.removed.count, 3)
-        XCTAssertEqual(NavItem.allCases.count, 28)
+        XCTAssertEqual(NavItem.allCases.count, 25)
     }
 
     func testMoreKeepsAllCasesOrder() {
-        XCTAssertEqual(
-            NavItem.more,
-            NavItem.allCases.filter { !NavItem.core.contains($0) && !NavItem.removed.contains($0) }
-        )
-    }
-
-    func testRemovedItemsAreUnreachableFromSidebar() {
-        let sidebar = Set(NavItem.core + NavItem.more)
-        for item in NavItem.removed {
-            XCTAssertFalse(sidebar.contains(item), "\(item) must not appear in the sidebar")
-            XCTAssertTrue(item.isRemoved)
-            XCTAssertFalse(item.isCore)
-            XCTAssertEqual(item.resolved, .today, "\(item) must fall back to Today")
-        }
-    }
-
-    func testResolvedKeepsNonRemovedItems() {
-        for item in NavItem.core + NavItem.more {
-            XCTAssertFalse(item.isRemoved)
-            XCTAssertEqual(item.resolved, item)
-        }
+        XCTAssertEqual(NavItem.more, NavItem.allCases.filter { !NavItem.core.contains($0) })
     }
 
     func testRawValuesAreUnchanged() {
-        // Persisted selections and other code depend on these.
+        // The sidebar uses these as stable ids.
         XCTAssertEqual(NavItem.today.rawValue, "Today")
         XCTAssertEqual(NavItem.insightsHub.rawValue, "What Moves You")
         XCTAssertEqual(NavItem.labBook.rawValue, "Lab Book")
         XCTAssertEqual(NavItem.fusedRecord.rawValue, "Your Data, Fused")
         XCTAssertEqual(NavItem.dataSources.rawValue, "Data Sources")
-        XCTAssertEqual(NavItem.smartAlarm.rawValue, "Smart Alarm")
     }
 
     func testCoreIsMainThenTools() {
@@ -144,8 +115,6 @@ final class NavItemGroupingTests: XCTestCase {
         for destination in destinations {
             XCTAssertTrue(reachable.contains(NavItem(destination: destination)),
                           "\(destination) is not reachable")
-            XCTAssertFalse(NavItem(destination: destination).isRemoved,
-                           "\(destination) must not route to a removed item")
         }
     }
 
@@ -156,12 +125,5 @@ final class NavItemGroupingTests: XCTestCase {
         for destination in [NavRouter.Destination.devices, .trends] {
             XCTAssertTrue(NavItem(destination: destination).isCore, "\(destination) should be core")
         }
-    }
-
-    func testSmartAlarmIsRemovedFromTheSidebarAndFallsBackToToday() {
-        XCTAssertTrue(NavItem.smartAlarm.isRemoved)
-        XCTAssertFalse(NavItem.core.contains(.smartAlarm))
-        XCTAssertFalse(NavItem.more.contains(.smartAlarm))
-        XCTAssertEqual(NavItem.smartAlarm.resolved, .today)
     }
 }

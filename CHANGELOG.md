@@ -1,12 +1,11 @@
 # Changelog
 
-All notable changes to NOOP. NOOP is an independent, experimental project — not the WHOOP app, and
-not affiliated with WHOOP. It reads a strap you own, on your own device, fully offline. Dates are
-approximate.
+All notable changes to NOOP for Mac, an unofficial macOS-only fork of NOOP. It is an independent,
+experimental project — not the WHOOP app, and not affiliated with WHOOP. It reads a strap you own, on
+your own Mac, fully offline. Dates are approximate.
 
-> This file is the upstream NOOP history up to the point this macOS-only fork was created. Mentions
-> of releases, downloads, iOS, Android, AltStore, Homebrew or donations refer to the upstream project;
-> this fork builds from source only.
+This fork has its own release line, starting at 8.0.0. Everything below
+[Upstream history](#upstream-history) belongs to the upstream project.
 
 ## What to expect
 
@@ -20,6 +19,35 @@ approximate.
 - **Everything stays on your device.** No account, no cloud, no sync.
 
 ---
+
+## 8.0.0 — first release of NOOP for Mac (October 2026)
+
+- **A fork with its own release line.** macOS only; the iPhone and Android apps, prebuilt downloads,
+  AltStore/Homebrew distribution and donation links are gone. You build the app from source.
+- **Local only.** No account, cloud or telemetry. The only network request NOOP makes is the
+  user-initiated "Check for updates", which now reads this fork's GitHub releases (tags `v8.0.0` and
+  later). A workout's route map loads map tiles for the route's area from Apple Maps; no health data
+  is sent.
+- **Removed:** the AI Coach, the Intelligence screen and the Smart Alarm / wake alarm.
+- **Optional external data folder** (build-time opt-in): database mirror for local tools, import
+  inbox and raw PPG capture. Well-known home folders such as `Documents` or `Public` are refused, and
+  apart from the data folder itself NOOP no longer changes the permissions of existing folders.
+- **Strap safety.** A WHOOP 5.0/MG only receives an allowlisted command set, never a strap-held alarm
+  or a looping vibration.
+- **The desktop widget follows the in-app language setting.**
+- **`noop-local-access`** only falls back to the legacy `~/NOOP-Daten` mirror when `~/NOOP-Data` does
+  not exist, and prints a stderr warning with that mirror's modification date whenever it uses it.
+- **Refactors without data changes:** split Bluetooth layer, AppModel as composition root, screens
+  reading through named Repository methods, a single design system, and the analytics pipeline in
+  `StrandAnalytics`.
+- **What's New** starts fresh with this release (English and German).
+
+---
+
+# Upstream history
+
+> Everything below is the upstream NOOP history up to the point this fork was created. Mentions of
+> releases, downloads, iOS, Android, AltStore, Homebrew or donations refer to the upstream project.
 
 ## 7.0.1 — fixes: sleep toggle, steps, manual workouts, HRV, scrolling, and the version display (all platforms)
 

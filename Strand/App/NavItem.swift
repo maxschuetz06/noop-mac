@@ -5,9 +5,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
     case today = "Today"
     /// The former "Control Center" dashboard, kept as a detail view behind the new home.
     case dayDetails = "Day Details"
-    case intelligence = "Intelligence"
     case insightsHub = "What Moves You"
-    case coach = "Coach"
     case live = "Live"
     case breathe = "Breathe"
     case intervals = "Intervals"
@@ -28,7 +26,6 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
     case devices = "Devices"
     case notifications = "Notifications"
     case automation = "Automations"
-    case smartAlarm = "Smart Alarm"
     case settings = "Settings"
     case about = "Support"
 
@@ -42,23 +39,11 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
     /// The "Tools" sidebar group, in display order.
     static let tools: [NavItem] = [.live, .breathe, .dataSources, .devices, .settings]
 
-    /// Sections intentionally removed from the app UI. The cases stay so stale persisted values and
-    /// other references still compile, but they never appear in the sidebar and any selection of
-    /// them falls back to `.today` (see `resolved`). The analytics pipeline behind Intelligence keeps
-    /// running; only the screens are gone.
-    static let removed: [NavItem] = [.intelligence, .coach, .smartAlarm]
-
     /// Everything else — listed under the collapsible "More" group, in `allCases` order.
-    static var more: [NavItem] { allCases.filter { !core.contains($0) && !removed.contains($0) } }
+    static var more: [NavItem] { allCases.filter { !core.contains($0) } }
 
     /// True for sections that live in the always-visible core list.
     var isCore: Bool { Self.core.contains(self) }
-
-    /// True for sections that were removed from the UI and must never be shown.
-    var isRemoved: Bool { Self.removed.contains(self) }
-
-    /// The item that may actually be shown: removed sections fall back to `.today`.
-    var resolved: NavItem { isRemoved ? .today : self }
 
     /// The sidebar item a cross-screen `NavRouter` request opens.
     init(destination: NavRouter.Destination) {
@@ -82,9 +67,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: return Descriptor(title: "Overview", outlineIcon: "house")
         case .dayDetails: return Descriptor(title: "Day Details", outlineIcon: "square.grid.2x2")
-        case .intelligence: return Descriptor(title: "Intelligence", outlineIcon: "brain.head.profile")
         case .insightsHub: return Descriptor(title: "What Moves You", outlineIcon: "sparkle")
-        case .coach: return Descriptor(title: "Coach", outlineIcon: "sparkles")
         case .live: return Descriptor(title: "Live Pulse", outlineIcon: "waveform.path.ecg")
         case .breathe: return Descriptor(title: "Breathe", outlineIcon: "wind")
         case .intervals: return Descriptor(title: "Intervals", outlineIcon: "timer")
@@ -105,7 +88,6 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
         case .devices: return Descriptor(title: "Devices", outlineIcon: "dot.radiowaves.left.and.right")
         case .notifications: return Descriptor(title: "Notifications", outlineIcon: "bell")
         case .automation: return Descriptor(title: "Automations", outlineIcon: "wand.and.stars")
-        case .smartAlarm: return Descriptor(title: "Smart Alarm", outlineIcon: "alarm")
         case .settings: return Descriptor(title: "Settings", outlineIcon: "gearshape")
         case .about: return Descriptor(title: "About", outlineIcon: "info.circle")
         }

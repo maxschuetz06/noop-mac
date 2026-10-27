@@ -4,8 +4,7 @@ import StrandAnalytics
 
 // MARK: - FusedRecordView — "Your Data, Fused" (v5 — Local Multi-Device Fusion)
 //
-// The read-only headline screen for the fusion pillar
-// (docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md §UX). For each core
+// The read-only headline screen for the fusion pillar. For each core
 // metric it shows the BEST-sourced value, a provenance pill naming the source, the plain published
 // reason from MetricArbitrationPolicy ("counts directly" / "best stager"), and the inline agreement
 // state from FusionResolver (agree / minor delta / conflict). When two sources disagree it offers a
@@ -118,11 +117,7 @@ struct FusedRecordView: View {
         // reason. Opening it never changes the resolved value — it only explains it.
         .sheet(item: $comparing) { row in
             ConflictCompareSheet(row: row)
-                #if os(iOS)
-                .noopSheetPresentation(largeFirst: false)
-                #else
                 .frame(width: 480, height: 600)
-                #endif
         }
     }
 
@@ -136,11 +131,7 @@ struct FusedRecordView: View {
     /// "this Mac" / "this device" without pulling in the app's Platform helper (keeps the view's deps
     /// minimal — the helper lives in the main target, not the design package).
     private var deviceNoun: String {
-        #if os(macOS)
         return "this Mac"
-        #else
-        return "this device"
-        #endif
     }
 
     /// "Today's record owned by WHOOP" — the scores' single-owner, made honest. Only shown when the

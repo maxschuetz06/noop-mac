@@ -420,7 +420,7 @@ struct DeviceCapabilityProfile {
         }
         // Generic heart-rate strap: live HR + R-R only; drives the live console + Effort, nothing nightly.
         // (Same WHOOP test as SourceCoordinator.isWhoop, inlined so this stays nonisolated.)
-        let isWhoop = d.id == "my-whoop" || d.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
+        let isWhoop = d.id == SourceID.whoop || d.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
         guard isWhoop else {
             return DeviceCapabilityProfile(
                 displayModel: "Heart-rate strap",

@@ -6,8 +6,7 @@ import Foundation
 // definitions so the user can pick a marker by name (with a sensible canonical unit
 // and decimal precision prefilled) instead of typing everything free-hand.
 //
-// Per the Health Records design spec (2026-06-19-v5-health-records-design.md,
-// §"New" and §"Non-clinical / legal framing"):
+// Design rules (non-clinical framing):
 //   - This ships NO reference-range tables. `referenceTextHint` is a neutral
 //     placeholder prompting the user to copy the range FROM THEIR OWN REPORT — NOOP
 //     never defines, computes, or asserts a normal range.

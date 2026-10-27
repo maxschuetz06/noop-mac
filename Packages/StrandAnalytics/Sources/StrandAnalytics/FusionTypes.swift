@@ -2,17 +2,15 @@ import Foundation
 
 // MARK: - Fusion value types (v5 — Local Multi-Device Fusion)
 //
-// The plain inputs/outputs for the pure fusion engine described in
-// docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md. No I/O, no model, no
+// The plain inputs/outputs for the pure fusion engine (`FusionResolver`). No I/O, no model, no
 // network — the Repository feeds these rows it already loads, the engine returns a resolved point.
 // These deliberately mirror the existing `DailyMetricSource` / `SourcedDailyMetric` provenance
 // vocabulary (Repository.swift L61-82) but generalised to cover every importer source so a future
-// Polar/Garmin/Oura is a table entry, not a type change. Value-for-value Kotlin twin in
-// android/.../analytics/FusionTypes.kt.
+// Polar/Garmin/Oura is a table entry, not a type change.
 
 /// Where a fused number came from — a superset of the legacy `DailyMetricSource` (whoopImport /
 /// noopComputed / appleHealth / localCache), extended to every source the importers already write.
-/// The rawValue is the canonical source id (`Repository.whoopSource` etc.) so a `FusionSource` round-
+/// The rawValue is the canonical source id (`SourceID.whoop` etc.) so a `FusionSource` round-
 /// trips to/from the stored `deviceId` / source string without a lookup table.
 public enum FusionSource: String, Equatable, Sendable, CaseIterable, Codable {
     /// Imported WHOOP record (CSV/zip export under the strap's `deviceId`, e.g. "my-whoop").

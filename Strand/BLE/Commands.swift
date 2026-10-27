@@ -62,11 +62,8 @@ public enum WhoopCommand: UInt8, CaseIterable {
     case sendR10R11Realtime    = 63
 
     // MARK: Alarm commands (confirmed for interoperability)
-    /// Arm the strap's FIRMWARE alarm for a specific UTC time. The strap will buzz at that time
-    /// even if the app is backgrounded or killed (event STRAP_DRIVEN_ALARM_EXECUTED=57).
-    /// Payload: `setAlarmPayload(epochSec:)` → [0x01] + u32 LE + [0x00, 0x00] + [0x00, 0x00] (9 bytes).
-    /// IMPORTANT: always send SET_CLOCK (cmd 10) immediately before this to ensure the strap RTC
-    /// is UTC-correct, otherwise the alarm fires at the wrong wall-clock time.
+    /// Arm the strap's FIRMWARE alarm (event STRAP_DRIVEN_ALARM_EXECUTED=57). The app never sends it and
+    /// has no payload builder for it; the case exists so `StrapCommandPolicy` can name and deny it.
     case setAlarmTime          = 66
     /// Read the currently armed firmware alarm time. Payload [0x01].
     /// The strap replies with the armed epoch on the cmd-notify characteristic.
@@ -111,32 +108,6 @@ public enum WhoopCommand: UInt8, CaseIterable {
     }
 
     // MARK: Payload builders
-
-    /// SET_ALARM_TIME (66) payload: Rev1 form.
-    /// Layout: `[0x01] + <epoch u32 LE> + [0x00, 0x00] + [0x00, 0x00]` = 9 bytes total.
-    /// The leading 0x01 is the sub-command / form byte; bytes 5-6 are subseconds (always 0 — this is a
-    /// minute-precision alarm); bytes 7-8 are a haptic-mode field. Always send SET_CLOCK (cmd 10) first
-    /// so the strap RTC is UTC-correct, otherwise the alarm fires at the wrong wall-clock time.
-    ///
-    /// The earlier 7-byte form dropped the trailing 2-byte haptic-mode field. On #428 the strap ACKed
-    /// that shorter frame and logged "armed" but never buzzed (no STRAP_DRIVEN_ALARM_EXECUTED event).
-    /// @ujix's btsnoop capture of the official WHOOP app on a real 4.0 (PR #535) shows the official app
-    /// always sends 9 bytes — the two trailing zero bytes are the missing haptic-mode field. The byte
-    /// layout is now pinned by SetAlarmPayloadTests against that capture.
-    ///
-    /// ⚠️ STILL EXPERIMENTAL until a real WHOOP 4.0 owner confirms the strap actually buzzes with this
-    /// 9-byte frame. We send the bytes the official app sends, but no strap-driven wake has been
-    /// reported firing on our side yet, so the UI keeps a "keep a backup alarm" caveat (see
-    /// AutomationsView). Do NOT guess additional fields beyond the captured frame.
-    public static func setAlarmPayload(epochSec: UInt32) -> [UInt8] {
-        [0x01,
-         UInt8(epochSec & 0xFF),
-         UInt8((epochSec >> 8) & 0xFF),
-         UInt8((epochSec >> 16) & 0xFF),
-         UInt8((epochSec >> 24) & 0xFF),
-         0x00, 0x00, // subseconds (always 0 — minute precision)
-         0x00, 0x00] // haptic-mode field (from @ujix's official-app wire capture, #535)
-    }
 
     /// Max UTF-8 byte length for a strap advertising name. BLE caps the whole advertising payload at
     /// 31 bytes; keeping the name ≤ 24 leaves room for the rest of the AD structure (flags + service

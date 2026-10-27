@@ -6921,42 +6921,12 @@
         }
       }
     },
-    "App icon": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App-Symbol"
-          }
-        }
-      }
-    },
     "Default": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Standard"
-          }
-        }
-      }
-    },
-    "Navy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marineblau"
-          }
-        }
-      }
-    },
-    "Couldn't change the app icon": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das App-Symbol konnte nicht geändert werden"
           }
         }
       }
@@ -6987,26 +6957,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hält den detaillierten Schlag-zu-Schlag-Herzfrequenzstream Tag und Nacht aktiv, nicht nur bei geöffnetem Live-Bildschirm, damit NOOP deutlich mehr für nächtliche HRV, Erholung und Schlaf erfasst. Verbraucht mehr Akku — dein Strap streamt die Herzfrequenz durchgehend, solange er verbunden ist."
-          }
-        }
-      }
-    },
-    "Live heart rate in Dynamic Island": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live-Herzfrequenz in der Dynamic Island"
-          }
-        }
-      }
-    },
-    "Shows your live heart rate on the Lock Screen and in the Dynamic Island while the strap is connected. Turn it off to keep your live HR out of the Dynamic Island. (Any one already showing clears within a moment.)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeigt deine Live-Herzfrequenz auf dem Sperrbildschirm und in der Dynamic Island, solange der Strap verbunden ist. Schalte es aus, um deine Live-HF aus der Dynamic Island herauszuhalten. (Eine bereits angezeigte verschwindet in einem Moment.)"
           }
         }
       }
@@ -7441,16 +7391,6 @@
         }
       }
     },
-    "Writes a timestamped copy of your strap log to NOOP's folder in the Files app, once a day — handy for a bug report without remembering to grab it. On iPhone it fires when iOS next wakes NOOP near your chosen time, not guaranteed to the minute (keep NOOP open overnight for the best chance). Everything stays on %@; nothing is uploaded.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schreibt einmal täglich eine Kopie deines Strap-Protokolls mit Zeitstempel in NOOPs Ordner in der Dateien-App — praktisch für einen Fehlerbericht, ohne daran denken zu müssen. Auf dem iPhone läuft es, wenn iOS NOOP das nächste Mal nahe deiner gewählten Zeit weckt, nicht minutengenau garantiert (lass NOOP über Nacht offen für die beste Chance). Alles bleibt auf %@; nichts wird hochgeladen."
-          }
-        }
-      }
-    },
     "Writes a timestamped copy of your strap log to your Documents folder, once a day — handy for a bug report without remembering to grab it. On Mac it runs while NOOP is open (and catches up on launch if the time passed while it was closed). Everything stays on %@; nothing is uploaded.": {
       "localizations": {
         "de": {
@@ -7807,86 +7747,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "WHOOP-5.0-Protokoll"
-          }
-        }
-      }
-    },
-    "Device, iOS build, Data Protection and sideload status — for bug reports.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gerät, iOS-Build, Datenschutz und Sideload-Status — für Fehlerberichte."
-          }
-        }
-      }
-    },
-    "Using NOOP on iPhone": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NOOP auf dem iPhone verwenden"
-          }
-        }
-      }
-    },
-    "This is a sideloaded build — installed outside the App Store. It needs re-signing periodically: roughly every 7 days on a free Apple ID, about a year on a paid developer account.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das ist ein per Sideload installierter Build — außerhalb des App Store installiert. Er muss regelmäßig neu signiert werden: etwa alle 7 Tage mit einer kostenlosen Apple-ID, etwa einmal im Jahr mit einem bezahlten Entwicklerkonto."
-          }
-        }
-      }
-    },
-    "After your iPhone reboots, unlock it once. Until you do, iOS keeps NOOP's files locked (Data Protection), so new history can't be written or synced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entsperre dein iPhone nach einem Neustart einmal. Bis dahin hält iOS NOOPs Dateien gesperrt (Datenschutz), sodass kein neuer Verlauf geschrieben oder synchronisiert werden kann."
-          }
-        }
-      }
-    },
-    "Background Bluetooth has OS limits — iOS may pause NOOP when it's not in the foreground, so keep it open while syncing a fresh strap.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth im Hintergrund hat Systemgrenzen — iOS kann NOOP pausieren, wenn es nicht im Vordergrund ist, also lass es offen, während ein neuer Strap synchronisiert."
-          }
-        }
-      }
-    },
-    "On a beta version of iOS, things can break that work on the release build.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf einer Betaversion von iOS kann etwas kaputtgehen, das im Release-Build funktioniert."
-          }
-        }
-      }
-    },
-    "Attach this to a bug report.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Häng das an einen Fehlerbericht an."
-          }
-        }
-      }
-    },
-    "No iOS diagnostics available.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine iOS-Diagnosedaten verfügbar."
           }
         }
       }
@@ -11953,28 +11813,6 @@
         }
       }
     },
-    "API key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API key"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API-Schlüssel"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API-ключ"
-          }
-        }
-      }
-    },
     "Apple": {
       "localizations": {
         "en": {
@@ -12037,50 +11875,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Спрашивайте о восстановлении, нагрузке, сне и тренировках — на основе ваших собственных данных."
-          }
-        }
-      }
-    },
-    "Ask Coach about your data…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ask Coach about your data…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Frage den Coach zu deinen Daten…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Спросите ИИ-тренера о ваших данных…"
-          }
-        }
-      }
-    },
-    "Ask your first question": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ask your first question"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stelle deine erste Frage"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Задайте первый вопрос"
           }
         }
       }
@@ -12663,28 +12457,6 @@
         }
       }
     },
-    "Building from your strap": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Building from your strap"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird von deinem Strap aufgebaut"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По данным с браслета"
-          }
-        }
-      }
-    },
     "Built on": {
       "localizations": {
         "en": {
@@ -13071,138 +12843,6 @@
         }
       }
     },
-    "Coach": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер"
-          }
-        }
-      }
-    },
-    "Coach is thinking": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach is thinking"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach denkt nach"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер думает"
-          }
-        }
-      }
-    },
-    "Coach is thinking…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach is thinking…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach denkt nach…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер думает…"
-          }
-        }
-      }
-    },
-    "Coach reads a summary of your last two weeks plus 30-day averages and recent workouts, then answers in plain language. Try a suggestion below.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach reads a summary of your last two weeks plus 30-day averages and recent workouts, then answers in plain language. Try a suggestion below."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Coach liest eine Zusammenfassung deiner letzten zwei Wochen sowie 30-Tage-Durchschnitte und aktuelle Workouts und antwortet dann in klarer Sprache. Probiere einen Vorschlag unten aus."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер анализирует сводку за последние две недели, средние показатели за 30 дней и недавние тренировки, а затем отвечает понятным языком. Попробуйте один из вариантов ниже."
-          }
-        }
-      }
-    },
-    "Coach said: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach said: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach sagte: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер: %@"
-          }
-        }
-      }
-    },
-    "Coach uses your own API key. Pick a provider, paste a key, and choose a model. Your key is stored securely in the macOS Keychain and never leaves your Mac except as the request you make.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach uses your own API key. Pick a provider, paste a key, and choose a model. Your key is stored securely in the macOS Keychain and never leaves your Mac except as the request you make."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Coach nutzt deinen eigenen API-Schlüssel. Wähle einen Anbieter, füge einen Schlüssel ein und wähle ein Modell. Dein Schlüssel wird sicher im macOS-Schlüsselbund gespeichert und verlässt deinen Mac nur als die Anfrage, die du stellst."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ИИ-тренер использует ваш API-ключ. Выберите провайдера, вставьте ключ и выберите модель. Ключ надёжно хранится в «Связке ключей» macOS и отправляется только при выполнении вашего запроса."
-          }
-        }
-      }
-    },
     "Coherence estimate": {
       "localizations": {
         "en": {
@@ -13331,28 +12971,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Настроить"
-          }
-        }
-      }
-    },
-    "Connect a provider": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect a provider"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anbieter verbinden"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подключите провайдера"
           }
         }
       }
@@ -13557,78 +13175,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Копировать"
-          }
-        }
-      }
-    },
-    "Crunching your raw streams…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crunching your raw streams…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Rohdaten werden verarbeitet…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Обрабатываю исходные данные…"
-          }
-        }
-      }
-    },
-    "Custom model id": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom model id"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigene Modell-ID"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пользовательский ID модели"
-          }
-        }
-      }
-    },
-    "Custom…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benutzerdefiniert…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personalizado…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пользовательский…"
           }
         }
       }
@@ -13941,50 +13487,6 @@
         }
       }
     },
-    "Enter a model id": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter a model id"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modell-ID eingeben"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Введите ID модели"
-          }
-        }
-      }
-    },
-    "Error: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fehler: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ошибка: %@"
-          }
-        }
-      }
-    },
     "Estimate only — a higher RMSSD while paced usually means your parasympathetic \"rest\" branch is engaging. It is not a clinical reading; trends over a session matter more than any single number.": {
       "localizations": {
         "en": {
@@ -14255,28 +13757,6 @@
         }
       }
     },
-    "Fetch the available models from %@ using your saved key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fetch the available models from %@ using your saved key"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verfügbare Modelle von %@ mit deinem gespeicherten Schlüssel abrufen"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Получить список доступных моделей от %@ с помощью сохранённого ключа"
-          }
-        }
-      }
-    },
     "Find it in the sidebar under Data Sources.": {
       "localizations": {
         "en": {
@@ -14383,28 +13863,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Проверяет вибрацию на браслете"
-          }
-        }
-      }
-    },
-    "Forget the saved key and disconnect": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Forget the saved key and disconnect"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gespeicherten Schlüssel vergessen und trennen"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить сохранённый ключ и отключиться"
           }
         }
       }
@@ -15087,28 +14545,6 @@
         }
       }
     },
-    "Intelligence": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intelligence"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intelligenz"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Аналитика"
-          }
-        }
-      }
-    },
     "Interrogate what affects what.": {
       "localizations": {
         "en": {
@@ -15369,28 +14805,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Формируем вашу норму — %lld из %lld ночей."
-          }
-        }
-      }
-    },
-    "Let the coach use my data": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Let the coach use my data"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dem Coach erlauben, meine Daten zu nutzen"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Разрешить ИИ-тренеру использовать мои данные"
           }
         }
       }
@@ -16019,28 +15433,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Мин."
-          }
-        }
-      }
-    },
-    "Model": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modell"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Модель"
           }
         }
       }
@@ -16887,28 +16279,6 @@
         }
       }
     },
-    "Off — the coach answers generally and sends none of your metrics.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off — the coach answers generally and sends none of your metrics."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus — der Coach antwortet allgemein und sendet keine deiner Metriken."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выкл. — ИИ-тренер отвечает общими рекомендациями и не отправляет ваши показатели."
-          }
-        }
-      }
-    },
     "OK": {
       "localizations": {
         "en": {
@@ -16927,28 +16297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ОК"
-          }
-        }
-      }
-    },
-    "On — your recovery, sleep, HRV and workouts are shared with the provider for tailored coaching.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On — your recovery, sleep, HRV and workouts are shared with the provider for tailored coaching."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An — deine Erholung, dein Schlaf, deine HRV und Workouts werden für maßgeschneidertes Coaching mit dem Anbieter geteilt."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вкл. — ваше восстановление, сон, ВСР и тренировки передаются провайдеру для персональных рекомендаций."
           }
         }
       }
@@ -17125,28 +16473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "p < 0,05"
-          }
-        }
-      }
-    },
-    "Paste your %@ API key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste your %@ API key"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Füge deinen %@-API-Schlüssel ein"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вставьте API-ключ %@"
           }
         }
       }
@@ -17373,50 +16699,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Источник данных"
-          }
-        }
-      }
-    },
-    "Provider": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provider"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anbieter"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Провайдер"
-          }
-        }
-      }
-    },
-    "Question": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Question"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Frage"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вопрос"
           }
         }
       }
@@ -17707,28 +16989,6 @@
         }
       }
     },
-    "Recompute": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recompute"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neu berechnen"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пересчитать"
-          }
-        }
-      }
-    },
     "Record puffin frames to a file": {
       "localizations": {
         "en": {
@@ -17795,50 +17055,6 @@
         }
       }
     },
-    "Refresh models": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh models"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modelle aktualisieren"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Обновить модели"
-          }
-        }
-      }
-    },
-    "Refresh models from provider": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh models from provider"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modelle vom Anbieter aktualisieren"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Обновить модели от провайдера"
-          }
-        }
-      }
-    },
     "REM": {
       "localizations": {
         "en": {
@@ -17901,28 +17117,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сбросить"
-          }
-        }
-      }
-    },
-    "Reset API key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset API key"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API-Schlüssel zurücksetzen"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сбросить API-ключ"
           }
         }
       }
@@ -18187,28 +17381,6 @@
         }
       }
     },
-    "Save key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save key"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schlüssel speichern"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранить ключ"
-          }
-        }
-      }
-    },
     "Save…": {
       "localizations": {
         "en": {
@@ -18359,28 +17531,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "СЕКУНДЫ"
-          }
-        }
-      }
-    },
-    "Send": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senden"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить"
           }
         }
       }
@@ -19202,28 +18352,6 @@
         }
       }
     },
-    "Suggested prompt: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suggested prompt: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vorgeschlagene Frage: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Предлагаемый запрос: %@"
-          }
-        }
-      }
-    },
     "Syncing strap history…": {
       "localizations": {
         "en": {
@@ -19352,28 +18480,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "На их основе рассчитываются пульсовые зоны, оценка калорий и личные нормы восстановления. Следите, чтобы данные были точными."
-          }
-        }
-      }
-    },
-    "Thinking": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thinking"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Denkt nach"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Думаю"
           }
         }
       }
@@ -19758,50 +18864,6 @@
         }
       }
     },
-    "Use": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verwenden"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Использовать"
-          }
-        }
-      }
-    },
-    "Use custom model": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use custom model"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigenes Modell verwenden"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Использовать пользовательскую модель"
-          }
-        }
-      }
-    },
     "v%@": {
       "localizations": {
         "en": {
@@ -19886,28 +18948,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "VO₂ макс."
-          }
-        }
-      }
-    },
-    "Wake at": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wake at"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufwachen um"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подъём в"
           }
         }
       }
@@ -20314,28 +19354,6 @@
         }
       }
     },
-    "You said: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You said: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du sagtest: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вы сказали: %@"
-          }
-        }
-      }
-    },
     "You're connected.": {
       "localizations": {
         "en": {
@@ -20634,118 +19652,6 @@
         }
       }
     },
-    "Morning": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Morning"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Morgen"
-          }
-        }
-      }
-    },
-    "Wake alarm": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wake alarm"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wecker"
-          }
-        }
-      }
-    },
-    "Enable wake alarm": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable wake alarm"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wecker aktivieren"
-          }
-        }
-      }
-    },
-    "Buzzes your strap at the wake time. The strap's own alarm is armed, and this Mac backs it up while NOOP is running.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buzzes your strap at the wake time. The strap's own alarm is armed, and this Mac backs it up while NOOP is running."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lässt deinen Strap zur Weckzeit vibrieren. Der Wecker des Straps wird gesetzt, und dieser Mac springt ein, solange NOOP läuft."
-          }
-        }
-      }
-    },
-    "Next alarm: %@ %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Next alarm: %@ %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nächster Wecker: %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "No upcoming alarm — pick at least one day.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No upcoming alarm — pick at least one day."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kein anstehender Wecker – wähle mindestens einen Tag."
-          }
-        }
-      }
-    },
-    "Wake alarm is off.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wake alarm is off."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Wecker ist aus."
-          }
-        }
-      }
-    },
     "Test now": {
       "localizations": {
         "en": {
@@ -20790,230 +19696,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Strap vibriert … (%1$lld/%2$lld) Doppeltippe auf den Strap oder drücke Stopp."
-          }
-        }
-      }
-    },
-    "Connect the strap to test the alarm.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect the strap to test the alarm."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verbinde den Strap, um den Wecker zu testen."
-          }
-        }
-      }
-    },
-    "The strap's own alarm hasn't been confirmed to fire on WHOOP 5.0 yet. If it stays silent, this Mac buzzes the strap instead — but only while the Mac is awake and the strap is in Bluetooth range.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The strap's own alarm hasn't been confirmed to fire on WHOOP 5.0 yet. If it stays silent, this Mac buzzes the strap instead — but only while the Mac is awake and the strap is in Bluetooth range."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dass der Wecker des Straps beim WHOOP 5.0 wirklich auslöst, ist noch nicht bestätigt. Bleibt er stumm, lässt dieser Mac den Strap stattdessen vibrieren – aber nur, solange der Mac wach ist und der Strap in Bluetooth-Reichweite liegt."
-          }
-        }
-      }
-    },
-    "Mac buzzed the strap %lld×": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac buzzed the strap %lld×"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac hat den Strap %lld× vibrieren lassen"
-          }
-        }
-      }
-    },
-    "Stopped by double-tap after %lld×": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stopped by double-tap after %lld×"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per Doppeltipp gestoppt nach %lld×"
-          }
-        }
-      }
-    },
-    "Stopped in the app after %lld×": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stopped in the app after %lld×"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In der App gestoppt nach %lld×"
-          }
-        }
-      }
-    },
-    "Strap alarm fired": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strap alarm fired"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strap-Wecker hat ausgelöst"
-          }
-        }
-      }
-    },
-    "Mac was asleep at alarm time": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac was asleep at alarm time"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac war zur Weckzeit im Ruhezustand"
-          }
-        }
-      }
-    },
-    "Last test: %@ – %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last test: %@ – %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letzter Test: %1$@ – %2$@"
-          }
-        }
-      }
-    },
-    "Last alarm: %@ – %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last alarm: %@ – %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letzter Wecker: %1$@ – %2$@"
-          }
-        }
-      }
-    },
-    "Good morning — double-tap your strap to stop the buzz.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Good morning — double-tap your strap to stop the buzz."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Morgen – doppeltippe auf den Strap, um die Vibration zu stoppen."
-          }
-        }
-      }
-    },
-    "Strap not connected — it can't wake you. Check Bluetooth.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strap not connected — it can't wake you. Check Bluetooth."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strap nicht verbunden – er kann dich nicht wecken. Prüfe Bluetooth."
-          }
-        }
-      }
-    },
-    "Test one burst": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Test one burst"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einen Weckstoß testen"
-          }
-        }
-      }
-    },
-    "Buzzing the strap… round %lld/%lld. Double-tap the strap or press Stop.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buzzing the strap… round %lld/%lld. Double-tap the strap or press Stop."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strap vibriert … Runde %1$lld/%2$lld. Doppeltippe auf den Strap oder drücke Stopp."
-          }
-        }
-      }
-    },
-    "One round = %lld quick buzzes. The real alarm repeats up to %lld rounds, %lld s apart. The test plays one round only.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One round = %lld quick buzzes. The real alarm repeats up to %lld rounds, %lld s apart. The test plays one round only."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Runde = %1$lld kurze Vibrationen. Der echte Wecker wiederholt bis zu %2$lld Runden im Abstand von %3$lld s. Der Test spielt nur eine Runde."
           }
         }
       }
@@ -21224,16 +19906,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Daten"
-          }
-        }
-      }
-    },
-    "Smart Alarm": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Smart Alarm"
           }
         }
       }
@@ -22340,6 +21012,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Исходный проект NoopApp, на котором основан этот форк."
+          }
+        }
+      }
+    },
+    "The first release of NOOP for Mac: macOS only, everything local": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die erste Version von NOOP für Mac: nur macOS, alles lokal"
+          }
+        }
+      }
+    },
+    "October 2026": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oktober 2026"
+          }
+        }
+      }
+    },
+    "**A fork with its own release line.** NOOP for Mac is an unofficial, macOS-only fork of NOOP and starts its own versions at 8.0.0. The iPhone and Android apps, prebuilt downloads and donation links are gone; you build the app from source.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Ein Fork mit eigener Versionsreihe.** NOOP für Mac ist ein inoffizieller Fork von NOOP nur für macOS und beginnt seine eigenen Versionen mit 8.0.0. Die Apps für iPhone und Android, fertige Downloads und Spendenlinks entfallen; du baust die App selbst aus dem Quellcode."
+          }
+        }
+      }
+    },
+    "**Local only.** No account, no cloud, no telemetry. The only network request NOOP makes is “Check for updates”, and only when you click it; a workout’s route map loads map tiles for the route’s area from Apple Maps, without any health data. The AI Coach, the Intelligence screen and the Smart Alarm were removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Nur lokal.** Kein Konto, keine Cloud, keine Telemetrie. Die einzige Netzwerkanfrage von NOOP ist „Nach Updates suchen“, und nur, wenn du darauf klickst; die Routenkarte eines Trainings lädt Kartenkacheln für die Umgebung der Route von Apple Karten, ohne Gesundheitsdaten. Der KI-Coach, der Bereich Intelligenz und der Smart Alarm wurden entfernt."
+          }
+        }
+      }
+    },
+    "**Optional external data folder.** A build can opt into one folder in your home directory for a database mirror for local tools, an import inbox and raw PPG capture. It is off by default, and well-known folders such as Documents or Public are refused.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Optionaler externer Datenordner.** Ein Build kann einen Ordner in deinem Benutzerordner aktivieren: für eine Kopie der Datenbank für lokale Werkzeuge, einen Import-Eingang und die Roh-PPG-Aufzeichnung. Standardmäßig ist er aus, und bekannte Ordner wie Dokumente oder Öffentlich werden abgelehnt."
+          }
+        }
+      }
+    },
+    "**Strap safety.** A WHOOP 5.0/MG only receives an allowlisted set of commands, and never a strap-held alarm or a looping vibration.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Strap-Sicherheit.** Ein WHOOP 5.0/MG erhält nur freigegebene Befehle und nie einen im Strap gespeicherten Wecker oder eine Vibration in Endlosschleife."
+          }
+        }
+      }
+    },
+    "**The desktop widget follows the app language** you choose in Settings, not only the system language.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Das Desktop-Widget folgt der App-Sprache,** die du in den Einstellungen wählst, nicht nur der Systemsprache."
+          }
+        }
+      }
+    },
+    "**Rebuilt inside, same data.** The Bluetooth layer, the app start-up, the screens and the design system were reorganised into smaller, tested parts. Your database and your scores are unchanged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Innen neu gebaut, gleiche Daten.** Bluetooth-Schicht, App-Start, Bildschirme und Designsystem wurden in kleinere, getestete Teile aufgeteilt. Deine Datenbank und deine Werte bleiben unverändert."
           }
         }
       }

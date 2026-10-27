@@ -200,7 +200,7 @@ final class ImportInboxEngineTests: XCTestCase {
     func testPrepareCreatesOwnerOnlyFoldersAndEnglishReadmeOnce() throws {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
         let engine = try makeEngine { _ in .failure("unused") }
-        XCTAssertEqual(try mode(""), 0o700)
+        XCTAssertEqual(try mode(""), 0o755, "an inbox that already existed keeps its permissions")
         XCTAssertEqual(try mode("Done"), 0o700)
         XCTAssertEqual(try mode("Failed"), 0o700)
         let readmeURL = dir.appendingPathComponent("README.txt")

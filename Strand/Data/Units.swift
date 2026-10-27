@@ -9,7 +9,6 @@ import Foundation
 // versa). Default is Metric — most of the world, and it matches what we store.
 //
 // Persisted via @AppStorage (UserDefaults), the same mechanism every other macOS NOOP preference uses.
-// The Android side mirrors this exactly in Units.kt + NoopPrefs.
 
 /// The length+mass unit system. Temperature has its own override (see `UnitPrefs.temperature`).
 enum UnitSystem: String, CaseIterable, Identifiable {

@@ -105,8 +105,7 @@ struct InsightsView: View {
 
     // MARK: Personal-experiment state (LOCAL ONLY — UserDefaults-backed, single user)
     //
-    // A running n-of-1 plan: one behaviour, one outcome, a short window. All five
-    // keys mirror the Android SharedPreferences keys (InsightsScreen.kt) for parity.
+    // A running n-of-1 plan: one behaviour, one outcome, a short window.
     @AppStorage("noop.experiment.behaviour")    private var experimentBehaviour = ""
     @AppStorage("noop.experiment.outcome")      private var experimentOutcomeRaw = Outcome.recovery.rawValue
     @AppStorage("noop.experiment.startedDay")   private var experimentStartedDay = ""
@@ -270,7 +269,7 @@ struct InsightsView: View {
         var byKey: [String: [String: Double]] = [:]
         var seriesMap: [String: [(day: String, value: Double)]] = [:]
         for key in outcomeKeys {
-            let s = await repo.series(key: key, source: "my-whoop")
+            let s = await repo.series(key: key, source: SourceID.whoop)
             var dict: [String: Double] = [:]
             for row in s { dict[row.day] = row.value }
             for d in mergedDays where dict[d.day] == nil {

@@ -1,9 +1,8 @@
 import XCTest
 @testable import StrandAnalytics
 
-/// Pure-logic tests for the Lab Book projection. The fixtures here are mirrored
-/// byte-for-byte by the Android twin (LabBookProjectionTest.kt) so the same readings
-/// produce identical daily projections and windowed pairs on both platforms.
+/// Pure-logic tests for the Lab Book projection: fixed readings pin the daily projections and
+/// windowed pairs.
 final class LabBookProjectionTests: XCTestCase {
 
     private func r(_ key: String, _ day: String, _ value: Double, _ takenAt: Double) -> LabReading {

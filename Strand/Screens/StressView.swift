@@ -66,7 +66,7 @@ struct StressView: View {
     }
 
     private func load() async {
-        storedSeries = await repo.series(key: "stress", source: "my-whoop")
+        storedSeries = await repo.series(key: "stress", source: SourceID.whoop)
         loaded = true
         rebuildModelIfNeeded()
         await loadDaytime()
@@ -84,8 +84,7 @@ struct StressView: View {
 
         let hr = await repo.hrSamples(from: from, to: to, limit: 200_000)
         guard hr.count >= DaytimeStress.minHourHRSamples else { daytime = .empty; return }
-        let rr = (try? await repo.storeHandle()?.rrIntervals(
-            deviceId: repo.deviceId, from: from, to: to, limit: 200_000)) ?? []
+        let rr = await repo.rrIntervals(from: from, to: to, limit: 200_000)
 
         daytime = DaytimeStress.analyze(hr: hr, rr: rr, tzOffsetSeconds: tz)
     }
@@ -144,9 +143,7 @@ struct StressView: View {
                         }
                     }
             }
-            #if os(macOS)
             .frame(width: 520, height: 760)
-            #endif
         }
     }
 
@@ -591,13 +588,7 @@ struct StressModel {
     /// Last up-to-14 trend values, for the hero tile sparkline.
     var sparkValues: [Double] { Array(fullTrend.suffix(14)).map(\.value) }
 
-    private static let dayParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayParser = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     /// Personal 30-day RHR/HRV baseline ending the day BEFORE the day being scored.
     private struct Baseline {

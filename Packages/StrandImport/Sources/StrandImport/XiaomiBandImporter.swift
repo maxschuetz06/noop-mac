@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 import GRDB
 import ZIPFoundation
@@ -257,14 +258,7 @@ public struct XiaomiBandImporter {
         dayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(time + zoneOffset)))
     }
 
-    static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    static let dayFormatter = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     // JSON value coercion — Mi Fitness stores numbers as either Int or Double.
     static func intVal(_ v: [String: Any], _ k: String) -> Int? {

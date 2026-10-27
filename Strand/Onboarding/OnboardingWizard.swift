@@ -377,25 +377,12 @@ private struct ExpectationsStep: View {
                     .animation(StrandMotion.gentle.delay(Double(index) * 0.08), value: shown)
                 }
 
-                #if os(iOS)
-                // The iPhone-only reality: this is a sideloaded build, so set the re-sign + unlock
-                // expectation up front rather than letting it surprise people later (#222 / cert expiry).
-                expectationRow(
-                    icon: "iphone.gen3",
-                    title: "Installed outside the App Store",
-                    body: "On iPhone this is a sideloaded build. Re-sign it about every 7 days on a free Apple ID (longer on a paid account). After your phone reboots, unlock it once so NOOP can read and sync its data."
-                )
-                .opacity(shown ? 1 : 0)
-                .offset(y: shown ? 0 : 8)
-                .animation(StrandMotion.gentle.delay(Double(AppChangelog.expectations.count) * 0.08), value: shown)
-                #endif
             }
         }
         .onAppear { shown = true }
     }
 
-    /// One expectation callout, matching the data-driven rows above so the iOS-only addition is visually
-    /// identical to the rest of the list.
+    /// One expectation callout, styled like the data-driven rows above.
     private func expectationRow(icon: String, title: String, body: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
@@ -868,22 +855,12 @@ private struct ImportStep: View {
         case appleHealth
 
         var allowedContentTypes: [UTType] {
-            // See DataSourcesView: `.folder` is a macOS-only affordance (pick an unzipped export
-            // directory). On iOS it greys out the .zip in the Files picker (issue #179), so iOS
-            // offers only the concrete file types.
+            // `.folder` lets the user pick an unzipped export directory (see DataSourcesView).
             switch self {
             case .whoop:
-                #if os(macOS)
                 return [.zip, .folder]
-                #else
-                return [.zip]
-                #endif
             case .appleHealth:
-                #if os(macOS)
                 return [.zip, .xml, .folder]
-                #else
-                return [.zip, .xml]
-                #endif
             }
         }
     }
@@ -913,24 +890,6 @@ private struct NotificationsStep: View {
                 }
                 .frame(height: 130)
 
-                #if os(iOS)
-                // iOS gives an app no way to observe *other* apps' notifications, and the per-app picker
-                // behind it is NSWorkspace-based (macOS-only). So drop the cross-app relay claim here and
-                // keep only what iOS genuinely does: NOOP's own strain nudges + smart alarm buzz the strap
-                // directly over BLE.
-                InfoCard(
-                    icon: "applewatch.radiowaves.left.and.right",
-                    tint: StrandPalette.statusPositive,
-                    title: "A buzz, not a banner",
-                    message: "NOOP taps your strap so an alert lands on your wrist instead of your screen — no need to reach for it. Everything stays on \(Platform.deviceNounPhrase)."
-                )
-
-                VStack(spacing: 12) {
-                    Checkline(text: "Strain nudges and your smart alarm tap your wrist the moment they fire.")
-                    Checkline(text: "It all stays on your strap and \(Platform.deviceNounPhrase) — no account, no cloud.")
-                }
-                .frame(maxWidth: 460)
-                #else
                 InfoCard(
                     icon: "applewatch.radiowaves.left.and.right",
                     tint: StrandPalette.statusPositive,
@@ -943,7 +902,6 @@ private struct NotificationsStep: View {
                     Checkline(text: "Strain nudges and your smart alarm tap your wrist the same way.")
                 }
                 .frame(maxWidth: 460)
-                #endif
             }
         }
         .onAppear { if !reduceMotion { withAnimation(StrandMotion.breathe) { pulse = true } } }

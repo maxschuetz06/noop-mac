@@ -19,7 +19,7 @@ enum MetricAvailabilityIndex {
                       summaries: [MetricSeriesSummary],
                       deviceId: String,
                       days: [DailyMetric]) -> [String: MetricAvailability] {
-        let computedId = deviceId + "-noop"
+        let computedId = deviceId + SourceID.computedSuffix
         var latestBySeries: [String: MetricSeriesSummary] = [:]
         for s in summaries where s.count > 0 { latestBySeries[s.deviceId + "\u{1F}" + s.key] = s }
 
@@ -31,7 +31,7 @@ enum MetricAvailabilityIndex {
                 if let b = best, (b.day, b.priority) >= (day, priority) { return }
                 best = (day, value, priority)
             }
-            if m.source == "my-whoop" {
+            if m.source == SourceID.whoop {
                 if let s = latestBySeries[deviceId + "\u{1F}" + m.key] { offer(s.latestDay, s.latestValue, 2) }
                 if let s = latestBySeries[computedId + "\u{1F}" + m.key] { offer(s.latestDay, s.latestValue, 1) }
                 for d in days {

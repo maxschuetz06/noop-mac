@@ -15,10 +15,26 @@ public extension View {
     /// wash + border bias; nil uses the flat raised surface with no wash.
     func frostedCardSurface(
         tint: Color? = nil,
+        wash: CardWash? = nil,
         cornerRadius: CGFloat = 18,
         washStrength: Double = 1.0
     ) -> some View {
-        background(FrostedCardSurface(tint: tint, cornerRadius: cornerRadius, washStrength: washStrength))
+        background(FrostedCardSurface(tint: tint, wash: wash, cornerRadius: cornerRadius, washStrength: washStrength))
+    }
+}
+
+/// A soft colour blob painted inside a card (the dashboard look): a strong top-weighted radial
+/// gradient at `center`, plus an optional `secondary` blob rising from the bottom-leading corner.
+/// Unlike `tint` (a faint domain hint), a wash IS the card's colour.
+public struct CardWash {
+    public var color: Color
+    public var center: UnitPoint
+    public var secondary: Color?
+
+    public init(color: Color, center: UnitPoint, secondary: Color? = nil) {
+        self.color = color
+        self.center = center
+        self.secondary = secondary
     }
 }
 
@@ -27,12 +43,14 @@ public extension View {
 /// No drop shadow — the Titanium surface reads off the hairline + tint alone.
 public struct FrostedCardSurface: View {
     public var tint: Color?
+    public var wash: CardWash?
     public var cornerRadius: CGFloat
     public var washStrength: Double
     @Environment(\.colorScheme) private var scheme
 
-    public init(tint: Color? = nil, cornerRadius: CGFloat = 18, washStrength: Double = 1.0) {
+    public init(tint: Color? = nil, wash: CardWash? = nil, cornerRadius: CGFloat = 18, washStrength: Double = 1.0) {
         self.tint = tint
+        self.wash = wash
         self.cornerRadius = cornerRadius
         self.washStrength = washStrength
     }
@@ -48,8 +66,7 @@ public struct FrostedCardSurface: View {
         // Soft redesign (2026-10-19): white card, 1px hairline, a whisper of shadow on light, and —
         // for tinted cards — a soft radial colour wash in the top-trailing corner instead of a
         // linear tint, matching the macOS home dashboard.
-        shape
-            .fill(StrandPalette.surfaceRaised)
+        fill(shape)
             .overlay(
                 GeometryReader { geo in
                     RadialGradient(
@@ -63,6 +80,26 @@ public struct FrostedCardSurface: View {
             .overlay(shape.strokeBorder(StrandPalette.hairline, lineWidth: 1))
             .shadow(color: scheme == .light ? Color.black.opacity(0.035) : .clear,
                     radius: scheme == .light ? 16 : 0, x: 0, y: scheme == .light ? 6 : 0)
+    }
+
+    @ViewBuilder private func fill(_ shape: RoundedRectangle) -> some View {
+        if let wash {
+            GeometryReader { geo in
+                let r = max(geo.size.width, geo.size.height)
+                ZStack {
+                    StrandPalette.surfaceRaised
+                    RadialGradient(colors: [wash.color.opacity(scheme == .dark ? 0.9 : 0.95), wash.color.opacity(0)],
+                                   center: wash.center, startRadius: 0, endRadius: r * 0.75)
+                    if let second = wash.secondary {
+                        RadialGradient(colors: [second.opacity(0.7), second.opacity(0)],
+                                       center: UnitPoint(x: 0.15, y: 0.95), startRadius: 0, endRadius: r * 0.6)
+                    }
+                }
+            }
+            .clipShape(shape)
+        } else {
+            shape.fill(StrandPalette.surfaceRaised)
+        }
     }
 }
 
@@ -78,17 +115,20 @@ public struct StrandCard<Content: View>: View {
     public var padding: CGFloat
     public var cornerRadius: CGFloat
     public var tint: Color?
+    public var wash: CardWash?
     @ViewBuilder public var content: () -> Content
 
     public init(
         padding: CGFloat = 16,
         cornerRadius: CGFloat = 18,
         tint: Color? = nil,
+        wash: CardWash? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.padding = padding
         self.cornerRadius = cornerRadius
         self.tint = tint
+        self.wash = wash
         self.content = content
     }
 
@@ -96,7 +136,7 @@ public struct StrandCard<Content: View>: View {
         content()
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frostedCardSurface(tint: tint, cornerRadius: cornerRadius)
+            .frostedCardSurface(tint: tint, wash: wash, cornerRadius: cornerRadius)
             .strandCardHover(cornerRadius: cornerRadius)
     }
 }

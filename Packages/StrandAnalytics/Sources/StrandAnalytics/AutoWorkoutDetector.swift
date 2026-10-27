@@ -3,10 +3,6 @@ import WhoopProtocol
 
 // AutoWorkoutDetector.swift — opt-in MVP "did you just work out?" detector.
 //
-// Faithful Swift twin of android/.../com/noop/analytics/AutoWorkoutDetector.kt — the two MUST
-// stay BYTE-PARITY on the detection logic (same thresholds, same span/merge/overlap rules, same
-// outputs), verified by the mirrored unit tests on each platform.
-//
 // This is DELIBERATELY SEPARATE from `WorkoutDetector` (the exercise.py port that computes
 // calories / zones / strain and writes the durable "detected" rows the IntelligenceEngine
 // churns). This one is the lightweight, OPT-IN, NON-DESTRUCTIVE MVP that only ever SUGGESTS a
@@ -23,7 +19,7 @@ import WhoopProtocol
 // Pure / headless: no I/O, no clock. All ts/start/end are unix SECONDS. NOT medical advice.
 
 /// A candidate workout window the user can accept (Save) or reject (dismiss). All fields are
-/// derived purely from the HR samples inside the window. Mirrors the Kotlin `DetectedWorkout`.
+/// derived purely from the HR samples inside the window.
 public struct DetectedWorkout: Equatable, Sendable {
     public let startSec: Int
     public let endSec: Int
@@ -55,7 +51,7 @@ public struct SavedWorkoutSpan: Equatable, Sendable {
 
 public enum AutoWorkoutDetector {
 
-    // MARK: - Constants (keep byte-identical with the Kotlin twin)
+    // MARK: - Constants
 
     /// Elevated gate: bpm must be at least restingHR + this margin to count as "working".
     public static let elevatedMarginBPM = 30
@@ -67,7 +63,7 @@ public enum AutoWorkoutDetector {
     public static let mergeGapS = 5 * 60
     /// When an OPTIONAL continuous motion series is supplied, a window must ALSO show elevated motion
     /// to qualify (confirmation). "Elevated motion" = the window's mean per-second motion intensity
-    /// (L2 gravity-delta) is at least this. Ignored entirely in HR-only mode. Matches the Kotlin twin.
+    /// (L2 gravity-delta) is at least this. Ignored entirely in HR-only mode.
     public static let motionConfirmMean = 0.05
     /// Resting-HR fallback when the caller has no nightly RHR for the day.
     public static let defaultRestingHR = 60
@@ -116,7 +112,7 @@ public enum AutoWorkoutDetector {
 
     /// Detect candidate sustained-elevated-HR workout windows.
     ///
-    /// Algorithm (kept byte-identical with the Kotlin twin):
+    /// Algorithm:
     ///  1. Sort HR ascending. Floor = restingHR + `elevatedMarginBPM`. A sample is "elevated" when
     ///     bpm >= floor.
     ///  2. Grow a contiguous span across elevated samples. A run of NON-elevated samples is tolerated
@@ -220,7 +216,6 @@ public enum AutoWorkoutDetector {
     }
 
     /// Two closed [aStart, aEnd] / [bStart, bEnd] intervals overlap (touching endpoints count).
-    /// Mirrors the Kotlin `overlaps`.
     static func overlaps(_ aStart: Int, _ aEnd: Int, _ bStart: Int, _ bEnd: Int) -> Bool {
         aStart <= bEnd && bStart <= aEnd
     }

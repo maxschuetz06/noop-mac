@@ -7,9 +7,9 @@ import Foundation
 @MainActor
 final class JournalCatalogStore: ObservableObject {
 
-    /// Mirrors Android STARTER_JOURNAL_QUESTIONS value-for-value (JournalLog.kt). These are DATA,
-    /// not UI literals — stored verbatim in the journal table and rendered verbatim, so they must
-    /// never be localised (a translated key would start a new, disconnected behaviour).
+    /// The starter journal questions. These are DATA, not UI literals — stored verbatim in the journal
+    /// table and rendered verbatim, so they must never be localised (a translated key would start a new,
+    /// disconnected behaviour).
     nonisolated static let starterQuestions: [String] = [
         "Did you drink any alcohol?",
         "Did you have caffeine late in the day?",
@@ -47,7 +47,6 @@ final class JournalCatalogStore: ObservableObject {
     /// sit beside the starter "Did you take magnesium?" as two rows (#224). Collapsing here folds
     /// them onto one key. The DISPLAYED string is still the original verbatim text — only the match
     /// key is normalised — so the stored behaviour key (which the effects engine joins on) is intact.
-    /// Kept value-for-value in step with Android `normJournalKey` (JournalLog.kt).
     private nonisolated static func norm(_ s: String) -> String {
         s.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }

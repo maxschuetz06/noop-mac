@@ -5,14 +5,13 @@ import WhoopProtocol
 /// Tests for the experimental, non-clinical RhythmScreener regularity engine.
 ///
 /// All fixtures are SYNTHETIC and built from a deterministic integer LCG + integer-ms
-/// R-R series (no trig, no platform-dependent floats), so the Kotlin twin
-/// (`RhythmScreenerTest.kt`) reproduces byte-identical inputs and therefore identical
-/// `RhythmRegularity` labels and rounded stats. This is the cross-platform parity gate.
+/// R-R series (no trig, no platform-dependent floats), so the inputs and therefore the
+/// `RhythmRegularity` labels and rounded stats are reproducible byte for byte.
 ///
 /// No real patient data is ever used — synthetic only.
 final class RhythmScreenerTests: XCTestCase {
 
-    // MARK: - Deterministic synthetic fixtures (mirrored exactly in Kotlin)
+    // MARK: - Deterministic synthetic fixtures
 
     /// A tiny deterministic LCG (Numerical Recipes constants) over UInt32, so Swift and
     /// Kotlin produce the identical sequence. `next(mod:)` returns an Int in [0, mod).

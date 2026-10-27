@@ -10,6 +10,13 @@ struct ExternalDataFolder: Equatable, Sendable {
     static let importDirectoryName = "Import"
     static let rawPPGDirectoryName = "raw-ppg"
     static let maxNameLength = 255
+    /// Folders macOS or the user already use for other things. As the data folder they would be set to
+    /// 0700 (breaking, for example, `~/Public` sharing), so these names disable the feature. Compared
+    /// case-insensitively because the home volume usually is.
+    static let wellKnownHomeFolders: Set<String> = [
+        "applications", "desktop", "documents", "downloads", "library", "movies", "music", "pictures",
+        "public", "sites",
+    ]
 
     let name: String
     let root: URL
@@ -26,8 +33,9 @@ struct ExternalDataFolder: Equatable, Sendable {
         realHome: realHomeDirectory()
     )
 
-    /// Accepts a single folder name relative to the home directory. Missing, empty and anything that
-    /// could point elsewhere (slashes, `.`/`..`, `~`, unexpanded build settings) disables the feature.
+    /// Accepts a single folder name relative to the home directory. Missing, empty, well-known folders and
+    /// anything that could point elsewhere (slashes, `.`/`..`, `~`, unexpanded build settings) disable
+    /// the feature.
     static func resolve(configuredName: Any?, realHome: URL) -> ExternalDataFolder? {
         guard let raw = configuredName as? String else { return nil }
         let name = raw.trimmingCharacters(in: .whitespaces)
@@ -36,9 +44,14 @@ struct ExternalDataFolder: Equatable, Sendable {
     }
 
     static func isValidName(_ name: String) -> Bool {
-        guard !name.isEmpty, name.utf8.count <= maxNameLength, name != ".", name != ".." else { return false }
+        guard !name.isEmpty, name.utf8.count <= maxNameLength, name != ".", name != "..",
+              !isWellKnownHomeFolder(name) else { return false }
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " -_."))
         return name.unicodeScalars.allSatisfy { allowed.contains($0) }
+    }
+
+    static func isWellKnownHomeFolder(_ name: String) -> Bool {
+        wellKnownHomeFolders.contains(name.lowercased())
     }
 
     /// Real home directory. In the sandbox `NSHomeDirectory()` is the container, so ask the passwd database.
@@ -53,13 +66,17 @@ struct ExternalDataFolder: Equatable, Sendable {
 /// Creates directories and files that only the owner can read (0700 / 0600). The home directory is
 /// group-readable on macOS and the external folder has no TCC protection, so health data written there
 /// must not depend on the umask or on who created a folder first.
+///
+/// Permission rule: directories NOOP creates get 0700. An existing directory keeps its permissions,
+/// except the configured data folder itself (`tighteningExisting`), which is never a well-known folder.
 enum PrivateFiles {
     static let directoryMode: mode_t = 0o700
     static let fileMode: mode_t = 0o600
 
-    /// Creates `url` and any missing parents with 0700, then sets 0700 on `url` itself even if it already
-    /// existed. Existing parents (e.g. the home directory) keep their permissions.
-    static func ensureDirectory(_ url: URL) throws {
+    /// Creates `url` and any missing parents with 0700. An existing `url` is only set to 0700 when
+    /// `tighteningExisting` is true and its name is not a well-known home folder; existing parents
+    /// (e.g. the home directory) always keep their permissions.
+    static func ensureDirectory(_ url: URL, tighteningExisting: Bool = false) throws {
         var missing: [URL] = []
         var cursor = url.standardizedFileURL
         var isDir: ObjCBool = false
@@ -71,6 +88,9 @@ enum PrivateFiles {
         for dir in missing.reversed() {
             guard mkdir(dir.path, directoryMode) == 0 || errno == EEXIST else { throw posixError(dir) }
         }
+        let created = !missing.isEmpty
+        let tightens = tighteningExisting && !ExternalDataFolder.isWellKnownHomeFolder(url.lastPathComponent)
+        guard created || tightens else { return }
         guard chmod(url.path, directoryMode) == 0 else { throw posixError(url) }
     }
 

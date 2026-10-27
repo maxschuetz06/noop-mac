@@ -47,6 +47,8 @@ struct MetricRing: View {
 /// A ring with its caption underneath — one of the three WHOOP home-screen rings.
 struct MetricRingColumn: View {
     let label: LocalizedStringKey
+    /// Table the label is looked up in (the widget's language, see `WidgetLocalization`).
+    let bundle: Bundle
     let fill: Double
     let color: Color
     let valueText: String
@@ -57,14 +59,14 @@ struct MetricRingColumn: View {
         VStack(spacing: 5) {
             MetricRing(fill: fill, color: color, valueText: valueText, isEmpty: isEmpty, valueScale: valueScale)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Text(label)
+            Text(label, bundle: bundle)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(StrandPalette.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
+        .accessibilityLabel(Text(label, bundle: bundle))
         .accessibilityValue(valueText)
     }
 }

@@ -42,7 +42,7 @@ import Foundation
 // .building on a tie, then sport name ascending — a fully deterministic, stable order.
 //
 // All day arithmetic goes through CorrelationEngine.shiftDay (fixed UTC calendar) and
-// all the means are self-contained so the Kotlin mirror is line-for-line.
+// all the means are self-contained.
 
 // MARK: - Result
 
@@ -228,7 +228,7 @@ public enum ActivityCostEngine {
         }
     }
 
-    // MARK: - Stats (self-contained so the Kotlin mirror is line-for-line)
+    // MARK: - Stats
 
     static func mean(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }

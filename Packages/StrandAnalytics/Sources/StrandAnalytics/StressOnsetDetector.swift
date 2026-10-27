@@ -7,8 +7,6 @@ import Foundation
 // `SedentaryDetector.evaluate`: the caller persists `nextState` and feeds it back, so a replayed window
 // can't re-fire. No I/O / BLE here.
 //
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L3).
-//
 // WHAT IT GENERALISES (from AppModel.evaluateStress): a rolling clean-R-R buffer → a SLOW RMSSD baseline
 // (the shipped 0.98/0.02 EMA) + a resting-HR band gate (55–100 bpm) + a `rmssd < baseline × 0.6` drop +
 // a once-per-15-min limiter + a single confirming buzz. What this engine ADDS, per spec:

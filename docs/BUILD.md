@@ -95,7 +95,7 @@ prefix, so the desktop widget cannot share data with the app; everything else wo
 
 The app is sandboxed. Its default entitlements (`Strand/Resources/Strand.entitlements`) are the App
 Sandbox, Bluetooth, user-selected file access, the App Group, and outbound network client access
-(used only by the opt-in, bring-your-own-key AI Coach and the user-tapped "Check for updates"). They
+(used only by the user-tapped "Check for updates"). They
 contain no sandbox exceptions. The file
 is maintained by hand; XcodeGen does not regenerate it.
 
@@ -130,9 +130,9 @@ NOOP_APP_ENTITLEMENTS = Config/Strand-ExternalDataFolder.entitlements
 
 For a different folder name, copy the variant to `Config/Strand-ExternalDataFolder.local.entitlements`
 (ignored by git), change its `home-relative-path` entry and point `NOOP_APP_ENTITLEMENTS` at it. A
-build phase (`Tools/check-external-data-folder.sh`) fails the build if the folder setting and the
-entitlements disagree, and keeps the default build free of sandbox exceptions. Details:
-[`EXTERNAL_DATA_FOLDER.md`](EXTERNAL_DATA_FOLDER.md).
+build phase (`Tools/check-external-data-folder.sh`) fails the build if the folder name is invalid or a
+well-known home folder, or if the folder setting and the entitlements disagree, and keeps the default
+build free of sandbox exceptions. Details: [`EXTERNAL_DATA_FOLDER.md`](EXTERNAL_DATA_FOLDER.md).
 
 ## 6. Tests
 
@@ -172,6 +172,23 @@ swift run backfill
 ```
 
 Without `NOOP_DB_PATH` it targets the container of the default bundle id `com.noopapp.noop`.
+
+## 8. Versions and releases
+
+The fork's versions start at 8.0.0. For a release:
+
+1. In `project.yml`, set `MARKETING_VERSION` and raise `CFBundleVersion` (the app and the widget use
+   the same value).
+2. Add the release at the top of `AppChangelog.releases` in `Strand/System/AppChangelog.swift` and set
+   `AppChangelog.currentVersion`. Its strings are localized: add the German translations to
+   `Strand/Resources/Localizable.xcstrings` (`AppChangelogTests` fails without them).
+3. Add a section to `CHANGELOG.md` and tag the release `v<version>`; "Check for updates" reads the
+   tag of the latest GitHub release.
+
+"What's new" opens once for existing users whose last-seen version differs from
+`AppChangelog.currentVersion`, and the release is posted once to the Updates inbox. A new app version
+also re-runs the archived undecodable history frames through the decoder once
+(`RejectArchiveReplayGate`); that replay is idempotent.
 
 ## Pairing and BLE
 

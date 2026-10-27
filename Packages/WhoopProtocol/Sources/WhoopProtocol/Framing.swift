@@ -220,7 +220,7 @@ public final class Reassembler {
     /// ~4× the largest real WHOOP frame (~1920 B raw/historical). A declared total beyond this is a
     /// corrupt or misaligned length (a bit-flip, or a spurious 0xAA injected mid-frame), not a real
     /// frame — so drop that SOF and resync rather than wait forever for bytes that can't arrive.
-    /// Mirrors the Android `Framing.kt` cap. (Reimplemented from @vulnix0x4's PR #374.)
+    /// (Reimplemented from @vulnix0x4's PR #374.)
     static let maxFrameBytes = 8192
 
     /// `family` selects the frame-length convention:

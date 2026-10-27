@@ -11,12 +11,11 @@ import WhoopStore
 // get from your doctor or pharmacy — bloods, blood pressure, body measurements — and
 // SEE them next to your wearable signals, entirely on this device. NOOP never tests
 // you, never reads a result for you, and never tells you what a number means medically.
-// (Spec: docs/superpowers/specs/2026-06-19-v5-health-records-design.md.)
 //
 // This screen is SELF-CONTAINED: it takes the repo via the environment (the same one
-// every other screen binds to) and reads/writes markers through `repo.storeHandle()` —
-// the on-device WhoopStore, where the LabMarkerStore extension lives (v17 `labMarker`
-// table). Raw readings are stored under the strap device id (`repo.deviceId`); every
+// every other screen binds to) and reads/writes markers through the Repository's lab-marker
+// methods — backed by the on-device WhoopStore, where the LabMarkerStore extension lives (v17
+// `labMarker` table). Raw readings are stored under the strap device id (`repo.deviceId`); every
 // write also projects a daily series under the `lab-book` source so Compare/Explore/
 // Coach see markers unchanged. The "Compare with a signal" surface reuses the same
 // Pearson idiom + restrained copy as CompareView's pairCard.
@@ -301,27 +300,20 @@ struct LabBookView: View {
     // MARK: - Load / save / delete (through the shared on-device store)
 
     private func load() async {
-        guard let store = await repo.storeHandle() else { return }
-        // Read by category so we cover them all; markers are stored under the strap device id.
-        var all: [LabMarkerRow] = []
-        for category in LabMarkerCategory.allCases {
-            let rows = (try? await store.labMarkers(deviceId: repo.deviceId, category: category.rawValue)) ?? []
-            all.append(contentsOf: rows)
-        }
-        markers = all.sorted { $0.takenAt < $1.takenAt }
+        guard let all = await repo.labMarkers() else { return }
+        markers = all
         loaded = true
     }
 
     private func save(_ drafts: [LabMarkerRow]) async {
-        guard !drafts.isEmpty, let store = await repo.storeHandle() else { return }
-        try? await store.upsertLabMarkers(drafts)
+        guard !drafts.isEmpty else { return }
+        await repo.saveLabMarkers(drafts)
         await repo.refresh()   // re-resolves the lab-book projection into Compare/Explore/Coach
         await load()
     }
 
     private func delete(_ id: String) async {
-        guard let store = await repo.storeHandle() else { return }
-        _ = try? await store.deleteLabMarker(id: id)
+        await repo.deleteLabMarker(id: id)
         await repo.refresh()
         await load()
     }
@@ -369,13 +361,7 @@ enum LabBookFormat {
     }
 
     /// The `yyyy-MM-dd` day key the projection uses (LOCAL day of the reading).
-    private static let keyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-    static func dayKey(_ date: Date) -> String { keyFormatter.string(from: date) }
+    static func dayKey(_ date: Date) -> String { DayKey.string(from: date) }
 }
 
 // MARK: - Marker detail (history + trend + "compare with a signal")
@@ -416,13 +402,9 @@ private struct MarkerDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        #if os(iOS)
-        .presentationDragIndicator(.visible)
-        #else
         // Fixed frame — a macOS sheet around a ScrollView needs a definite height or its rows
         // collapse to the top and overlap (the "Add a reading" layout bug).
         .frame(width: 520, height: 720)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 
@@ -780,11 +762,7 @@ private struct LabBookDisclaimerView: View {
                     .padding(.top, 4)
             }
         }
-        #if os(iOS)
-        .presentationDragIndicator(.visible)
-        #else
         .frame(width: 480, height: 560)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 

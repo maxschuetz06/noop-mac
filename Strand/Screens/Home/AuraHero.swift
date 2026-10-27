@@ -1,5 +1,5 @@
-#if os(macOS)
 import SwiftUI
+import StrandDesign
 
 // MARK: - Aura hero
 //
@@ -60,7 +60,7 @@ struct AuraHero: View {
                 }
                 Text(caption)
                     .font(.system(size: 13))
-                    .foregroundStyle(Soft.ink3)
+                    .foregroundStyle(StrandPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(width: min(220, size.width), alignment: .leading)
                     .position(x: min(110, size.width / 2), y: size.height - 30)
@@ -79,15 +79,15 @@ struct AuraHero: View {
     private func glow(center: CGPoint, radius: CGFloat, size: CGSize) -> some View {
         let dark = scheme == .dark
         return ZStack {
-            RadialGradient(colors: [Soft.peachWash.opacity(dark ? 0.55 : 0.9), Soft.peachWash.opacity(0)],
+            RadialGradient(colors: [StrandPalette.washPeach.opacity(dark ? 0.55 : 0.9), StrandPalette.washPeach.opacity(0)],
                            center: .center, startRadius: 0, endRadius: radius * 1.5)
                 .frame(width: radius * 3, height: radius * 3)
                 .position(x: center.x - radius * 0.25, y: center.y + radius * 0.35)
-            RadialGradient(colors: [Soft.roseWash.opacity(dark ? 0.5 : 0.85), Soft.roseWash.opacity(0)],
+            RadialGradient(colors: [StrandPalette.washRose.opacity(dark ? 0.5 : 0.85), StrandPalette.washRose.opacity(0)],
                            center: .center, startRadius: 0, endRadius: radius * 1.2)
                 .frame(width: radius * 2.4, height: radius * 2.4)
                 .position(x: center.x + radius * 0.35, y: center.y - radius * 0.2)
-            RadialGradient(colors: [Soft.blueWash.opacity(dark ? 0.45 : 0.75), Soft.blueWash.opacity(0)],
+            RadialGradient(colors: [StrandPalette.washBlue.opacity(dark ? 0.45 : 0.75), StrandPalette.washBlue.opacity(0)],
                            center: .center, startRadius: 0, endRadius: radius * 1.1)
                 .frame(width: radius * 2.2, height: radius * 2.2)
                 .position(x: center.x + radius * 0.1, y: center.y - radius * 0.75)
@@ -101,7 +101,7 @@ struct AuraHero: View {
         let tilt = -0.32
         let (ct, st) = (cos(theta), sin(theta))
         let (cx, sx) = (cos(tilt), sin(tilt))
-        let top = Soft.violet, mid = Soft.rose, bottom = Soft.peach
+        let top = StrandPalette.hueViolet, mid = StrandPalette.hueRose, bottom = StrandPalette.huePeach
         for p in Self.points {
             // Rotate around Y, then tilt around X.
             let x1 = p.x * ct + p.z * st
@@ -136,18 +136,18 @@ struct AuraHero: View {
             p.move(to: anchor)
             p.addLine(to: marker)
         }
-        .stroke(Soft.ink3.opacity(0.55), lineWidth: 0.8)
+        .stroke(StrandPalette.textTertiary.opacity(0.55), lineWidth: 0.8)
 
         AuraMarker().position(marker)
 
         VStack(alignment: c.side == .leading ? .leading : .trailing, spacing: 2) {
-            Text(c.title).font(.system(size: 13, weight: .medium)).foregroundStyle(Soft.ink)
+            Text(c.title).font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(c.value).font(Soft.number(24))
+                Text(c.value).font(StrandFont.number(24))
                 Text(c.unit).font(.system(size: 14, weight: .medium))
             }
-            .foregroundStyle(Soft.ink)
-            Text(c.status).font(.system(size: 12)).foregroundStyle(Soft.ink3)
+            .foregroundStyle(StrandPalette.textPrimary)
+            Text(c.status).font(.system(size: 12)).foregroundStyle(StrandPalette.textTertiary)
         }
         .frame(width: labelW, alignment: c.side == .leading ? .leading : .trailing)
         .position(x: labelX, y: labelY)
@@ -162,9 +162,8 @@ private struct AuraMarker: View {
             Circle().fill(Color.white.opacity(0.35)).frame(width: 34, height: 34)
                 .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 1))
             Circle().fill(Color.white).frame(width: 14, height: 14)
-            Circle().fill(Soft.marker).frame(width: 8, height: 8)
+            Circle().fill(StrandPalette.hueYellow).frame(width: 8, height: 8)
         }
         .shadow(color: .black.opacity(0.08), radius: 4, y: 1)
     }
 }
-#endif

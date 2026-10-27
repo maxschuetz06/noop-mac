@@ -4,8 +4,6 @@ import XCTest
 /// Pins the L3 `StressOnsetDetector` — the highest-value test, guarding the credibility line: it fires
 /// ONCE on a fresh non-metabolic HRV dip, is suppressed by the exercise gate (HR-out-of-band and/or
 /// motion), honours the rate limit + quiet hours, and replays safely (a re-fed window can't re-fire).
-/// GOLDEN/behaviour vectors the Kotlin `StressOnsetDetectorTest` mirrors.
-/// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L3).
 final class StressOnsetDetectorTests: XCTestCase {
 
     private let on = StressOnsetDetector.Config(enabled: true, autoNudge: true)

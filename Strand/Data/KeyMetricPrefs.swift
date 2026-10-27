@@ -9,8 +9,7 @@ import SwiftUI
 // differently; this just decides which of the already-computed tiles render and in what sequence.
 //
 // Stored as a single comma-joined string of metric keys in @AppStorage (UserDefaults), the same
-// mechanism every other macOS NOOP preference uses. The Android side mirrors this exactly in
-// KeyMetricPrefs.kt (SharedPreferences "today.keyMetrics"). Unknown keys are dropped on read and any
+// mechanism every other macOS NOOP preference uses. Unknown keys are dropped on read and any
 // known key missing from the saved list is appended (disabled) so a future tile addition can't be lost.
 
 /// One of the Today screen's Key-Metric tiles. The rawValue is the stable persisted identifier — keep it

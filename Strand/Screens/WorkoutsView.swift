@@ -42,12 +42,6 @@ struct WorkoutsView: View {
     @State private var range: Range = .all
     private let usesPreviewRows: Bool
 
-    // iPhone (.compact) can't fit the labelled "Add workout" button beside the 5-segment range pill —
-    // the button got crushed into a tall sliver (#234/#339). Stack them there; iPad/Mac keep one row.
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var hSizeClass
-    #endif
-
     /// The add/edit sheet target: `.some(nil)` = add a new workout, `.some(row)` = edit `row`,
     /// `nil` = sheet closed. Wrapped in Identifiable so `.sheet(item:)` can drive presentation.
     @State private var sheet: WorkoutSheetTarget?
@@ -156,11 +150,7 @@ struct WorkoutsView: View {
                 WorkoutDetailView(row: target.row)
                     .environmentObject(repo)
             }
-            #if os(iOS)
-            .noopSheetPresentation(largeFirst: true)
-            #else
             .frame(width: 620, height: 720)
-            #endif
         }
         // #459: the in-exercise view, presented when Start Workout is tapped here (same screen LiveView
         // shows). activeWorkout is global on AppModel, so ending it from either surface stays in sync.
@@ -269,23 +259,11 @@ struct WorkoutsView: View {
     private func rangeBar(rows: [WorkoutRow], effectiveRange: Range) -> some View {
         let fellBack = effectiveRange != range
         let caption = rangeCaption(rows: rows, effectiveRange: effectiveRange, fellBack: fellBack)
-        #if os(iOS)
-        let stacked = hSizeClass == .compact
-        #else
-        let stacked = false
-        #endif
         return VStack(alignment: .leading, spacing: 8) {
-            if stacked {
-                // iPhone: button on its own row, the range pill full-width below — no crushed sliver.
+            HStack(spacing: 12) {
                 addWorkoutButton
+                Spacer()
                 SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                HStack(spacing: 12) {
-                    addWorkoutButton
-                    Spacer()
-                    SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
-                }
             }
             Text(caption)
                 .font(StrandFont.footnote)
@@ -668,25 +646,8 @@ struct WorkoutsView: View {
                           overline: "Log",
                           trailing: "\(rows.count) total")
             NoopCard(padding: 0) {
-                // The fixed-width columns total ≈612pt — wider than an iPhone — so on iOS the table
-                // scrolls horizontally instead of clipping the SPORT / DIST / SOURCE columns (#183).
-                // macOS windows are wide enough to show it all, so they keep the full-width layout.
-                #if os(iOS)
-                ScrollView(.horizontal, showsIndicators: true) {
-                    sessionsTable(rows: rows)
-                }
-                #else
                 sessionsTable(rows: rows)
-                #endif
             }
-            #if os(iOS)
-            // Each row now carries a visible "•••" actions button; the long-press contextMenu still
-            // works as a secondary path (#183).
-            Text("Tap a workout for its detail · tap ••• to re-label, edit or delete it.")
-                .font(StrandFont.caption)
-                .foregroundStyle(StrandPalette.textTertiary)
-                .padding(.horizontal, 4)
-            #endif
         }
     }
 

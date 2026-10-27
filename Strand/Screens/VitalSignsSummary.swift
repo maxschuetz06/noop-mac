@@ -289,20 +289,9 @@ enum BodyVitalSigns {
         localDayFormatter.string(from: now.addingTimeInterval(-Double(rolloverHour) * 3_600))
     }
 
-    private static let localDayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let localDayFormatter = DayKey.makeFormatter()
 
-    static let dayParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    static let dayParser = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     static let dayFormatter: DateFormatter = {
         let f = DateFormatter()

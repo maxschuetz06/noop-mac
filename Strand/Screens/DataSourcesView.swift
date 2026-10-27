@@ -265,23 +265,12 @@ struct DataSourcesView: View {
     }
 
     private func presentImporter(_ target: ImportTarget) {
-        #if os(iOS)
-        // iOS: go through UIDocumentPickerViewController with asCopy:true (DocumentPicker) rather than
-        // SwiftUI's `.fileImporter` (#179). asCopy makes iOS DOWNLOAD an iCloud-Drive placeholder and
-        // hand us a readable local copy — `.fileImporter` instead returns a security-scoped URL that,
-        // for an undownloaded iCloud file, can't be read, and the whole import silently did nothing.
-        Task {
-            guard let url = await DocumentPicker.importFile(target.allowedContentTypes) else { return } // cancelled
-            handlePickedURL(url, for: target)
-        }
-        #else
         // macOS: an explicit NSOpenPanel built per target at click time (see ImportPanel). SwiftUI's
         // `.fileImporter` left the .zip export and its unzipped folder both greyed out on the mixed
         // `[.zip, .folder]` list, and read its types from a view update that raced the target switch.
         ImportPanel.present(for: target) { url in
             handlePickedURL(url, for: target)
         }
-        #endif
     }
 
     private func handlePickedURL(_ url: URL, for target: ImportTarget) {
@@ -331,14 +320,8 @@ struct DataSourcesView: View {
                     nutritionImporting = false
                     return
                 }
-                guard let store = await repo.storeHandle() else {
-                    nutritionSummary = "Couldn't open the local store."
-                    nutritionFailed = true
-                    nutritionImporting = false
-                    return
-                }
                 let points = result.metricPoints.map { MetricPoint(day: $0.day, key: $0.key, value: $0.value) }
-                try await store.upsertMetricSeries(points, deviceId: NutritionCsvImporter.sourceId)
+                try await repo.saveMetricPoints(points, source: NutritionCsvImporter.sourceId)
                 await repo.refresh()
                 var msg = "Imported \(result.importedDays) days (\(points.count) values)"
                 if let a = result.earliestDay, let b = result.latestDay, a != b { msg += " · \(a) – \(b)" }
@@ -346,6 +329,9 @@ struct DataSourcesView: View {
                 nutritionSummary = msg
                 nutritionFailed = false
                 logImport("Nutrition CSV: \(result.importedDays) days, \(points.count) values, \(result.skippedRows) rejected")
+            } catch RepositoryError.storeUnavailable {
+                nutritionSummary = "Couldn't open the local store."
+                nutritionFailed = true
             } catch {
                 nutritionSummary = "Import failed: \(error.localizedDescription)"
                 nutritionFailed = true
@@ -375,12 +361,6 @@ struct DataSourcesView: View {
                     liftingImporting = false
                     return
                 }
-                guard let store = await repo.storeHandle() else {
-                    liftingSummary = "Couldn't open the local store."
-                    liftingFailed = true
-                    liftingImporting = false
-                    return
-                }
                 let rows = result.sessions.map { s in
                     WorkoutRow(
                         startTs: Int(s.start.timeIntervalSince1970),
@@ -397,7 +377,7 @@ struct DataSourcesView: View {
                         notes: s.volumeLoadNote()
                     )
                 }
-                try await store.upsertWorkouts(rows, deviceId: LiftingImporter.sourceId)
+                try await repo.saveWorkouts(rows, source: LiftingImporter.sourceId)
                 await repo.refresh()
                 let totalVolume = result.sessions.reduce(0.0) { $0 + $1.volumeLoadKg }
                 var msg = "Imported \(result.sessionCount) workout\(result.sessionCount == 1 ? "" : "s")"
@@ -411,6 +391,9 @@ struct DataSourcesView: View {
                 liftingSummary = msg
                 liftingFailed = false
                 logImport("Lifting log: \(result.sessionCount) workouts, \(result.skipped) rejected")
+            } catch RepositoryError.storeUnavailable {
+                liftingSummary = "Couldn't open the local store."
+                liftingFailed = true
             } catch {
                 liftingSummary = "Import failed: \(error.localizedDescription)"
                 liftingFailed = true
@@ -449,12 +432,6 @@ struct DataSourcesView: View {
                     activityFileImporting = false
                     return
                 }
-                guard let store = await repo.storeHandle() else {
-                    activityFileSummary = "Couldn't open the local store."
-                    activityFileFailed = true
-                    activityFileImporting = false
-                    return
-                }
                 let sport = ActivityFileImporter.workoutSport(from: activity.sport)
                 let row = WorkoutRow(
                     startTs: Int(activity.start.timeIntervalSince1970),
@@ -470,11 +447,14 @@ struct DataSourcesView: View {
                     zonesJSON: nil,
                     notes: activity.importNote()
                 )
-                try await store.upsertWorkouts([row], deviceId: ActivityFileImporter.sourceId)
+                try await repo.saveWorkouts([row], source: ActivityFileImporter.sourceId)
                 await repo.refresh()
                 activityFileSummary = ActivityFileImporter.summaryText(activity)
                 activityFileFailed = false
                 logImport("Workout file (\(sport)): 1 workout imported")
+            } catch RepositoryError.storeUnavailable {
+                activityFileSummary = "Couldn't open the local store."
+                activityFileFailed = true
             } catch {
                 activityFileSummary = "Import failed: \(error.localizedDescription)"
                 activityFileFailed = true
@@ -495,17 +475,14 @@ struct DataSourcesView: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
-                guard let store = await repo.storeHandle() else {
-                    wearableSummary = "Couldn't open the local store."
-                    wearableFailed = true
-                    wearableImporting = false
-                    return
-                }
-                let result = try await WearableImporter.importExport(url: url, into: store)
+                let result = try await repo.importWearableExport(url: url)
                 await repo.refresh()
                 wearableSummary = WearableExportImporter.summaryText(result)
                 wearableFailed = false
                 logImport("\(result.brand.displayName) export: \(result.days.count) days, \(result.sleeps.count) sleeps, \(result.summary.skippedSpans) rejected")
+            } catch RepositoryError.storeUnavailable {
+                wearableSummary = "Couldn't open the local store."
+                wearableFailed = true
             } catch {
                 wearableSummary = "Import failed: \(error.localizedDescription)"
                 wearableFailed = true
@@ -526,20 +503,15 @@ struct DataSourcesView: View {
         appleHealthDeleting = true
         appleHealthDeletedSummary = nil
         Task {
-            guard let store = await repo.storeHandle() else {
-                appleHealthDeletedSummary = nil
-                appleHealthDeleting = false
-                return
-            }
             do {
-                // `registryQueue` is the nonisolated GRDB handle the synchronous DeviceRegistryStore
-                // wraps — same construction the rest of the app uses (AppModel / BLEManager).
-                try DeviceRegistryStore(dbQueue: store.registryQueue).deleteAllData(deviceId: model.appleDeviceId)
+                try await repo.deleteAllData(deviceId: model.appleDeviceId)
                 await repo.refresh()
                 model.appleHealthImportSummary = nil
                 model.appleHealthImportFailed = false
                 appleHealthDeletedSummary = "Removed all Apple Health imported data."
                 logImport("Apple Health: imported data removed")
+            } catch RepositoryError.storeUnavailable {
+                appleHealthDeletedSummary = nil
             } catch {
                 appleHealthDeletedSummary = "Couldn't remove the data: \(error.localizedDescription)"
                 logImport("Apple Health delete failed: \(error.localizedDescription)")
@@ -549,10 +521,7 @@ struct DataSourcesView: View {
     }
 
     private var liftingDayFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")   // sessions are stored at UTC; label the same span
-        f.dateFormat = "yyyy-MM-dd"
+        let f = DayKey.makeFormatter(timeZone: DayKey.utc)
         return f
     }
 
@@ -714,32 +683,17 @@ enum ImportTarget {
     case wearable
 
     var allowedContentTypes: [UTType] {
-        // `.folder` lets macOS users point at an *unzipped* export directory. On iOS the Files
-        // picker can't meaningfully pick a folder here, and including `UTType.folder` in the type
-        // list greys out the .zip itself — so the picker opens but nothing is selectable
-        // (issue #179). iOS therefore offers only the concrete file types.
+        // `.folder` lets the user point at an *unzipped* export directory.
         switch self {
         case .whoop:
-            #if os(macOS)
             return [.zip, .folder]
-            #else
-            return [.zip]
-            #endif
         case .appleHealth:
-            #if os(macOS)
             return [.zip, .xml, .folder]
-            #else
-            return [.zip, .xml]
-            #endif
         case .xiaomi:
-            // The Mi Fitness sandbox is shared as a .zip (or, on macOS, an unzipped
-            // folder); the bare `<user_id>.db` is also accepted directly.
+            // The Mi Fitness sandbox is shared as a .zip (or an unzipped folder); the bare
+            // `<user_id>.db` is also accepted directly.
             let db = UTType(filenameExtension: "db") ?? .data
-            #if os(macOS)
             return [.zip, .folder, db]
-            #else
-            return [.zip, db]
-            #endif
         case .nutrition:
             return [.commaSeparatedText, .plainText]
         case .lifting:
@@ -757,11 +711,7 @@ enum ImportTarget {
         case .wearable:
             // Oura is a single .json; Fitbit (Google Takeout) and Garmin (GDPR) are .zip bundles.
             // On macOS an unzipped folder is also accepted. The importer sniffs the brand by content.
-            #if os(macOS)
             return [.json, .zip, .folder, .data]
-            #else
-            return [.json, .zip, .data]
-            #endif
         }
     }
 }

@@ -29,6 +29,10 @@ final class StrapHapticsStopTests: XCTestCase {
         ])
     }
 
+    func testDisableRev2IsTheClearingBody() {
+        XCTAssertEqual(AlarmPayload.disableRev2(), [0x02, 0xFF])
+    }
+
     private struct Sent: Equatable {
         let command: WhoopCommand
         let payload: [UInt8]

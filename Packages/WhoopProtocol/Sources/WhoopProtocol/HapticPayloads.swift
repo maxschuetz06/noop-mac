@@ -4,9 +4,8 @@ import Foundation
 ///
 /// These are WHOOP 5.0/MG protocol facts — command numbers, field offsets and byte layouts —
 /// documented as factual wire-format observations for interoperability; no proprietary code is
-/// reproduced (see ATTRIBUTION.md / DISCLAIMER.md). Swift twin of the Android
-/// `protocol/AlarmPayload.kt`; byte parity is pinned by cross-platform golden frames in both
-/// test suites. All multi-byte fields are little-endian. Revision values: REVISION_1=1,
+/// reproduced (see ATTRIBUTION.md / DISCLAIMER.md). Golden frames in the tests pin the bytes.
+/// All multi-byte fields are little-endian. Revision values: REVISION_1=1,
 /// REVISION_2=2, REVISION_4=4.
 ///
 /// EXPERIMENTAL / UNCONFIRMED (same posture as the Android client): unlike the maverick buzz
@@ -40,7 +39,7 @@ public enum AlarmPayload {
     ///   [8..19]  haptic pattern: 8 effects + u16 LE loopControl(0) + overallLoop(7) + duration(30)
     /// ```
     public static func setAlarmRev4(wakeEpochMs: Int64, alarmId: UInt8 = 1) -> [UInt8] {
-        // Clamp rather than trap (matches armStrapAlarm's WHOOP4 posture for absurd dates).
+        // Clamp rather than trap for absurd dates.
         let seconds = UInt32(clamping: wakeEpochMs / 1000)
         let subseconds = UInt16(clamping: (max(0, wakeEpochMs % 1000) * 32768) / 1000)
         return [0x04, alarmId,

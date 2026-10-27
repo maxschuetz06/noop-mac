@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 
 // Baselines.swift — personal rolling baselines per nightly metric.
@@ -161,6 +162,7 @@ public enum Baselines {
     public static var hrvCfg: MetricCfg { metricCfg["hrv"]! }
     public static var restingHRCfg: MetricCfg { metricCfg["resting_hr"]! }
     public static var respCfg: MetricCfg { metricCfg["resp"]! }
+    public static var skinTempCfg: MetricCfg { metricCfg["skin_temp"]! }
 
     /// Convert a half-life in nights to an EWMA smoothing factor.
     static func lambda(halfLife: Double) -> Double {
@@ -317,10 +319,7 @@ public enum Baselines {
         guard epoch > 0 else { return foldHistory(values, cfg: cfg) }
 
         // Pre-build the day-start epoch (UTC) for each "yyyy-MM-dd" key once.
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
+        let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
 
         var state: BaselineState? = nil
         for (i, v) in values.enumerated() {

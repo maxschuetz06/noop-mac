@@ -78,9 +78,7 @@ final class HealthVitalsOverlayTests: XCTestCase {
         let spo2 = try XCTUnwrap(out.first { $0.key == "spo2" })
         XCTAssertNil(spo2.value)
         XCTAssertNil(spo2.formattedValue)
-        #if os(macOS)
         XCTAssertEqual(spo2.stateCaption, String(localized: "Not yet available from WHOOP 5.0 on this Mac"))
-        #endif
     }
 
     func testPresentSpo2IsUntouched() throws {

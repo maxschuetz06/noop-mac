@@ -3,7 +3,7 @@ import XCTest
 
 /// `SpotHrvReading` — the on-demand "take an HRV reading now" spot RMSSD path (#537).
 ///
-/// Swift parity twin of `android/.../analytics/SpotHrvReadingTest.kt`. The headline guarantee these
+/// The headline guarantee these
 /// tests pin is CONSISTENCY: the spot value uses the SAME RMSSD math as NOOP's nightly HRV
 /// (`HRVAnalyzer.rmssdRaw`, Task Force 1996, sample (n-1) denominator), so a spot reading is comparable
 /// to the overnight number, not a few percent off it. We assert the value against a hand-computed (n-1)

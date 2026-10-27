@@ -34,81 +34,84 @@ public final class FrameRouter {
         if state.lastFrameType != parsed.typeName { state.lastFrameType = parsed.typeName }
 
         switch parsed.typeName {
-        case "REALTIME_DATA", "REALTIME_RAW_DATA":
-            // Reject 0 / out-of-range spikes from realtime streams; AppModel medians the rest.
-            // Some firmware exposes live BPM only on the R10/R11 raw stream after acknowledging
-            // BLE_REALTIME_HR_ON, so the UI can consume it even though persistence still ignores raw43.
-            // live perf: skip the publish when HR is unchanged — the raw flood carries the same HR
-            // byte across many frames, so an unguarded write re-renders the whole console for nothing.
-            if let hr = parsed.parsed["heart_rate"]?.intValue, hr >= 30, hr <= 220, state.heartRate != hr {
-                state.heartRate = hr
-            }
-            // The realtime stream usually reports rr_count=0; only update R-R when this frame
-            // actually carries intervals, so we don't wipe R-R sourced from the 0x2A37 profile.
-            // setRRIntervals also feeds the Live console's rolling rrRecent buffer.
-            if let rr = parsed.parsed["rr_intervals"]?.intArrayValue, !rr.isEmpty {
-                state.setRRIntervals(rr)
-            }
+        case "REALTIME_DATA", "REALTIME_RAW_DATA": applyRealtime(parsed)
+        case "COMMAND_RESPONSE": applyCommandResponse(parsed, frame: frame)
+        case "EVENT": applyEvent(parsed)
+        default: break
+        }
+    }
 
-        case "COMMAND_RESPONSE":
-            if let pct = parsed.parsed["battery_pct"]?.doubleValue {
-                state.setBattery(pct)
-            }
-            // Advertising-name replies (WHOOP 4.0 / Harvard). GET (cmd 76) carries the current name in
-            // its payload; SET (cmd 77) carries only a result byte. The schema has no field decode for
-            // either, so pull them straight from the frame bytes. The COMMAND_RESPONSE inner is
-            // [type,seq,cmd,origin_seq,result,payload…] starting at offset 4, with crc32 at `length`.
-            if family == .whoop4, let cmd = parsed.cmdName {
-                if cmd == "GET_ADVERTISING_NAME_HARVARD" {
-                    if let name = Self.advertisingName(in: frame), !name.isEmpty {
-                        state.advertisingName = name
-                    }
-                } else if cmd == "SET_ADVERTISING_NAME_HARVARD" {
-                    state.renameStatus = Self.renameAck(for: Self.commandResultByte(in: frame))
-                }
-            }
+    private func applyRealtime(_ parsed: ParsedFrame) {
+        // Reject 0 / out-of-range spikes from realtime streams; AppModel medians the rest.
+        // Some firmware exposes live BPM only on the R10/R11 raw stream after acknowledging
+        // BLE_REALTIME_HR_ON, so the UI can consume it even though persistence still ignores raw43.
+        // live perf: skip the publish when HR is unchanged — the raw flood carries the same HR
+        // byte across many frames, so an unguarded write re-renders the whole console for nothing.
+        if let hr = parsed.parsed["heart_rate"]?.intValue, hr >= 30, hr <= 220, state.heartRate != hr {
+            state.heartRate = hr
+        }
+        // The realtime stream usually reports rr_count=0; only update R-R when this frame
+        // actually carries intervals, so we don't wipe R-R sourced from the 0x2A37 profile.
+        // setRRIntervals also feeds the Live console's rolling rrRecent buffer.
+        if let rr = parsed.parsed["rr_intervals"]?.intArrayValue, !rr.isEmpty {
+            state.setRRIntervals(rr)
+        }
+    }
 
-        case "EVENT":
-            if let ev = parsed.parsed["event"]?.stringValue {
-                // #92: don't surface the live-HR stream toggle (BLE_REALTIME_HR_ON/OFF) in "Last
-                // Event" — it's internal plumbing that fires on every connect and just confuses
-                // users. Every other event (wrist, double-tap, battery, bonded…) still shows.
-                if !ev.hasPrefix("BLE_REALTIME_HR") {
-                    state.lastEvent = ev
+    private func applyCommandResponse(_ parsed: ParsedFrame, frame: [UInt8]) {
+        if let pct = parsed.parsed["battery_pct"]?.doubleValue {
+            state.setBattery(pct)
+        }
+        // Advertising-name replies (WHOOP 4.0 / Harvard). GET (cmd 76) carries the current name in
+        // its payload; SET (cmd 77) carries only a result byte. The schema has no field decode for
+        // either, so pull them straight from the frame bytes. The COMMAND_RESPONSE inner is
+        // [type,seq,cmd,origin_seq,result,payload…] starting at offset 4, with crc32 at `length`.
+        if family == .whoop4, let cmd = parsed.cmdName {
+            if cmd == "GET_ADVERTISING_NAME_HARVARD" {
+                if let name = Self.advertisingName(in: frame), !name.isEmpty {
+                    state.advertisingName = name
                 }
-                // Strap-pushed event = "I may have new data" → kick a (rate-limited) sync.
-                onSyncTrigger?()
-                // Belt-and-suspenders: a BLE_BONDED event confirms the link is bonded.
-                // (BLEManager also sets bonded=true when the confirmed write succeeds.)
-                if ev.hasPrefix("BLE_BONDED") {
-                    state.bonded = true
-                }
-                // BATTERY_LEVEL events carry the only charging flag the strap reports (wire
-                // observation: u8 bit0, ~every 8 min on captured links). Flag only — battery %
-                // keeps its family-specific source (#77). No freshness gate needed here: this
-                // path never sees historical replay (backfill skips handle(frame:), see below).
-                if ev.hasPrefix("BATTERY_LEVEL"),
-                   let ch = parsed.parsed["battery_charging"]?.intValue {
-                    state.charging = (ch != 0)
-                }
-                // Physical inputs the strap exposes — live only (this path never sees historical
-                // replay, which goes through the Backfiller). Event strings are "NAME(rawValue)".
-                if ev.hasPrefix("DOUBLE_TAP") {
-                    state.onDoubleTap?()
-                } else if ev.hasPrefix("WRIST_ON") {
-                    if !state.worn { state.worn = true; state.onWristChange?(true) }
-                } else if ev.hasPrefix("WRIST_OFF") {
-                    if state.worn { state.worn = false; state.onWristChange?(false) }
-                } else if ev.hasPrefix("STRAP_DRIVEN_ALARM_EXECUTED") {
-                    // The strap fired its firmware smart alarm → re-arm the next day's instant (the
-                    // alarm is a single absolute time with no recurrence). Belt-and-suspenders to the
-                    // daily/foreground re-arm in AppModel, since this event isn't always observed.
-                    state.onSmartAlarmFired?()
-                }
+            } else if cmd == "SET_ADVERTISING_NAME_HARVARD" {
+                state.renameStatus = Self.renameAck(for: Self.commandResultByte(in: frame))
             }
+        }
+    }
 
-        default:
-            break
+    private func applyEvent(_ parsed: ParsedFrame) {
+        if let ev = parsed.parsed["event"]?.stringValue {
+            // #92: don't surface the live-HR stream toggle (BLE_REALTIME_HR_ON/OFF) in "Last
+            // Event" — it's internal plumbing that fires on every connect and just confuses
+            // users. Every other event (wrist, double-tap, battery, bonded…) still shows.
+            if !ev.hasPrefix("BLE_REALTIME_HR") {
+                state.lastEvent = ev
+            }
+            // Strap-pushed event = "I may have new data" → kick a (rate-limited) sync.
+            onSyncTrigger?()
+            // Belt-and-suspenders: a BLE_BONDED event confirms the link is bonded.
+            // (BLEManager also sets bonded=true when the confirmed write succeeds.)
+            if ev.hasPrefix("BLE_BONDED") {
+                state.bonded = true
+            }
+            // BATTERY_LEVEL events carry the only charging flag the strap reports (wire
+            // observation: u8 bit0, ~every 8 min on captured links). Flag only — battery %
+            // keeps its family-specific source (#77). No freshness gate needed here: this
+            // path never sees historical replay (backfill skips handle(frame:), see below).
+            if ev.hasPrefix("BATTERY_LEVEL"),
+               let ch = parsed.parsed["battery_charging"]?.intValue {
+                state.charging = (ch != 0)
+            }
+            // Physical inputs the strap exposes — live only (this path never sees historical
+            // replay, which goes through the Backfiller). Event strings are "NAME(rawValue)".
+            if ev.hasPrefix("DOUBLE_TAP") {
+                state.onDoubleTap?()
+            } else if ev.hasPrefix("WRIST_ON") {
+                if !state.worn { state.worn = true; state.onWristChange?(true) }
+            } else if ev.hasPrefix("WRIST_OFF") {
+                if state.worn { state.worn = false; state.onWristChange?(false) }
+            } else if ev.hasPrefix("STRAP_DRIVEN_ALARM_EXECUTED") {
+                // NOOP arms no firmware alarm; an alarm left on the strap by another app can still fire.
+                state.append(log: "Strap event: firmware alarm executed (not armed by NOOP)")
+            }
         }
     }
 

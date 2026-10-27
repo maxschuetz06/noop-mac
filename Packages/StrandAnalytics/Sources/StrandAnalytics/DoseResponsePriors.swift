@@ -15,14 +15,10 @@ import Foundation
 //     dose lands (the caffeine "dose" axis is a TIMING bucket, not mg — copy says so).
 //
 // Magnitudes are intentionally modest and are surfaced to the user AS priors, framed as
-// "typical patterns" — wellness association, never a causal/clinical claim. Values mirror
-// the Kotlin DoseResponsePriors twin byte-for-byte so a future sync round-trips.
-//
-// (Spec: 2026-06-19-v5-insights-correlation-engine-design.md — "Personal dose-response
-// with population-prior shrinkage", DoseResponsePriors.swift in the file table.)
+// "typical patterns" — wellness association, never a causal/clinical claim.
 
 /// Identifies a dosed behaviour whose dose-response has a documented population prior.
-/// The raw string is the stable storage / lookup key (mirrors Kotlin's enum `raw`).
+/// The raw string is the stable storage / lookup key.
 public enum DosedBehavior: String, Equatable, Sendable, Codable, CaseIterable {
     /// Alcoholic drinks, dose = number of drinks (0/1/2/3+ ⇒ 0,1,2,3).
     case alcohol
@@ -67,9 +63,9 @@ public enum DoseResponsePriors {
         }
     }
 
-    /// The documented, conservative priors. Kept small and explicit so the Kotlin twin is
-    /// byte-identical. Magnitudes are "typical, not yours" and are always overridable by the
-    /// user's own data once they have enough of it (see DoseResponseEngine shrinkage).
+    /// The documented, conservative priors, kept small and explicit. Magnitudes are "typical, not yours"
+    /// and are always overridable by the user's own data once they have enough of it (see
+    /// DoseResponseEngine shrinkage).
     ///
     /// - Alcohol → Charge: ≈ −5 Charge points per extra drink (clamped −15…+2).
     /// - Caffeine → HRV:   ≈ −4 ms per step later in the day (clamped −20…+4).

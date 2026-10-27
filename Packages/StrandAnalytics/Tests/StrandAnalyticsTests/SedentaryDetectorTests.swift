@@ -2,10 +2,9 @@ import XCTest
 @testable import StrandAnalytics
 import WhoopProtocol
 
-/// Tests for SedentaryDetector — the pure core of the inactivity reminder. The detection tests mirror
-/// the Android ActivityDetectorTest; the decision tests cover the live-path guard (fires after the
-/// threshold; not inside cooldown; not outside active hours; resets on movement; respects the toggle).
-/// Fixtures are IDENTICAL to SedentaryDetectorTest.kt so the two engines prove byte-identical output.
+/// Tests for SedentaryDetector — the pure core of the inactivity reminder. The decision tests cover the
+/// live-path guard (fires after the threshold; not inside cooldown; not outside active hours; resets on
+/// movement; respects the toggle).
 final class SedentaryDetectorTests: XCTestCase {
 
     // Cadence ~3 s (close to real offload data) so the 240 s smoothing window behaves realistically.

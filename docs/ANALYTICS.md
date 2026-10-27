@@ -36,25 +36,25 @@ The package contains more analytics than the app currently surfaces. This sectio
 
 | Engine | File | Status in the app |
 |---|---|---|
-| `HRVAnalyzer` | `HRVAnalyzer.swift` | **Library-only** as a type. The app computes RMSSD inline via `AppModel.rmssd(_:)` (same Task-Force formula) for the live stress nudge. |
-| `RecoveryScorer` | `RecoveryScorer.swift` | **Live.** Computes the **Charge** score. Runs inside `AnalyticsEngine.analyzeDay` via `Strand/Data/IntelligenceEngine.swift`; computed values are persisted under the `"<deviceId>-noop"` source and merged **under** any imported `recovery_score_pct` (imports always win). APPROXIMATE. |
+| `HRVAnalyzer` | `HRVAnalyzer.swift` | **Library-only** as a type. The app computes RMSSD inline in `StressMonitor` (`Strand/App/StressMonitor.swift`, same Task-Force formula) for the live stress nudge. |
+| `RecoveryScorer` | `RecoveryScorer.swift` | **Live.** Computes the **Charge** score. Runs inside `AnalyticsEngine.analyzeDay` via `RecomputePipeline` (StrandAnalytics), which `Strand/Data/IntelligenceEngine.swift` schedules; computed values are persisted under the `"<deviceId>-noop"` source and merged **under** any imported `recovery_score_pct` (imports always win). APPROXIMATE. |
 | `StrainScorer` | `StrainScorer.swift` | **Live.** Computes the **Effort** score (0–100). Day load is computed on-device for nights the strap offloaded; the imported `day_strain` column still wins for imported days. APPROXIMATE. |
 | `SleepStager` | `SleepStager.swift` | **Live.** Stages each offloaded night inside `analyzeDay`; the per-night stages feed the **Rest** composite. Computed sessions are persisted under the `"-noop"` source, with imported sleeps taking precedence. APPROXIMATE. |
-| `Baselines` | `Baselines.swift` | **Live.** Seeds the recovery baseline in `IntelligenceEngine.analyzeRecent` (two-pass cold-start). The illness early-warning in `AppModel` still uses its own trailing-window baseline math inline (see below). |
+| `Baselines` | `Baselines.swift` | **Live.** Seeds the recovery baseline in `RecomputePipeline` (`RecomputeBaselines`, two-pass cold-start). The illness early-warning in `HealthSignalEngines` still uses its own trailing-window baseline math inline (see below). |
 | `WorkoutDetector` / `Calories` | `WorkoutDetector.swift` | **Live.** Runs inside `AnalyticsEngine.analyzeDay`; detected bouts are persisted as `workout` rows under the computed `"<deviceId>-noop"` source (sport `"detected"`), de-duplicated against imported WHOOP workouts. All intensity/calorie fields are APPROXIMATE. Not yet surfaced in the Workouts screen. |
-| `AnalyticsEngine` | `AnalyticsEngine.swift` | **Live orchestrator.** `analyzeDay(...)` is called by `Strand/Data/IntelligenceEngine.swift` — every 15 minutes while connected, and from the Intelligence screen — and its `DailyMetric`, sleep sessions and detected workouts are persisted under the `"-noop"` source. |
-| `HRZones` | `HRZones.swift` | **Library-only** (display zone model). The app's live zone coaching computes `%HRmax` inline in `AppModel.coachZone(_:)`. |
+| `AnalyticsEngine` | `AnalyticsEngine.swift` | **Live orchestrator.** `analyzeDay(...)` is called by `RecomputePipeline` (StrandAnalytics), which `Strand/Data/IntelligenceEngine.swift` runs every 15 minutes while connected — and its `DailyMetric`, sleep sessions and detected workouts are persisted under the `"-noop"` source. |
+| `HRZones` | `HRZones.swift` | **Library-only** (display zone model). The app's live zone coaching computes `%HRmax` inline in `StrapInputAutomation.coachZone(_:)`. |
 | `CorrelationEngine` | `CorrelationEngine.swift` | **Live.** Used by `InsightsView`, `CompareView`, `MetricExplorerView`. |
 | `BehaviorInsights` | `BehaviorInsights.swift` | **Live.** Used by `InsightsView` (`rank` + `sentence`). |
 | `ComparisonEngine` | `ComparisonEngine.swift` | **Live.** Used by `MetricExplorerView`. |
 
-**In short:** the *interactive data-interrogation* engines (correlation, behavior effects, period comparison) are wired into screens, and the *recompute-from-raw-streams* engines that produce the three daily scores — Charge (recovery), Effort (strain), Rest (sleep), plus workout detection — run live too: `IntelligenceEngine` calls `analyzeDay` for every night the strap offloaded and persists the APPROXIMATE results under the `"-noop"` source, merged under any imported rows — a WHOOP export still wins wherever it covers a day. The live BLE app additionally runs four small inline analytics in `AppModel`: HR smoothing, RMSSD, HR-zone coaching, an illness/strain early-warning, and a resting-stress nudge.
+**In short:** the *interactive data-interrogation* engines (correlation, behavior effects, period comparison) are wired into screens, and the *recompute-from-raw-streams* engines that produce the three daily scores — Charge (recovery), Effort (strain), Rest (sleep), plus workout detection — run live too: `RecomputePipeline` (scheduled by `IntelligenceEngine`) calls `analyzeDay` for every night the strap offloaded and persists the APPROXIMATE results under the `"-noop"` source, merged under any imported rows — a WHOOP export still wins wherever it covers a day. `AppModel` only wires these pieces together; it computes no scores itself. The live BLE app additionally runs small inline analytics: HR smoothing (in `AppModel`), RMSSD and a resting-stress nudge (`StressMonitor`), HR-zone coaching (`StrapInputAutomation`), and an illness/strain early-warning (`HealthSignalEngines`).
 
 ---
 
-## Live analytics in `AppModel`
+## Live analytics wired by `AppModel`
 
-Source: `Strand/App/AppModel.swift`. These run against the live BLE stream and the daily history, on the main actor.
+Sources: `Strand/App/AppModel.swift` (HR smoothing), `StressMonitor.swift`, `StrapInputAutomation.swift` and `HealthSignalEngines.swift` in `Strand/App/`. `AppModel` feeds them the live BLE stream and the daily history; they run on the main actor.
 
 ### 1. Heart-rate smoothing (`ingestHR`)
 
@@ -74,7 +74,7 @@ bpm = vals.isEmpty ? nil : Int(vals[vals.count / 2].rounded())
 
 Median (not mean) is deliberate: it rejects single-beat outliers without lagging the signal.
 
-### 2. RMSSD for the stress nudge (`rmssd` + `evaluateStress`)
+### 2. RMSSD for the stress nudge (`StressMonitor`)
 
 The live RMSSD uses the classic Task-Force successive-difference formula over a rolling R-R buffer:
 
@@ -87,7 +87,7 @@ static func rmssd(_ rr: [Int]) -> Double {
 }
 ```
 
-`evaluateStress()` is an **experimental, off-by-default** resting-stress nudge:
+`StressMonitor.evaluate(bpm:)` runs an **experimental, off-by-default** resting-stress nudge:
 
 - Only runs when `behavior.stressNudge` is on **and** the strap is bonded **and** worn.
 - Filters R-R to plausible beats (`300 < rr < 2000` ms, i.e. 30–200 bpm), keeps the last 60, needs ≥ 20.
@@ -97,7 +97,7 @@ static func rmssd(_ rr: [Int]) -> Double {
 
 It is intentionally conservative so it rarely false-fires.
 
-### 3. HR-zone haptic coaching (`coachZone`)
+### 3. HR-zone haptic coaching (`StrapInputAutomation.coachZone`)
 
 Watches the smoothed `bpm`, computes `%HRmax` from `profile.hrMax`, and buckets into 5 zones at `0.6 / 0.7 / 0.8 / 0.9` of max:
 
@@ -108,7 +108,7 @@ let zone = pct >= 0.9 ? 5 : pct >= 0.8 ? 4 : pct >= 0.7 ? 3 : pct >= 0.6 ? 2 : 1
 
 On crossing **into zone 5** it buzzes three times ("ease off"); on dropping back **to zone ≤ 1** it buzzes once ("recovered"). Gated on `behavior.zoneCoaching`, bonded, worn, and a valid `hrMax`.
 
-### 4. Illness / strain early-warning (`evaluateIllness`)
+### 4. Illness / strain early-warning (`HealthSignalEngines.evaluateIllness`)
 
 This is the live, app-side version of the baseline-comparison idea. It recomputes whenever the daily history changes (`repo.$days`). It compares the **last ~2 days** against a **~28-day baseline ending 3 days ago** (so the recent window doesn't contaminate its own baseline):
 
@@ -441,7 +441,7 @@ Source: `ComparisonEngine.swift`. Period-over-period comparison of one daily met
 
 ## The library orchestrator: `AnalyticsEngine`
 
-Source: `AnalyticsEngine.swift`. A pure function that ties the recompute engines together for one day, producing the three daily scores — **Charge** (recovery), **Effort** (strain), **Rest** (sleep). **Live:** `analyzeDay` is wired in via `Strand/Data/IntelligenceEngine.swift` — it runs every ~15 minutes while connected and on demand from the Intelligence screen, persisting the computed Charge/Effort/Rest/workouts under the `"<deviceId>-noop"` source and **merged under** imports. Where a WHOOP export covers a day, its own per-day numbers still win; the recompute fills in the days the strap offloaded but no export covers.
+Source: `AnalyticsEngine.swift`. A pure function that ties the recompute engines together for one day, producing the three daily scores — **Charge** (recovery), **Effort** (strain), **Rest** (sleep). **Live:** `analyzeDay` is wired in via `RecomputePipeline`, which `Strand/Data/IntelligenceEngine.swift` runs every ~15 minutes while connected, persisting the computed Charge/Effort/Rest/workouts under the `"<deviceId>-noop"` source and **merged under** imports. Where a WHOOP export covers a day, its own per-day numbers still win; the recompute fills in the days the strap offloaded but no export covers.
 
 `analyzeDay(day:hr:rr:resp:gravity:profile:baselines:maxHROverride:)` runs, in order:
 
@@ -485,13 +485,14 @@ Apple Health XML ──┘                                         │
                                                              │
                           ┌──────────────────────────────────┤
                           ▼                                   ▼
-   IntelligenceEngine ─► AnalyticsEngine.analyzeDay   Repository.days ─► TodayView,
-   (live recompute: HRV + Charge/Effort/Rest +        InsightsView (CorrelationEngine,
-   workouts from raw streams, every ~15 min +         BehaviorInsights), CompareView,
-   Intelligence screen; persisted under the           MetricExplorerView (ComparisonEngine)
-   "<deviceId>-noop" source, merged UNDER imports)
+   IntelligenceEngine ─► RecomputePipeline            Repository.days ─► TodayView,
+   ─► AnalyticsEngine.analyzeDay                      InsightsView (CorrelationEngine,
+   (live recompute: HRV + Charge/Effort/Rest +        BehaviorInsights), CompareView,
+   workouts from raw streams, every ~15 min;          MetricExplorerView (ComparisonEngine)
+   persisted under the "<deviceId>-noop" source,
+   merged UNDER imports)
 
-   live BLE stream ─► AppModel: HR smoothing · RMSSD · zone coaching ·
+   live BLE stream ─► AppModel wiring: HR smoothing · RMSSD · zone coaching ·
                        illness early-warning · resting-stress nudge
 ```
 

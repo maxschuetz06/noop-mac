@@ -5,8 +5,6 @@ import Foundation
 // the strap's actual haptic command (`AppModel.buzz(loops:)` / `send(.runHapticsPattern)`) and schedules
 // the gaps with the proven `HapticClock` asyncAfter walk. No I/O here.
 //
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L1 "Act (the pacer)").
-//
 // Felt language (identical to the shipped Breathe screen, so existing users already know it):
 //   • Inhale onset → ONE light pulse  (loops: 1)
 //   • Exhale onset → TWO pulses       (loops: 2)

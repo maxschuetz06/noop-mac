@@ -25,41 +25,12 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var content: () -> Content
 
-    // iPad runs the shared screens full-screen, where an uncapped column gives 120+ character lines
-    // in landscape. On iOS regular width (iPad) the readable column is capped + centred; compact
-    // (iPhone) and macOS are unchanged. macOS also reports a horizontalSizeClass, so the cap is gated
-    // by `#if os(iOS)` — a runtime size-class check alone would also narrow the Mac detail pane.
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var hSizeClass
-    #endif
-
     var body: some View {
         ScrollView {
             column
-            #if os(macOS)
             .padding(.horizontal, 32).padding(.top, 34).padding(.bottom, 32)
-            #else
-            .padding(28)
-            #endif
-            #if os(iOS)
-            // The tab bar floats over the scroll content, so the last card sat hidden behind it.
-            // Reserve extra bottom scroll room so every screen's final card clears the floating bar.
-            .padding(.bottom, NoopMetrics.tabBarClearance)
-            // iPad: cap the readable column, then centre it in the full-width scroll viewport.
-            // iPhone (.compact): the inner frame is .infinity/.leading, identical to before.
-            .frame(maxWidth: hSizeClass == .regular ? 700 : .infinity,
-                   alignment: hSizeClass == .regular ? .center : .leading)
-            .frame(maxWidth: .infinity, alignment: .center)
-            #else
             .frame(maxWidth: .infinity, alignment: .leading)
-            #endif
         }
-        #if os(iOS)
-        // #697: stop a vertical scroll from drifting/bouncing the screen left-right. `.basedOnSize` only
-        // permits horizontal bounce when content genuinely overflows the width (it does not here, the column
-        // is width-capped), so the spurious horizontal rubber-band that caused the sideways drift is gone.
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        #endif
         // The flat canvas, plus an optional full-bleed TOP backdrop (Today's day-cycle scene) drawn behind
         // the scroll content — edge-to-edge under the status bar. The scene is CONFINED to the header+hero
         // band (see SceneScreenBackground.height) so it fades out ABOVE the dashboard cards, which then sit
@@ -96,21 +67,13 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 if let title {
-                    #if os(macOS)
                     // Soft redesign: large, tight display title + calm subtitle (the home's header).
                     Text(title).font(.system(size: 44, weight: .semibold)).tracking(-1.1)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .accessibilityAddTraits(.isHeader)
-                    #else
-                    Text(title).font(StrandFont.title1).foregroundStyle(StrandPalette.textPrimary)
-                    #endif
                 }
                 if let subtitle {
-                    #if os(macOS)
                     Text(subtitle).font(.system(size: 17)).foregroundStyle(StrandPalette.textSecondary)
-                    #else
-                    Text(subtitle).font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
-                    #endif
                 }
             }
             Spacer(minLength: 0)
@@ -191,8 +154,7 @@ struct SyncingHistoryNote: View {
 }
 
 /// Coarse relative-time label for the "History synced N ago" sync-status line. Pure — `now` is
-/// injectable so the bucket edges are unit-testable (RelativeAgoTests) — and deliberately the same
-/// buckets as the Android `relativeAgo` (LiveScreen.kt, ed6a31d) so the two apps read identically.
+/// injectable so the bucket edges are unit-testable (RelativeAgoTests).
 /// Clamps future timestamps (strap-clock skew) to "just now", never negative.
 func relativeAgo(_ epochSeconds: TimeInterval,
                  now: TimeInterval = Date().timeIntervalSince1970) -> String {

@@ -2,8 +2,9 @@
 #
 # Build-phase guard: the external data folder setting and the app entitlements must agree.
 # - NOOP_EXTERNAL_DATA_FOLDER empty: the entitlements must not grant a home-relative sandbox exception.
-# - NOOP_EXTERNAL_DATA_FOLDER set: it must be a plain folder name and the entitlements must grant
-#   read-write access to exactly "/<folder>/".
+# - NOOP_EXTERNAL_DATA_FOLDER set: it must be a plain folder name that is not a well-known home folder
+#   (same list as ExternalDataFolder.wellKnownHomeFolders, any case; NOOP tightens the data folder to
+#   0700) and the entitlements must grant read-write access to exactly "/<folder>/".
 # Inputs come from the Xcode build environment; writes a stamp file to SCRIPT_OUTPUT_FILE_0.
 
 set -euo pipefail
@@ -24,6 +25,10 @@ if [[ -z "$folder" ]]; then
 else
   [[ "$folder" =~ ^[A-Za-z0-9._-]+$ && "$folder" != "." && "$folder" != ".." ]] \
     || fail "NOOP_EXTERNAL_DATA_FOLDER must be a single folder name, got: $folder"
+  case "$(printf '%s' "$folder" | tr '[:upper:]' '[:lower:]')" in
+    applications|desktop|documents|downloads|library|movies|music|pictures|public|sites)
+      fail "NOOP_EXTERNAL_DATA_FOLDER must be a new, dedicated folder, not the well-known home folder \"$folder\"; see docs/EXTERNAL_DATA_FOLDER.md" ;;
+  esac
   [[ "$first" == "/$folder/" && -z "$second" ]] \
     || fail "$NOOP_APP_ENTITLEMENTS must grant exactly \"/$folder/\" (found: ${first:-none}); see docs/EXTERNAL_DATA_FOLDER.md"
 fi

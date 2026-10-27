@@ -1,9 +1,5 @@
 import Foundation
-#if canImport(AppKit)
 import AppKit
-#elseif canImport(UIKit)
-import UIKit
-#endif
 import SQLite3
 import UniformTypeIdentifiers
 import WhoopStore
@@ -66,7 +62,6 @@ enum DataBackup {
             return .failure("Couldn't safely export right now — recent changes are still in the database's write-ahead log. Close any in-flight sync, then try again.")
         }
 
-        #if os(macOS)
         let panel = NSSavePanel()
         panel.title = "Export NOOP backup"
         panel.prompt = "Export"
@@ -89,20 +84,6 @@ enum DataBackup {
         } catch {
             return .failure("Export failed: \(error.localizedDescription)")
         }
-        #else
-        let fm = FileManager.default
-
-        // Stage the compressed backup in temp, then hand it to the share sheet.
-        let staged = fm.temporaryDirectory.appendingPathComponent(defaultBackupName())
-        do {
-            if fm.fileExists(atPath: staged.path) { try fm.removeItem(at: staged) }
-            try writeBackupZip(dbURL: dbURL, to: staged)
-        } catch {
-            return .failure("Export failed: \(error.localizedDescription)")
-        }
-        guard let dest = await DocumentPicker.export(staged) else { return .cancelled }
-        return .exported(dest)
-        #endif
     }
 
     /// Write the live SQLite at `dbURL` into a fresh single-entry deflate ZIP at `dest`, under the
@@ -126,7 +107,6 @@ enum DataBackup {
         do { dbPath = try StorePaths.defaultDatabasePath() }
         catch { return .failure("Couldn't locate the NOOP database. \(error.localizedDescription)") }
 
-        #if os(macOS)
         let panel = NSOpenPanel()
         panel.title = "Import NOOP backup"
         panel.prompt = "Import"
@@ -139,11 +119,6 @@ enum DataBackup {
 
         let scoped = pickedSource.startAccessingSecurityScopedResource()
         defer { if scoped { pickedSource.stopAccessingSecurityScopedResource() } }
-        #else
-        // iOS: pick the backup through the system document picker (asCopy gives us a readable local
-        // copy in our temp dir, so no security-scoped bookkeeping is needed).
-        guard let pickedSource = await DocumentPicker.importFile(backupContentTypes()) else { return .cancelled }
-        #endif
 
         // If the picked file is a .noopbak ZIP, extract the SQLite entry to a temp dir first.
         // Legacy plain-SQLite files fall straight through. The extracted dir is cleaned up below.
@@ -246,10 +221,7 @@ enum DataBackup {
 
     /// "NOOP-backup-2026-06-07.noopbak"
     private static func defaultBackupName() -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return "NOOP-backup-\(f.string(from: Date())).noopbak"
+        "NOOP-backup-\(DayKey.string(from: Date())).noopbak"
     }
 
     private static func timestamp() -> String {

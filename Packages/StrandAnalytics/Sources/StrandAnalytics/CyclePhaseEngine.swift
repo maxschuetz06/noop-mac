@@ -16,7 +16,7 @@ import Foundation
 // pattern," never a verdict. All of this is the load-bearing legal/ethical framing.
 public enum CyclePhaseEngine {
 
-    // MARK: - Tuning constants (pinned by test; mirror the Kotlin twin exactly)
+    // MARK: - Tuning constants (pinned by test)
 
     /// Weights for the fused luteal index z = wTemp·zTemp + wRHR·zRHR + wHRV·(−zHRV). Temperature is
     /// dominant (it is the pillar's signal); RHR and HRV corroborate. The HRV term is NEGATED so a drop

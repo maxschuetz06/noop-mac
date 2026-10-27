@@ -94,6 +94,57 @@ final class HomeModelTests: XCTestCase {
         XCTAssertEqual(resolved(items[0].title, "de_DE"), "Schlaf")
     }
 
+    /// 2026-10-25 in Berlin has 25 hours (CEST → CET), 2026-03-29 has 23.
+    private let berlin: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        return cal
+    }()
+
+    private func berlinDayStart(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        berlin.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    func testPastDayHrWindowEndsAtTheNextLocalMidnightOnDstDays() {
+        for (start, next, hours) in [(berlinDayStart(2026, 10, 25), berlinDayStart(2026, 10, 26), 25),
+                                     (berlinDayStart(2026, 3, 29), berlinDayStart(2026, 3, 30), 23)] {
+            let window = HomeModel.hrWindow(dayStart: start, isToday: false, now: Date(), calendar: berlin)
+            XCTAssertEqual(window.from, Int(start.timeIntervalSince1970))
+            XCTAssertEqual(window.to, Int(next.timeIntervalSince1970))
+            XCTAssertEqual(window.to - window.from, hours * 3600)
+        }
+    }
+
+    func testTodayHrWindowRunsUpToNow() {
+        let start = berlinDayStart(2026, 10, 25)
+        let now = start.addingTimeInterval(10 * 3600)
+        let window = HomeModel.hrWindow(dayStart: start, isToday: true, now: now, calendar: berlin)
+        XCTAssertEqual(window.to, Int(now.timeIntervalSince1970))
+    }
+
+    func testTimelineKeepsTheLastHourOfALongDstDay() {
+        let start = berlinDayStart(2026, 10, 25)
+        let lateRun = start.addingTimeInterval(24 * 3600 + 15 * 60)   // 23:15 local, the day's 25th hour
+        let runTs = Int(lateRun.timeIntervalSince1970)
+        let run = WorkoutRow(startTs: runTs, endTs: runTs + 1800, sport: "running", source: "x", durationS: nil,
+                             energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil, distanceM: nil, zonesJSON: nil,
+                             notes: nil)
+        let items = HomeModel.timeline(dayStart: start, sleeps: [], workouts: [run],
+                                       now: lateRun.addingTimeInterval(3 * 3600), calendar: berlin)
+        XCTAssertEqual(items.map(\.kind), [.workout])
+    }
+
+    func testTimelineBarSpansTheWholeLongDstDay() {
+        let start = berlinDayStart(2026, 10, 25)   // 25 h: the clock falls back at 03:00
+        let lateRun = start.addingTimeInterval(24 * 3600 + 15 * 60)   // 23:15 local
+        XCTAssertEqual(HomeModel.dayFraction(lateRun, dayStart: start, calendar: berlin), 24.25 / 25, accuracy: 1e-9)
+        let ticks = Dictionary(uniqueKeysWithValues: HomeModel.hourTicks(dayStart: start, calendar: berlin)
+            .map { ($0.hour, $0.fraction) })
+        XCTAssertEqual(ticks[0], 0)
+        XCTAssertEqual(try XCTUnwrap(ticks[12]), 13.0 / 25, accuracy: 1e-9, "12:00 is 13 h after midnight")
+        XCTAssertEqual(ticks[24], 1)
+    }
+
     func testUnmappedSportShowsTheStoredLabelUntranslated() {
         // "Strength Training" and "Rowing" are also catalog keys elsewhere; a stored label must not hit them.
         for (stored, shown) in [("strength training", "Strength Training"), ("Rowing", "Rowing"),

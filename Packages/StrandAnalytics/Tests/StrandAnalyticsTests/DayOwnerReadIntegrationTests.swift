@@ -6,7 +6,7 @@ import WhoopStore
 /// Invariant I2 — a day's scores come from exactly ONE source. This proves the wired read path end to
 /// end: two devices have HR for the SAME UTC day, the resolver picks the owner (the active strap wins
 /// over an import), and reading the owner's HR returns ONLY the owner's samples — never the other
-/// device's. Mirrors `IntelligenceEngine.resolveDayOwner` + the per-day stream read it feeds.
+/// device's. Runs the recompute's `DayOwnerLookup` + the per-day stream read it feeds.
 final class DayOwnerReadIntegrationTests: XCTestCase {
 
     /// 2026-06-15 00:00:00 UTC. The night window the engine reads spans [dayStart-30h, dayStart+12h];
@@ -14,19 +14,9 @@ final class DayOwnerReadIntegrationTests: XCTestCase {
     private let dayStart = 1_781_481_600          // 2026-06-15 00:00:00 UTC
     private let day = "2026-06-15"
 
-    /// Build candidates exactly as `IntelligenceEngine.resolveDayOwner` does, then resolve.
-    private func resolveOwner(store: WhoopStore, registry: DeviceRegistryStore,
-                              from: Int, to: Int) async throws -> String? {
-        if let locked = try registry.dayOwner(day)?.deviceId { return locked }
-        let activeId = try registry.activeDeviceId() ?? "my-whoop"
-        var candidates: [DayOwnerResolver.Candidate] = []
-        for d in try registry.all() where d.status != .archived {
-            let isImport = d.sourceKind == .cloudImport || d.sourceKind == .fileImport
-            let priority = d.id == activeId ? 0 : (isImport ? 2 : 1)
-            let hasData = !((try? await store.hrSamples(deviceId: d.id, from: from, to: to, limit: 1)) ?? []).isEmpty
-            candidates.append(.init(deviceId: d.id, priority: priority, hasData: hasData))
-        }
-        return DayOwnerResolver.resolve(day: day, lockedOwner: nil, candidates: candidates)
+    /// Resolve exactly as the recompute does (a fresh registry snapshot per call).
+    private func resolveOwner(store: WhoopStore, from: Int, to: Int) async -> String {
+        await DayOwnerLookup(store: store, fallbackId: "my-whoop").owner(day: day, from: from, to: to)
     }
 
     func testActiveStrapOwnsDayAndReadReturnsOnlyItsSamples() async throws {
@@ -50,11 +40,11 @@ final class DayOwnerReadIntegrationTests: XCTestCase {
         let to = dayStart + 12 * 3_600
 
         // I2 resolution: the active strap (priority 0) wins over the import (priority 2).
-        let owner = try await resolveOwner(store: store, registry: registry, from: from, to: to)
+        let owner = await resolveOwner(store: store, from: from, to: to)
         XCTAssertEqual(owner, "my-whoop", "the active strap must own a day it has data for")
 
         // Read the day's HR under the resolved owner — it must be PURELY the owner's samples.
-        let read = try await store.hrSamples(deviceId: owner!, from: from, to: to, limit: 200_000)
+        let read = try await store.hrSamples(deviceId: owner, from: from, to: to, limit: 200_000)
         XCTAssertEqual(read.count, whoopHR.count)
         XCTAssertTrue(read.allSatisfy { $0.bpm == 55 }, "owner read leaked the other device's samples")
         XCTAssertFalse(read.contains { $0.bpm == 99 }, "Oura (non-owner) samples must never appear")
@@ -76,10 +66,10 @@ final class DayOwnerReadIntegrationTests: XCTestCase {
         try registry.setDayOwner(day: day, deviceId: "oura-import", locked: true)
 
         let from = dayStart - 30 * 3_600, to = dayStart + 12 * 3_600
-        let owner = try await resolveOwner(store: store, registry: registry, from: from, to: to)
+        let owner = await resolveOwner(store: store, from: from, to: to)
         XCTAssertEqual(owner, "oura-import", "a locked override must win over the active strap")
 
-        let read = try await store.hrSamples(deviceId: owner!, from: from, to: to, limit: 200_000)
+        let read = try await store.hrSamples(deviceId: owner, from: from, to: to, limit: 200_000)
         XCTAssertTrue(read.allSatisfy { $0.bpm == 99 }, "read must follow the locked owner")
     }
 
@@ -87,16 +77,15 @@ final class DayOwnerReadIntegrationTests: XCTestCase {
     /// MUST resolve to 'my-whoop' so behaviour is byte-identical to the pre-I2 code.
     func testSingleDeviceResolvesToWhoopUnchanged() async throws {
         let store = try await WhoopStore.inMemory()
-        let registry = DeviceRegistryStore(dbQueue: store.registryQueue)
 
         let base = dayStart + 3 * 3_600
         _ = try await store.insert(Streams(hr: (0..<300).map { HRSample(ts: base + $0, bpm: 55) }), deviceId: "my-whoop")
 
         let from = dayStart - 30 * 3_600, to = dayStart + 12 * 3_600
-        let owner = try await resolveOwner(store: store, registry: registry, from: from, to: to)
+        let owner = await resolveOwner(store: store, from: from, to: to)
         XCTAssertEqual(owner, "my-whoop", "single-device install must resolve to the seeded WHOOP")
 
-        let read = try await store.hrSamples(deviceId: owner!, from: from, to: to, limit: 200_000)
+        let read = try await store.hrSamples(deviceId: owner, from: from, to: to, limit: 200_000)
         XCTAssertEqual(read.count, 300)
         XCTAssertTrue(read.allSatisfy { $0.bpm == 55 })
     }

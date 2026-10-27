@@ -1,8 +1,7 @@
 import XCTest
-@testable import Strand
 import StrandAnalytics
 
-/// #277 — IntelligenceEngine's LOCAL-midnight floor used to re-bucket daily metrics by the device's
+/// #277 — the recompute's LOCAL-midnight floor used to re-bucket daily metrics by the device's
 /// local calendar day (the bucket the dashboard reads). Mirrors the Android
 /// LocalDayBucketingTest.midnightLocal_* cases byte-for-byte in logic/constants.
 final class LocalDayMidnightTests: XCTestCase {
@@ -12,20 +11,21 @@ final class LocalDayMidnightTests: XCTestCase {
         // 2021-06-15 00:00 local == 04:00 UTC == 1623729600.
         let offset = -4 * 3600
         let tsUtc = 1_623_805_200
-        XCTAssertEqual(IntelligenceEngine.midnightLocal(tsUtc, offsetSec: offset), 1_623_729_600)
+        XCTAssertEqual(RecomputePipeline.midnightLocal(tsUtc, offsetSec: offset), 1_623_729_600)
         // The floored value, re-keyed under the same offset, is the local day.
         XCTAssertEqual(
-            AnalyticsEngine.dayString(IntelligenceEngine.midnightLocal(tsUtc, offsetSec: offset),
+            AnalyticsEngine.dayString(RecomputePipeline.midnightLocal(tsUtc, offsetSec: offset),
                                       offsetSec: offset),
             "2021-06-15")
     }
 
     func testMidnightLocalOffsetZeroEqualsMidnightUtc() {
-        // floorMod-based local floor with offset 0 must equal the legacy UTC midnight floor for any sign.
-        for ts in [1_609_459_200, 1_609_459_200 + 45_000, 0, 86_399, -1, -86_401] {
-            XCTAssertEqual(IntelligenceEngine.midnightLocal(ts, offsetSec: 0),
-                           IntelligenceEngine.midnightUtc(ts),
-                           "midnightLocal(offset=0) must equal midnightUtc for ts=\(ts)")
+        // The local floor with offset 0 must equal the UTC midnight floor for any sign.
+        let utcMidnights = [1_609_459_200: 1_609_459_200, 1_609_459_200 + 45_000: 1_609_459_200,
+                            0: 0, 86_399: 0, -1: -86_400, -86_401: -172_800]
+        for (ts, midnight) in utcMidnights {
+            XCTAssertEqual(RecomputePipeline.midnightLocal(ts, offsetSec: 0), midnight,
+                           "midnightLocal(offset=0) must equal the UTC midnight for ts=\(ts)")
         }
     }
 
@@ -34,7 +34,7 @@ final class LocalDayMidnightTests: XCTestCase {
         // (ts+offset divisible by 86400). Guards floorMod sign for negative offsets/timestamps.
         let offset = -5 * 3600 // UTC-5
         for ts in [1_623_805_200, 1_600_000_000, 100] {
-            let mid = IntelligenceEngine.midnightLocal(ts, offsetSec: offset)
+            let mid = RecomputePipeline.midnightLocal(ts, offsetSec: offset)
             let mod = ((mid + offset) % 86_400 + 86_400) % 86_400
             XCTAssertEqual(mod, 0, "must land on a local-day boundary")
             XCTAssertLessThanOrEqual(mid, ts, "midnight floor must not exceed ts")

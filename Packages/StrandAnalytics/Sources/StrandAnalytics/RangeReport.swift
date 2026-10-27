@@ -380,7 +380,7 @@ public enum RangeReportEngine {
         return d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045
     }
 
-    // MARK: - Stats (self-contained so the Kotlin mirror is line-for-line)
+    // MARK: - Stats
 
     static func mean(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }

@@ -1,11 +1,7 @@
 import SwiftUI
 import Foundation
 import StrandDesign
-#if canImport(AppKit)
 import AppKit
-#elseif canImport(UIKit)
-import UIKit
-#endif
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
