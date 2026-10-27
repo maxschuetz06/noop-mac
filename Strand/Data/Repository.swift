@@ -1166,11 +1166,10 @@ final class Repository: ObservableObject {
 
     /// All workouts (Whoop + Apple Health + on-device detected bouts), newest first.
     ///
-    /// Detected bouts are surfaced with an honest "Detected" badge so the user can see — and
-    /// dismiss or re-label — a duplicate the auto-detector created (#107). Dismissed detected spans
-    /// are filtered HERE so every consumer (Workouts screen, Today, Coach context) agrees: the engine
-    /// re-derives the detected rows each run, so a plain delete would resurrect them; the dismissed
-    /// span list is the durable "not a workout" record.
+    /// Detected bouts are surfaced with an honest "Detected" badge so the user can see — and dismiss or
+    /// re-label — a duplicate the auto-detector created (#107). Dismissed detected spans are filtered
+    /// HERE so every consumer (Workouts screen, Today) agrees: the engine re-derives the detected rows
+    /// each run, so a plain delete would resurrect them; the dismissed span list is the durable record.
     func workoutRows(days: Int = 4000) async -> [WorkoutRow] {
         guard let store = await ensureStore() else { return [] }
         let now = Int(Date().timeIntervalSince1970)

@@ -4,9 +4,8 @@ import Foundation
 ///
 /// These are WHOOP 5.0/MG protocol facts — command numbers, field offsets and byte layouts —
 /// documented as factual wire-format observations for interoperability; no proprietary code is
-/// reproduced (see ATTRIBUTION.md / DISCLAIMER.md). Swift twin of the Android
-/// `protocol/AlarmPayload.kt`; byte parity is pinned by cross-platform golden frames in both
-/// test suites. All multi-byte fields are little-endian. Revision values: REVISION_1=1,
+/// reproduced (see ATTRIBUTION.md / DISCLAIMER.md). Golden frames in the tests pin the bytes.
+/// All multi-byte fields are little-endian. Revision values: REVISION_1=1,
 /// REVISION_2=2, REVISION_4=4.
 ///
 /// EXPERIMENTAL / UNCONFIRMED (same posture as the Android client): unlike the maverick buzz

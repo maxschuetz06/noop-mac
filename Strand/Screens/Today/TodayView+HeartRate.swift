@@ -10,7 +10,7 @@ extension TodayView {
     /// A full-width 24-hour heart-rate trend, plotted from 5-minute bucket means of the strap's
     /// `hrSample` history (offloaded even while the app was closed, so the day reads continuously).
     /// Hidden until there are at least two buckets — a strap-only user with no wear today sees nothing
-    /// rather than an empty axis. Mirrored on Android (TodayScreen.kt HeartRateTrendCard).
+    /// rather than an empty axis.
     @ViewBuilder
     var heartRateTrendSection: some View {
         if hrPoints.count > 1 {

@@ -2,7 +2,7 @@ import XCTest
 @testable import WhoopProtocol
 
 /// Pure-logic tests for the Haptic Clock encoder (#460). These pin the EXACT pulse list for sample
-/// times; the Android `HapticClockTest.kt` asserts the same lists so the two platforms buzz identically.
+/// times.
 final class HapticClockTests: XCTestCase {
     private typealias P = HapticClock.Pulse
 

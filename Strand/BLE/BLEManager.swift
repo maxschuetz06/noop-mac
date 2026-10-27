@@ -325,8 +325,8 @@ public final class BLEManager: NSObject, ObservableObject {
         return ref.device + (wallNow - ref.wall)
     }
 
-    /// `rawFrameSink` receives offload frames for the opt-in raw PPG capture; the app wires it
-    /// (`BLEManager+AppWiring.swift`).
+    /// `rawFrameSink` receives offload frames for the opt-in raw PPG capture; the app injects
+    /// `RawPPGCapture.shared` (`AppModel.init`).
     init(state: LiveState, deviceId: String, rawFrameSink: any RawFrameSink) {
         self.state = state
         self.rawFrameSink = rawFrameSink

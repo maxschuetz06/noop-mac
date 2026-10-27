@@ -280,13 +280,10 @@ struct ManualWorkoutSheet: View {
 
 // MARK: - Live workout start picker
 //
-// The Apple-side entry point for LIVE tracking, mirroring Android's StartWorkoutSheet (WorkoutStart.kt):
-// pick a named sport from the shared WorkoutCatalog, then begin the session. Brings the iOS/macOS live
-// tracker to parity with Android, which has had a named-sport picker on Start since #115 — previously
-// the Apple "Start workout" buttons called `startWorkout()` with no sport and every live session saved
-// as the generic "Workout". A host presents this and forwards the chosen name to
-// `AppModel.startWorkout(sport:)`. Free-text isn't offered here (a live start is a quick tap from a
-// fixed list); an unusual sport can still be set afterwards via the manual edit sheet's free-text field.
+// The entry point for LIVE tracking: pick a named sport from the shared WorkoutCatalog, then begin the
+// session, so a live session is not saved as the generic "Workout". A host presents this and forwards
+// the chosen name to `AppModel.startWorkout(sport:)`. Free-text isn't offered here (a live start is a
+// quick tap from a fixed list); an unusual sport can still be set afterwards via the manual edit sheet.
 
 struct StartWorkoutSheet: View {
     /// Called with the chosen sport name once the user taps Start. The host wires this to

@@ -6,8 +6,8 @@ import SwiftUI
 // disabled at today so a future day can't be selected), and the centre accent block shows the
 // selected day's label + date and opens a graphical DatePicker capped at today for a direct jump.
 // Replaces the fixed three-day strip so navigation reaches arbitrarily far back. The same control
-// renders on macOS and iOS — the DatePicker is shown in a popover on both. Mirrors the Android
-// DayNavBar (StrandComponents.kt). Offset is days-back-from-today (0 = today).
+// renders on macOS and iOS — the DatePicker is shown in a popover on both. Offset is
+// days-back-from-today (0 = today).
 
 public struct DayNavBar: View {
     private let selectedOffset: Int

@@ -34,7 +34,7 @@ public enum HapticClock {
         public var isLong: Bool { durationMs >= HapticClock.longMs }
     }
 
-    // Pulse + gap timing (ms). Kept in lock-step with HapticClock.kt — change both together.
+    // Pulse + gap timing (ms).
     static let longMs = 500        // a "tens" pulse
     static let shortMs = 150       // a "units" pulse
     static let intraGapMs = 250    // silence between two pulses inside one digit group

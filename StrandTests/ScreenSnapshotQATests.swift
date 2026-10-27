@@ -196,7 +196,7 @@ private var snapshotLocale: Locale {
 }
 
 extension PerfEnvironment {
-    /// The QA screen list: the perf screens' set plus Smart Alarm, Data Sources and Settings.
+    /// The QA screen list: the main screens plus, when the host has an AppModel, the model-backed ones.
     var snapshotScreens: [PerfScreen] {
         func wrap<V: View>(_ v: V) -> AnyView {
             var any = AnyView(v

@@ -154,8 +154,7 @@ struct SyncingHistoryNote: View {
 }
 
 /// Coarse relative-time label for the "History synced N ago" sync-status line. Pure — `now` is
-/// injectable so the bucket edges are unit-testable (RelativeAgoTests) — and deliberately the same
-/// buckets as the Android `relativeAgo` (LiveScreen.kt, ed6a31d) so the two apps read identically.
+/// injectable so the bucket edges are unit-testable (RelativeAgoTests).
 /// Clamps future timestamps (strap-clock skew) to "just now", never negative.
 func relativeAgo(_ epochSeconds: TimeInterval,
                  now: TimeInterval = Date().timeIntervalSince1970) -> String {
