@@ -4,11 +4,9 @@ import WhoopStore
 /// Where the app's on-disk footprint goes, and the Storage screen's clean-up (#590 — StorageView).
 enum StorageDiagnostics {
     /// A point-in-time snapshot of where the app's on-disk footprint is going, for the Storage screen.
-    /// All sizes in bytes; `db` is nil only for an unopened/in-memory store. `inbox` is the iOS
-    /// document-picker drop folder, which the macOS app never writes, so it is always 0 here.
+    /// All sizes in bytes; `db` is nil only for an unopened/in-memory store.
     struct Report: Equatable, Sendable {
         var db: Int64?
-        var inbox: Int64 = 0
         var importTemp: Int64
     }
 
