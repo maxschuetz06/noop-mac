@@ -79,19 +79,11 @@ final class ScreenSnapshotQATests: XCTestCase {
             ("medium", .systemMedium, CGSize(width: 364, height: 170)),
             ("large", .systemLarge, CGSize(width: 364, height: 382)),
         ]
-        func full(localeIdentifier: String?) -> MacEntry {
-            MacEntry(date: Date(),
-                     snapshot: WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true,
-                                              updated: Date(), effort: 59, rest: 84, hrv: 64, restingHr: 52,
-                                              lastSync: Date().addingTimeInterval(-12 * 60),
-                                              localeIdentifier: localeIdentifier),
-                     isPlaceholder: false)
-        }
         // `full` follows the system language; `full_de` / `full_en` pin the app language like the publisher.
         let entries: [(String, MacEntry)] = [
-            ("full", full(localeIdentifier: nil)),
-            ("full_de", full(localeIdentifier: "de_DE")),
-            ("full_en", full(localeIdentifier: "en_US")),
+            ("full", Self.fullWidgetEntry(localeIdentifier: nil)),
+            ("full_de", Self.fullWidgetEntry(localeIdentifier: "de_DE")),
+            ("full_en", Self.fullWidgetEntry(localeIdentifier: "en_US")),
             ("sparse", MacEntry(date: Date(),
                                 snapshot: WidgetSnapshot(recovery: 28, bpm: nil, batteryPct: nil, bonded: false,
                                                          updated: Date()),
@@ -119,6 +111,17 @@ final class ScreenSnapshotQATests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private static func fullWidgetEntry(localeIdentifier: String?) -> MacEntry {
+        var snapshot = WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true, updated: Date())
+        snapshot.effort = 59
+        snapshot.rest = 84
+        snapshot.hrv = 64
+        snapshot.restingHr = 52
+        snapshot.lastSync = Date().addingTimeInterval(-12 * 60)
+        snapshot.localeIdentifier = localeIdentifier
+        return MacEntry(date: Date(), snapshot: snapshot, isPlaceholder: false)
+    }
 
     private static func offscreenWindow(host: NSView, size: CGSize) -> NSWindow {
         host.frame = NSRect(origin: .zero, size: size)

@@ -239,9 +239,13 @@ struct NOOPMacWidgetBundle: WidgetBundle {
 #if DEBUG
 private extension WidgetSnapshot {
     static var previewFull: WidgetSnapshot {
-        WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true, updated: Date(),
-                       effort: 59, rest: 84, hrv: 64, restingHr: 52,
-                       lastSync: Date().addingTimeInterval(-12 * 60))
+        var snap = WidgetSnapshot(recovery: 72, bpm: 61, batteryPct: 84, bonded: true, updated: Date())
+        snap.effort = 59
+        snap.rest = 84
+        snap.hrv = 64
+        snap.restingHr = 52
+        snap.lastSync = Date().addingTimeInterval(-12 * 60)
+        return snap
     }
     /// Mostly empty: only a low recovery, no strain/sleep/vitals, no sync yet.
     static var previewSparse: WidgetSnapshot {

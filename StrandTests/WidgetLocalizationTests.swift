@@ -44,8 +44,9 @@ final class WidgetLocalizationTests: XCTestCase {
     }
 
     func testSnapshotCarriesTheLocaleAndOlderSnapshotsStillDecode() throws {
-        let pinned = WidgetSnapshot(recovery: 50, bpm: nil, batteryPct: nil, bonded: false,
-                                    updated: Date(timeIntervalSince1970: 0), localeIdentifier: "de_DE")
+        var pinned = WidgetSnapshot(recovery: 50, bpm: nil, batteryPct: nil, bonded: false,
+                                    updated: Date(timeIntervalSince1970: 0))
+        pinned.localeIdentifier = "de_DE"
         let roundTrip = try JSONDecoder().decode(WidgetSnapshot.self, from: JSONEncoder().encode(pinned))
         XCTAssertEqual(roundTrip.localeIdentifier, "de_DE")
 

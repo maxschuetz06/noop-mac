@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import WhoopStore
 import WidgetKit
 
 /// Publishes the glance snapshot for the macOS desktop widget into the shared App Group.
@@ -68,24 +69,23 @@ final class MacWidgetPublisher {
         let day = repo.days.last(where: { $0.recovery != nil })
         var restScore: Double?
         if let day {
-            let restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+            let restSeries = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
             let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
             restScore = restByDay[day.day] ?? restSeries.last?.value
         }
         let now = Date()
-        let snap = WidgetSnapshot(
+        var snap = WidgetSnapshot(
             recovery: day?.recovery.map { Int($0.rounded()) },
             bpm: smoothedBpm() ?? live.heartRate,
             batteryPct: live.batteryPct.map { Int($0.rounded()) },
             bonded: live.bonded,
-            updated: now,
-            effort: day?.strain.map { Int($0.rounded()) },
-            rest: restScore.map { Int($0.rounded()) },
-            hrv: day?.avgHrv.map { Int($0.rounded()) },
-            restingHr: day?.restingHr,
-            lastSync: live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) },
-            localeIdentifier: AppLanguage.current().pinnedLocale?.identifier
-        )
+            updated: now)
+        snap.effort = day?.strain.map { Int($0.rounded()) }
+        snap.rest = restScore.map { Int($0.rounded()) }
+        snap.hrv = day?.avgHrv.map { Int($0.rounded()) }
+        snap.restingHr = day?.restingHr
+        snap.lastSync = live.lastSyncedAt.map { Date(timeIntervalSince1970: $0) }
+        snap.localeIdentifier = AppLanguage.current().pinnedLocale?.identifier
         snap.save()
         lastReload = now
         WidgetCenter.shared.reloadAllTimelines()
