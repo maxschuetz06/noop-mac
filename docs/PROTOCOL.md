@@ -229,9 +229,9 @@ Source: `enums.PacketType` in `whoop_protocol.json`; resolved by `Schema.typeNam
 | 55 | `RELATIVE_BATTERY_PACK_CONSOLE_LOGS` | |
 | 56 | `PUFFIN_METADATA` | WHOOP 5.0; aliased → `METADATA` |
 
-`isOffloadFrame(_:)` (in `BLEManager`) treats **47/48/49/50** as offload traffic; the live
-`REALTIME_DATA`(40)/`REALTIME_RAW_DATA`(43) flood is excluded so it cannot keep the backfill
-idle-watchdog alive.
+`BLEManager.isOffloadFrame(_:family:)` (in `BLEManager+Offload.swift`) treats **47/48/49/50** and
+`PUFFIN_METADATA` (56) as offload traffic; the live `REALTIME_DATA`(40)/`REALTIME_RAW_DATA`(43) flood
+is excluded so it cannot keep the backfill idle-watchdog alive.
 
 The parser also exposes irregular fields through per-type **post-hooks**
 (`registerPostHooks()` in `PostHooks.swift`): `realtime_data`, `event`, `command_response`,
@@ -550,7 +550,7 @@ inherit a base layout and override only what changed. The streamed decode that f
 | `Packages/WhoopProtocol/Sources/WhoopProtocol/PostHooks.swift` | per-type irregular-field decoders |
 | `Packages/WhoopProtocol/Sources/WhoopProtocol/HistoricalMeta.swift` | `classifyHistoricalMeta` (START/END/COMPLETE) |
 | `Packages/WhoopProtocol/Sources/WhoopProtocol/Resources/whoop_protocol.json` | canonical enums + packet layouts |
-| `Strand/BLE/BLEManager.swift` | CoreBluetooth transport, bond, connect lifecycle, backfill orchestration |
+| `Strand/BLE/BLEManager.swift` + `BLEManager+*.swift` | CoreBluetooth transport, bond, connect lifecycle; backfill orchestration in `BLEManager+Offload.swift` |
 | `Strand/BLE/Commands.swift` | safe `WhoopCommand` set + outbound frame builder |
 | `Strand/BLE/FrameRouter.swift` | decode → `LiveState` (UI) |
 | `Strand/BLE/StandardHeartRate.swift` | `0x2A37` HR/R-R parser |

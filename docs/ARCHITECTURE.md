@@ -63,7 +63,15 @@ through `Repository`.
 Strand/                         macOS SwiftUI app target (the reference implementation)
 ├── App/                        Composition root + window/scene
 │   ├── StrandApp.swift         @main App scene; owns AppModel, wires environment objects
-│   ├── AppModel.swift          @MainActor root state — owns BLE, Repository, profiles
+│   ├── AppModel.swift          @MainActor composition root — owns BLE, Repository, profiles, the services below
+│   ├── AppModel+ViewAPI.swift  view-facing forwarders to the owned services
+│   ├── AppModel+DeviceSources.swift  device registry, source coordinator, WHOOP scan entry points
+│   ├── AppRuntime.swift        XCTest-host detection (no strap, no user store, no schedulers)
+│   ├── StressMonitor.swift     live RMSSD stress nudge and stress check-in
+│   ├── StrapInputAutomation.swift    double-tap, wrist on/off, HR-zone coaching, battery alerts
+│   ├── HealthSignalEngines.swift     illness early-warning, cycle phase, body-clock phase
+│   ├── ManualWorkoutController.swift manual workouts: live HR, GPS route, scored save
+│   ├── StorageDiagnostics.swift      on-disk footprint and Storage clean-up
 │   ├── RootView.swift          NavigationSplitView shell + NavItem routing
 │   └── ContentView.swift
 ├── BLE/                        CoreBluetooth + the live/decode seam

@@ -87,14 +87,14 @@ The two standard services (`180D` heart rate, `180F` battery) are a useful sanit
 `2A37` Heart Rate Measurement characteristic streams HR and R-R intervals at ~1 Hz **without bonding**,
 which made it the reliable baseline while the custom channels were being mapped. NOOP still treats
 `2A37` as the *reliable* HR/R-R source and lets the custom streams supply everything else (see
-`parseStandardHR` in `BLEManager.swift`).
+`parseStandardHR` in `BLEManager+NotifyRouting.swift`).
 
 ### The single confirmed-write bond
 
 The custom notify characteristics (`…0003/0004/0005`) stay silent until the link is bonded. The key
 discovery is that **one "with-response" (confirmed) write is enough** to trigger iOS/macOS just-works
 bonding — there is no PIN, no pairing UI. NOOP performs this with a benign `GET_BATTERY_LEVEL`
-(`didDiscoverCharacteristicsFor` in `BLEManager.swift`):
+(`didDiscoverCharacteristicsFor` in `BLEManager+PeripheralDelegate.swift`):
 
 ```swift
 // THE BONDING TRICK: one confirmed write triggers just-works bonding.
