@@ -5,8 +5,6 @@ import Foundation
 // the live session controller (per platform) paces each candidate via `BreathPacer` + the buzz path,
 // feeds the clean R-R it ingested per pace back in here, and persists the locked pace as a pref.
 //
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L1 "Detect (the sweep)").
-//
 // THEORY (Lehrer/Gevirtz, approach not code): there is a personal pace — usually 4.5–7 br/min — at which
 // the 0.1 Hz baroreflex and RSA align and the heart-rate oscillation amplitude peaks. We find it by
 // pacing the user through candidate paces and reading the RSA response at each.

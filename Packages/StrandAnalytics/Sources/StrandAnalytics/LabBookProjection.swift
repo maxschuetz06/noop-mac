@@ -7,8 +7,7 @@ import Foundation
 // already understands, plus the windowed-aggregate pairing used before
 // `CorrelationEngine.pearson`.
 //
-// Per the Health Records design spec (2026-06-19-v5-health-records-design.md,
-// §"On-device algorithm" and §"New"):
+// Design rules:
 //   - There is NO new statistics here. A marker is just another `(day, value)` series.
 //     Day-alignment + Pearson are reused byte-for-byte from `CorrelationEngine`.
 //   - SPARSE-MARKER handling is the real design problem: bloods are months apart, so
@@ -21,8 +20,7 @@ import Foundation
 //
 // This engine is timezone-free by construction: it operates on pre-derived
 // `yyyy-MM-dd` day strings (the store derives the day from a reading's `takenAt`),
-// exactly like `CorrelationEngine`. That keeps the Swift engine and its Kotlin twin
-// byte-identical with no Calendar/ZoneId divergence.
+// exactly like `CorrelationEngine`, so no Calendar or time-zone state can skew it.
 //
 // NON-CLINICAL (spec §"Non-clinical"): this folds and lines up the user's own numbers.
 // It never judges a value normal/abnormal and ships no thresholds.

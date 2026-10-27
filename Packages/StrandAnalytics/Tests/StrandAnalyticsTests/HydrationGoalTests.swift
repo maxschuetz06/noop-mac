@@ -18,7 +18,7 @@ final class HydrationGoalTests: XCTestCase {
     }
 
     func testSexBaselineNormalisation() {
-        // Case- and whitespace-insensitive, plus the m/f shorthands (matches the Kotlin twin).
+        // Case- and whitespace-insensitive, plus the m/f shorthands.
         XCTAssertEqual(HydrationGoal.baselineForSex("MALE"), 3700)
         XCTAssertEqual(HydrationGoal.baselineForSex(" Female "), 2700)
         XCTAssertEqual(HydrationGoal.baselineForSex("m"), 3700)

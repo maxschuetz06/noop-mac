@@ -4,7 +4,6 @@ import StrandDesign
 import StrandAnalytics
 import WhoopStore
 
-#if os(macOS)
 // MARK: - Soft overview (macOS redesign)
 //
 // The calm top of the Sleep screen in the style of the home dashboard: score with gradient scale,
@@ -149,7 +148,7 @@ extension SleepView {
                     .frame(height: 44).accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Resting pulse over the last \(line.count) nights"), line, unit: Text(verbatim: "bpm")))
                 HStack {
-                    Text(HomeView.relativeState(value, base: base, higherIsBetter: false))
+                    Text(HomeStateLabel.relative(value, base: base, higherIsBetter: false))
                         .font(.system(size: 13, weight: .medium)).foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
                     (base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
@@ -451,4 +450,3 @@ private struct SleepNightBar: View {
         }
     }
 }
-#endif

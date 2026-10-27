@@ -170,7 +170,7 @@ extension SleepView {
             Spacer(minLength: 8)
             // C1 — "why this is a nap" explainer: the nap-row nudge that everything other than the chosen
             // main block is logged as a nap, with the Edit next-step. Keyed by the nap's stable startTs so
-            // one popover shows at a time across several nap rows. (spec 2026-06-20)
+            // one popover shows at a time across several nap rows.
             Button { napWhyStartTs = (napWhyStartTs == nap.startTs) ? nil : nap.startTs } label: {
                 Image(systemName: "info.circle")
                     .font(StrandFont.headline)

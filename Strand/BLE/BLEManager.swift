@@ -31,8 +31,6 @@ public final class BLEManager: NSObject, ObservableObject {
     static let batteryService   = CBUUID(string: "180F")
     static let batteryChar      = CBUUID(string: "2A19")
 
-    static let restoreID = "com.openwhoop.ble.central"
-
     // MARK: Published state
     public let state: LiveState
     let router: FrameRouter
@@ -253,7 +251,8 @@ public final class BLEManager: NSObject, ObservableObject {
     /// puffin-event streams, which used to fall through to the live UI parser and vanish). Counted and a
     /// few sampled; logged + stored raw (bounded) when a backfill ends.
     var unmappedTap = UnmappedFrameTap()
-    var seq: UInt8 = 0
+    /// Frame sequence number of the last strap write; advanced only through `nextCommandSeq()`.
+    private var seq: UInt8 = 0
     var didBond = false
     /// WHOOP 5/MG only: realtime HR has been armed (puffin TOGGLE_REALTIME_HR sent) once for this
     /// connection, so the post-bond callback re-firing on later `.withResponse` writes doesn't re-send it.
@@ -310,6 +309,12 @@ public final class BLEManager: NSObject, ObservableObject {
     /// Captured (device↔wall) correlation from GET_CLOCK; nil until the response lands.
     var clockRef: ClockRef?
 
+    /// The sequence number for the next framed strap write (wraps at 255).
+    func nextCommandSeq() -> UInt8 {
+        seq &+= 1
+        return seq
+    }
+
     /// The strap's OWN clock extrapolated to right now (its RTC at the last GET_CLOCK + elapsed since).
     /// Used to judge live-gesture freshness in the strap's clock domain rather than wall time — so a
     /// real-time gesture is "now" and a replayed historical one is "old" REGARDLESS of how stale the
@@ -334,17 +339,7 @@ public final class BLEManager: NSObject, ObservableObject {
         self.collector = nil
         super.init()
         state.lastSyncedAt = UserDefaults.standard.object(forKey: "lastSyncedAt") as? Double
-        // Restore identifier + background-capable central (foundation for M3 state restoration).
-        #if os(iOS)
-        // iOS background state preservation/restoration: the restore identifier is what makes
-        // CoreBluetooth relaunch the app into the background and deliver willRestoreState after
-        // a suspend-then-jettison. Without it, willRestoreState is never called.
-        central = CBCentralManager(delegate: self, queue: .main,
-                                   options: [CBCentralManagerOptionRestoreIdentifierKey: BLEManager.restoreID])
-        #else
-        // Strand (macOS desktop): no state-restoration identifier (iOS background feature).
         central = CBCentralManager(delegate: self, queue: .main)
-        #endif
         // Strap-as-clock: an incoming EVENT packet kicks a rate-limited catch-up sync.
         router.onSyncTrigger = { [weak self] in self?.requestSync(.strap) }
     }
@@ -396,8 +391,8 @@ public final class BLEManager: NSObject, ObservableObject {
                                 },
                                 enableRawCapture: enableRawCapture,
                                 log: { [weak self] s in self?.log(s) },
-                                rejectedSink: { [weak self] frames, trim, family in
-                                    self?.archiveRejectedFrames(frames, trim: trim, family: family) ?? true
+                                rejectedSink: Self.rejectedFrameSink(owner: self) { manager, frames, trim, family in
+                                    manager.archiveRejectedFrames(frames, trim: trim, family: family)
                                 },
                                 onChunk: { [weak self] decoded, console in
                                     if decoded { self?.state.decodedChunksThisSession += 1 }

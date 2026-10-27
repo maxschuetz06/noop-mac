@@ -5,11 +5,9 @@ import Foundation
 /// pulse counts units, in the order hour-tens, hour-units, minute-tens, minute-units.
 ///
 /// This is a PURE, platform-agnostic encoder: time-in, pulse-list-out, no I/O and no BLE. The trigger
-/// (`BLEManager.buzzTimeNow()` on Apple, `WhoopBleClient.buzzTimeNow()` on Android) walks the list and
-/// fires each pulse through the EXISTING maverick notification buzz; only the *schedule* of buzzes is
-/// new, the buzz itself is the hardware-confirmed one. The Kotlin twin is
-/// `android/app/src/main/java/com/noop/protocol/HapticClock.kt`; the two pulse lists are pinned
-/// identical by matching unit tests on both platforms (e.g. 3:25 → the same list).
+/// (`BLEManager.buzzTimeNow()`) walks the list and fires each pulse through the EXISTING maverick
+/// notification buzz; only the *schedule* of buzzes is new, the buzz itself is the hardware-confirmed
+/// one. The pulse lists are pinned by unit tests (e.g. 3:25 → one exact list).
 ///
 /// Reading the buzzes:
 ///   • LONG pulse  = one "ten"   in the current digit group
@@ -21,7 +19,7 @@ import Foundation
 public enum HapticClock {
 
     /// One buzz instruction: buzz the wrist for `durationMs`, then stay silent for `gapMs`.
-    /// `Equatable` so tests can assert the exact list; plain ints keep it portable to Kotlin.
+    /// `Equatable` so tests can assert the exact list.
     public struct Pulse: Equatable {
         public let durationMs: Int
         public let gapMs: Int
@@ -32,7 +30,7 @@ public enum HapticClock {
 
         /// Whether this is a "tens" pulse (long buzz) versus a "units" pulse (short). Lets a trigger
         /// weight the buzz (heavier vs lighter) without reaching into the encoder's private timing
-        /// table — the constants stay module-internal. Kotlin twin: `Pulse.isLong`.
+        /// table — the constants stay module-internal.
         public var isLong: Bool { durationMs >= HapticClock.longMs }
     }
 

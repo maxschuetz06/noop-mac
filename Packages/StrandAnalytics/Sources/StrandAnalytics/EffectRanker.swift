@@ -27,9 +27,7 @@ import Foundation
 // Output: one RankedEffect per (b, o) that produced a usable lag, ranked with the same rule
 // as BehaviorInsights.rank (significant first, |cohensD| desc, stable tiebreak), so the feed
 // matches the existing Behaviour Effects ordering exactly. Self-contained except for the two
-// reused primitives, so the Kotlin twin is line-for-line.
-//
-// (Spec: 2026-06-19-v5-insights-correlation-engine-design.md — "Lag-aware effect ranking".)
+// reused primitives.
 
 // MARK: - Result
 

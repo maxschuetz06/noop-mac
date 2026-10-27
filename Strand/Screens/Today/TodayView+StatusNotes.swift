@@ -79,7 +79,7 @@ extension TodayView {
     /// A small explained-state note for a score whose value isn't a real today number: the state title
     /// (Calibrating / Last night · <date> / Needs the strap), its detail line, and the implicit next step
     /// the detail copy carries. Renders NOTHING for `.scored` (the ring/tile shows the number itself), so
-    /// a score never shows a bare blank without a state, a reason and a next step. (spec 2026-06-20)
+    /// a score never shows a bare blank without a state, a reason and a next step.
     @ViewBuilder
     func explainedScoreNote(_ state: MetricTileState) -> some View {
         if let title = state.title, let detail = state.detail {

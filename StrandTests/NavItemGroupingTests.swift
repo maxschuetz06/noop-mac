@@ -34,20 +34,8 @@ final class NavItemGroupingTests: XCTestCase {
         XCTAssertEqual(NavItem.more, NavItem.allCases.filter { !NavItem.core.contains($0) })
     }
 
-    func testRemovedSectionsDecodeToToday() {
-        for stale in ["Intelligence", "Coach", "Smart Alarm"] {
-            XCTAssertEqual(NavItem(persistedRawValue: stale), .today, "\(stale) must fall back to Today")
-        }
-    }
-
-    func testPersistedRawValuesDecodeToTheirItem() {
-        for item in NavItem.allCases {
-            XCTAssertEqual(NavItem(persistedRawValue: item.rawValue), item)
-        }
-    }
-
     func testRawValuesAreUnchanged() {
-        // Persisted selections and other code depend on these.
+        // The sidebar uses these as stable ids.
         XCTAssertEqual(NavItem.today.rawValue, "Today")
         XCTAssertEqual(NavItem.insightsHub.rawValue, "What Moves You")
         XCTAssertEqual(NavItem.labBook.rawValue, "Lab Book")

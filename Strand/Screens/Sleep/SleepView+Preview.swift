@@ -25,12 +25,7 @@ private extension Repository {
 
         var days: [DailyMetric] = []
         var sleeps: [CachedSleepSession] = []
-        let fmt: DateFormatter = {
-            let f = DateFormatter()
-            f.locale = Locale(identifier: "en_US_POSIX")
-            f.dateFormat = "yyyy-MM-dd"
-            return f
-        }()
+        let fmt = DayKey.makeFormatter()
 
         for i in (0..<30).reversed() {
             let date = cal.date(byAdding: .day, value: -i, to: now)!

@@ -1,12 +1,18 @@
 import XCTest
+import WhoopStore
 @testable import StrandAnalytics
 
-/// Pure multi-device fusion contract — the Swift half of the Swift↔Kotlin parity gate. The identical
-/// fixtures + expected output live in android/.../FusionResolverTest.kt. Covers the spec test plan
-/// (docs/superpowers/specs/2026-06-19-v5-local-multi-device-fusion-design.md §Test plan): trust
-/// ordering, cross-validation boundaries, conflict-never-merges, single-source degradation, and
-/// provenance integrity.
+/// Pure multi-device fusion contract: trust ordering, cross-validation boundaries, conflict-never-merges,
+/// single-source degradation, and provenance integrity.
 final class FusionResolverTests: XCTestCase {
+
+    /// Fusion sources name stored rows, so their raw values must stay the stored source ids.
+    func testFusionSourcesUseTheStoredSourceIds() {
+        XCTAssertEqual(FusionSource.whoopImport.rawValue, SourceID.whoop)
+        XCTAssertEqual(FusionSource.noopComputed.rawValue, SourceID.whoopComputed)
+        XCTAssertEqual(FusionSource.appleHealth.rawValue, SourceID.appleHealth)
+        XCTAssertEqual(FusionSource.healthConnect.rawValue, SourceID.healthConnect)
+    }
 
     // MARK: - 1. Trust ordering ("best signal wins")
 

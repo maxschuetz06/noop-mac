@@ -118,7 +118,7 @@ extension TodayView {
     /// when TODAY has no value yet and there's nothing to carry over. Those vitals are measured overnight, so
     /// "After tonight's sleep" tells the user WHEN the tile fills rather than leaving a bare "—" beside a lone
     /// unit that read as broken. Returns nil off-today (a past day keeps the plain unit — it's missing data the
-    /// user can't act on now). Pure copy/gate so it can be unit-tested without a live view. Mirror in Kotlin.
+    /// user can't act on now). Pure copy/gate so it can be unit-tested without a live view.
     static func emptyVitalCaption(unit: String, isToday: Bool) -> String? {
         guard isToday else { return nil }
         return "After tonight's sleep"

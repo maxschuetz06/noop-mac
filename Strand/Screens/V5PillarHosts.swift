@@ -83,7 +83,8 @@ struct RhythmHost: View {
         // BLE-only users have their night under the computed source; fall back to it when the imported
         // device yields nothing.
         let rrRows = rr.isEmpty
-            ? await repo.rrIntervals(deviceId: repo.deviceId + "-noop", from: lo, to: hi, limit: 200_000)
+            ? await repo.rrIntervals(deviceId: repo.deviceId + SourceID.computedSuffix, from: lo, to: hi,
+                                     limit: 200_000)
             : rr
         guard !rrRows.isEmpty else { return }
         let grav = await repo.gravitySamples(from: lo, to: hi, limit: 200_000)

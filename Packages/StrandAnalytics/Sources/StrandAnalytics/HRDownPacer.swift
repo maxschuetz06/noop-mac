@@ -5,8 +5,6 @@ import Foundation
 // unit-tested; the live controller reads smoothed HR off `AppModel.bpm`, calls `next(...)`, fires ONE
 // light buzz per returned interval, and re-asks every recompute window. No I/O / BLE here.
 //
-// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L2).
-//
 // SAFETY ENVELOPE (a relaxation metronome, NOT cardiac control — bounded, never therapeutic):
 //   • Target tempo T = smoothedHR − Δ, where Δ RAMPS from `startDeltaBpm` to `maxDeltaBpm` over the
 //     session so the cue trails the heart down rather than yanking it.

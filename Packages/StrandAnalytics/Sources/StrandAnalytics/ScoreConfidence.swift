@@ -17,7 +17,7 @@ import Foundation
 //                  PPG-derived HR, or a short baseline history).
 //   .solid       — full inputs present and the baseline is trusted.
 //
-// Kept deliberately small and dependency-free so the Kotlin mirror is byte-identical.
+// Kept deliberately small and dependency-free.
 public enum ScoreConfidence: String, Equatable, Sendable, Codable {
     case calibrating
     case building

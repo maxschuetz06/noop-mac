@@ -58,7 +58,6 @@ extension RecomputePipeline {
     /// (cold-start). One `HistoryBlock` per stored session in `window` — start/end are the EFFECTIVE
     /// (edited) bounds so a corrected bedtime is learned, dayKey is the LOCAL day of the midpoint — and
     /// `SleepStageTotals.habitualMidsleepSec` keeps the longest block per day (naps drop out). (#547)
-    /// Mirrors the Android `computeHabitualMidsleep`.
     public static func habitualMidsleep(store: WhoopStore, sources: HabitualMidsleepSources,
                                         window: ClosedRange<Int>, offsetSec: Int) async -> Int? {
         let imported = (try? await store.sleepSessions(deviceId: sources.importedId, from: window.lowerBound,
@@ -109,8 +108,7 @@ extension RecomputePipeline {
     /// Vitality write to.
     static func saturdayKey(onOrBefore dayStr: String, timeZone: TimeZone) -> String {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = timeZone
-        let fmt = DateFormatter(); fmt.calendar = cal; fmt.timeZone = cal.timeZone
-        fmt.locale = Locale(identifier: "en_US_POSIX"); fmt.dateFormat = "yyyy-MM-dd"
+        let fmt = DayKey.makeFormatter(timeZone: timeZone)
         guard let d = fmt.date(from: dayStr) else { return dayStr }
         let back = cal.component(.weekday, from: d) % 7   // Sat(7)→0, Sun(1)→1 … Fri(6)→6
         let sat = cal.date(byAdding: .day, value: -back, to: d) ?? d

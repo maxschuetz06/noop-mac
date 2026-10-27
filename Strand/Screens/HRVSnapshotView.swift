@@ -83,9 +83,6 @@ struct HRVSnapshotView: View {
             guard phase == .capturing else { return }
             tick()
         }
-        .onDisappear {
-            ScreenIdle.keepAwake(false)
-        }
     }
 
     // MARK: - Status row
@@ -390,14 +387,12 @@ struct HRVSnapshotView: View {
         runningRMSSD = nil
         result = nil
         saved = false
-        ScreenIdle.keepAwake(true)      // hold the screen awake through the hands-still capture (no-op on macOS)
     }
 
     private func cancel() {
         phase = .idle
         secondsRemaining = Self.captureSeconds
         runningRMSSD = nil
-        ScreenIdle.keepAwake(false)
     }
 
     private func tick() {
@@ -410,7 +405,6 @@ struct HRVSnapshotView: View {
 
     /// End the capture and run the full cleaning analysis over everything collected.
     private func finish() {
-        ScreenIdle.keepAwake(false)
         result = HRVAnalyzer.analyze(rawRR: captureBuffer.map(Double.init),
                                      maxRejectedFraction: HRVAnalyzer.defaultSpotMaxRejectedFraction)
         phase = .done

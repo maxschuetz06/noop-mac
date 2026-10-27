@@ -144,7 +144,6 @@ final class SyncActivityHoldTests: XCTestCase {
         XCTAssertEqual(began, 2)
     }
 
-    #if os(macOS)
     func testSystemActivityRoundTrips() {
         let hold = SyncActivityHold()
         hold.acquire()
@@ -152,7 +151,6 @@ final class SyncActivityHoldTests: XCTestCase {
         hold.release()
         XCTAssertFalse(hold.isHeld)
     }
-    #endif
 }
 
 final class BackfillThroughputTrackerTests: XCTestCase {

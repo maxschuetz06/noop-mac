@@ -111,13 +111,7 @@ public enum AnalyticsEngine {
         }
     }
 
-    private static let isoDay: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let isoDay = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     /// Format a unix-seconds timestamp as a UTC YYYY-MM-DD day string.
     public static func dayString(_ ts: Int) -> String {
@@ -518,7 +512,7 @@ public enum AnalyticsEngine {
     ///   - consistency (0.10): sleep/wake regularity in [0,1]; a single day carries no
     ///     regularity signal, so the caller supplies it from history — nil → neutral 0.5.
     /// All sub-scores clamp to [0,1]; the weighted sum scales to [0,100]. Kept
-    /// dependency-free + constant-explicit so the Kotlin mirror is byte-identical.
+    /// dependency-free + constant-explicit.
     ///
     /// DEEP-sleep honesty (Reddit HRV/sleep report): pooling deep+REM let a night with normal REM
     /// but almost no DEEP still earn near-full restorative credit (so Rest read 95+ with little deep).

@@ -5,8 +5,7 @@ import WhoopStore
 // MARK: - DEBUG-only demo seed (Apple parity with Android's DemoSeeder)
 // Seeds a comprehensive, self-contained synthetic dataset so a DEBUG build can walk every screen —
 // Today, Sleep, Trends, Workouts, Health, Stress, Insights, Explore — with no strap and no import.
-// This is the Apple twin of `android/.../data/DemoSeeder.kt` (same RNG seed, same physiology, same
-// 120-day window) and exists so we can render iOS + macOS for verification and marketing screenshots.
+// It covers a 120-day window and exists so the app can be rendered for verification and screenshots.
 //
 // Gating: the whole file is `#if DEBUG`, so it is stripped from every Release build (the shipped
 // app). At runtime it only seeds when launched with `--demo-seed` AND the store has no daily rows,
@@ -15,9 +14,6 @@ import WhoopStore
 // and internally correlated (recovery ↔ HRV ↔ resting-HR ↔ sleep; strain ↔ workouts; a slow fitness
 // drift) so the charts, trends and insights all read like a real account.
 enum AppleDemoSeeder {
-
-    static let whoop = "my-whoop"
-    static let apple = "apple-health"
     private static let DAYS = 120
     /// Effort rescale factor: the old 0–21 strain scale → the new 0–100 Effort scale.
     private static let STRAIN_SCALE = 100.0 / 21.0
@@ -35,7 +31,8 @@ enum AppleDemoSeeder {
     static func seedIfRequested(into store: WhoopStore) async {
         guard requested else { return }
         seedDemoDeviceIfNeeded(into: store)
-        let existing = (try? await store.dailyMetrics(deviceId: whoop, from: "0000-00-00", to: "9999-99-99")) ?? []
+        let existing = (try? await store.dailyMetrics(deviceId: SourceID.whoop,
+                                                      from: "0000-00-00", to: "9999-99-99")) ?? []
         guard existing.isEmpty else { return }
         do { try await seed(into: store) }
         catch { NSLog("AppleDemoSeeder: seed failed — \(error)") }
@@ -49,7 +46,7 @@ enum AppleDemoSeeder {
     private static func seedDemoDeviceIfNeeded(into store: WhoopStore) {
         let registry = DeviceRegistryStore(dbQueue: store.registryQueue)
         guard let devices = try? registry.all() else { return }
-        guard devices.allSatisfy({ $0.id == whoop }) else { return }  // only the seeded WHOOP present
+        guard devices.allSatisfy({ $0.id == SourceID.whoop }) else { return }  // only the seeded WHOOP present
         let now = Int(Date().timeIntervalSince1970)
         let polar = PairedDevice(
             id: "polar-h10-demo", brand: "Polar", model: "H10", nickname: nil,
@@ -64,7 +61,7 @@ enum AppleDemoSeeder {
         let zone = TimeZone.current
         let startDay = cal.date(byAdding: .day, value: -(DAYS - 1), to: cal.startOfDay(for: Date()))!
 
-        try? await store.upsertDevice(id: whoop, mac: nil, name: "WHOOP (demo)")
+        try? await store.upsertDevice(id: SourceID.whoop, mac: nil, name: "WHOOP (demo)")
 
         var daily: [DailyMetric] = []
         var sleeps: [CachedSleepSession] = []
@@ -76,10 +73,7 @@ enum AppleDemoSeeder {
         var weight = 79.5
         var fitness = 0.0  // slow upward drift: HRV rises, resting-HR falls, VO2max climbs
 
-        let isoFmt = DateFormatter()
-        isoFmt.locale = Locale(identifier: "en_US_POSIX")
-        isoFmt.timeZone = zone
-        isoFmt.dateFormat = "yyyy-MM-dd"
+        let isoFmt = DayKey.makeFormatter(timeZone: zone)
 
         for i in 0..<DAYS {
             let date = cal.date(byAdding: .day, value: i, to: startDay)!
@@ -173,8 +167,8 @@ enum AppleDemoSeeder {
                 let dayStart = cal.startOfDay(for: date)
                 let start = Int(dayStart.timeIntervalSince1970) + hour * 3600 + rng.nextInt(0, 50) * 60 + k * 3600
                 let avg = Int(gauss(&rng, 138.0, 12.0))
-                let src = rng.nextDouble() < 0.7 ? whoop : apple
-                let zonesJSON: String? = src == whoop ? {
+                let src = rng.nextDouble() < 0.7 ? SourceID.whoop : SourceID.appleHealth
+                let zonesJSON: String? = src == SourceID.whoop ? {
                     let z = [gauss(&rng, 15.0, 5.0), gauss(&rng, 30.0, 8.0), gauss(&rng, 28.0, 8.0),
                              gauss(&rng, 15.0, 6.0), gauss(&rng, 6.0, 3.0)].map { $0.clamped(0.0, 100.0) }
                     return "{\"zone1\":\(round1(z[0])),\"zone2\":\(round1(z[1])),\"zone3\":\(round1(z[2])),\"zone4\":\(round1(z[3])),\"zone5\":\(round1(z[4]))}"
@@ -222,12 +216,12 @@ enum AppleDemoSeeder {
             bodyAgeDemo -= 0.6
         }
 
-        _ = try await store.upsertDailyMetrics(daily, deviceId: whoop)
-        _ = try await store.upsertSleepSessions(sleeps, deviceId: whoop)
-        _ = try await store.upsertMetricSeries(series, deviceId: whoop)
-        _ = try await store.upsertAppleDaily(appleRows, deviceId: apple)
-        if !workouts.isEmpty { _ = try await store.upsertWorkouts(workouts, deviceId: whoop) }
-        if !journal.isEmpty { _ = try await store.upsertJournal(journal, deviceId: whoop) }
+        _ = try await store.upsertDailyMetrics(daily, deviceId: SourceID.whoop)
+        _ = try await store.upsertSleepSessions(sleeps, deviceId: SourceID.whoop)
+        _ = try await store.upsertMetricSeries(series, deviceId: SourceID.whoop)
+        _ = try await store.upsertAppleDaily(appleRows, deviceId: SourceID.appleHealth)
+        if !workouts.isEmpty { _ = try await store.upsertWorkouts(workouts, deviceId: SourceID.whoop) }
+        if !journal.isEmpty { _ = try await store.upsertJournal(journal, deviceId: SourceID.whoop) }
         NSLog("AppleDemoSeeder: seeded \(daily.count) days, \(workouts.count) workouts.")
     }
 

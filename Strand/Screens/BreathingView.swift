@@ -552,7 +552,6 @@ private struct BreathingContent: View {
 
     private func start() {
         running = true
-        ScreenIdle.keepAwake(true)
         sessionSeconds = 0
         breathCount = 0
         endedOutcome = nil
@@ -566,7 +565,6 @@ private struct BreathingContent: View {
     private func stop() {
         let wasRunning = running
         running = false
-        ScreenIdle.keepAwake(false)
         phaseDeadline = .distantFuture
         if wasRunning { captureOutcome() }
         if reduceMotion {

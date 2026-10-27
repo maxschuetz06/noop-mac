@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 import ZIPFoundation
 
@@ -260,14 +261,7 @@ public struct WearableExportImporter {
 
     // MARK: - Shared date helpers
 
-    static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    static let dayFormatter = DayKey.makeFormatter(timeZone: DayKey.utc)
 
     static func dayDate(_ s: String) -> Date? { dayFormatter.date(from: s) }
 

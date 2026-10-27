@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import StrandDesign
 
@@ -47,4 +46,3 @@ struct HomeFormat {
         return Text("\(title): from \(lo, format: style(lo)) to \(hi, format: style(hi)) \(unit), latest \(last, format: style(last)) \(unit)")
     }
 }
-#endif

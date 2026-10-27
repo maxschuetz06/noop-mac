@@ -28,8 +28,7 @@ struct ManualWorkoutSheet: View {
     @State private var avgHrText: String
     @State private var kcalText: String
 
-    /// Focus for the numeric (Avg HR / Calories) fields so the keyboard Done button can resign them —
-    /// the decimal pad has no return key. iOS-only effect; the enum keeps both platforms compiling.
+    /// Focus for the numeric (Avg HR / Calories) fields.
     private enum NumberField: Hashable { case avgHr, calories }
     @FocusState private var focusedField: NumberField?
 
@@ -89,18 +88,7 @@ struct ManualWorkoutSheet: View {
             footer
         }
         .padding(NoopMetrics.space6)
-        // A fixed 420pt is right for the free-floating macOS sheet, but on iPhone it's wider than
-        // the screen, so the Avg HR/Calories row, the Start DatePicker and the footer ran off the
-        // right edge (#185, same fix as WhatsNewView/ScoringGuideView). iOS fills the presented
-        // sheet's width and sizes to content height instead.
-        #if os(macOS)
         .frame(width: 420)
-        #else
-        .frame(maxWidth: .infinity)
-        // A short 5-field form → open at .medium with .large a drag away; the grabber also gives the
-        // top dismiss affordance the sheet otherwise lacks (only a bottom Cancel).
-        .noopSheetPresentation(largeFirst: false)
-        #endif
         .background(StrandPalette.surfaceOverlay)
         // Lets the user dismiss the decimal pad (which has no return key) and reach Cancel/Add. No-op on macOS.
         .keyboardDoneToolbar($focusedField)
@@ -385,12 +373,7 @@ struct StartWorkoutSheet: View {
             }
         }
         .padding(NoopMetrics.space6)
-        #if os(macOS)
         .frame(width: 420)
-        #else
-        .frame(maxWidth: .infinity)
-        .noopSheetPresentation(largeFirst: false)
-        #endif
         .background(StrandPalette.surfaceOverlay)
     }
 }

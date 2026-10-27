@@ -2,11 +2,7 @@ import SwiftUI
 import StrandDesign
 import Foundation
 
-#if canImport(AppKit)
 import AppKit
-#elseif canImport(UIKit)
-import UIKit
-#endif
 
 // MARK: - Trends Report Renderer (#436)
 //
@@ -72,12 +68,6 @@ enum TrendsReportRenderer {
     /// filled before the view draws (PDF pages start transparent). Pulled from the same
     /// `StrandPalette.surfaceBase` token the page uses, so there's no colour drift.
     private static var pageBackgroundCGColor: CGColor {
-        #if canImport(AppKit)
         return NSColor(StrandPalette.surfaceBase).cgColor
-        #elseif canImport(UIKit)
-        return UIColor(StrandPalette.surfaceBase).cgColor
-        #else
-        return CGColor(gray: 0, alpha: 1)
-        #endif
     }
 }

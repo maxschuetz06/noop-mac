@@ -143,7 +143,7 @@ extension SleepView {
     /// a high-efficiency night whose deep+REM share is below the restorative floor. Built on the engine's
     /// own `ScoreConfidence.rest(...)` so the UI flag and the persisted Rest confidence agree. `asleepMin`,
     /// `deepMin`, `remMin` are minutes; `efficiency` is asleep/in-bed in [0,1]. Returns false for an unstaged
-    /// or zero-asleep night (no staging to doubt). Mirror EXACTLY in Kotlin. (#H9)
+    /// or zero-asleep night (no staging to doubt). (#H9)
     static func isStagingLowConfidence(asleepMin: Double, deepMin: Double, remMin: Double,
                                        efficiency: Double) -> Bool {
         guard asleepMin > 0 else { return false }

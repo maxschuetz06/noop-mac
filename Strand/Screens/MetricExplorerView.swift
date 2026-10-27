@@ -51,7 +51,7 @@ private func metricAccent(_ m: MetricDescriptor) -> Color {
         return StrandPalette.metricAmber
     default:
         switch m.source {
-        case "apple-health": return StrandPalette.metricCyan
+        case SourceID.appleHealth: return StrandPalette.metricCyan
         case "xiaomi-band":  return StrandPalette.metricAmber
         default:             return StrandPalette.textPrimary
         }
@@ -145,17 +145,9 @@ struct MetricExplorerView: View {
     @State private var showAll = false
 
     var body: some View {
-        #if os(macOS)
         // macOS: Explore is a standalone detail pane, so it owns its NavigationStack.
         NavigationStack { exploreScaffold }
             .task(id: repo.refreshSeq) { await loadAvailability(refreshSeq: repo.refreshSeq) }
-        #else
-        // iOS: Explore is pushed INSIDE the More tab's NavigationStack. A nested NavigationStack made
-        // tapping a metric bounce straight back to the More list (#199) — so use the ambient stack; the
-        // rows push their detail with a direct closure-based NavigationLink (#38).
-        exploreScaffold
-            .task(id: repo.refreshSeq) { await loadAvailability(refreshSeq: repo.refreshSeq) }
-        #endif
     }
 
     private var exploreScaffold: some View {
@@ -180,9 +172,6 @@ struct MetricExplorerView: View {
                 deepTimelineRow
             }
             .buttonStyle(StrandPressableButtonStyle(cornerRadius: NoopMetrics.cardRadius))
-            #if os(iOS)
-            .simultaneousGesture(TapGesture().onEnded { StrandHaptic.selection.play() })
-            #endif
             .padding(.bottom, NoopMetrics.sectionGap - 20)
 
             if !probing {
@@ -224,13 +213,6 @@ struct MetricExplorerView: View {
                                 // Full-row press-down feedback (square corners — the row spans the
                                 // card edge-to-edge, dividers between).
                                 .buttonStyle(StrandPressableButtonStyle(cornerRadius: 0))
-                                #if os(iOS)
-                                // Light selection tick on tap; the simultaneousGesture leaves the
-                                // NavigationLink push intact.
-                                .simultaneousGesture(TapGesture().onEnded {
-                                    StrandHaptic.selection.play()
-                                })
-                                #endif
                                 if idx < metrics.count - 1 {
                                     Divider().overlay(StrandPalette.hairline)
                                         .padding(.leading, 56)

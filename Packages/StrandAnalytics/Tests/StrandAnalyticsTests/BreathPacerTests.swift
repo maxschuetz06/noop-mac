@@ -2,9 +2,7 @@ import XCTest
 @testable import StrandAnalytics
 
 /// Pins the L1 `BreathPacer` cue list: a fixed `(bpm, inhaleFraction, cycles)` → an exact `[BreathCue]`
-/// list (offsets, phase, loops). Pure value logic, so no strap/BLE seam is needed. These are the GOLDEN
-/// VECTORS the Kotlin `BreathPacerTest` mirrors byte-for-byte — the cross-platform parity contract.
-/// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md.
+/// list (offsets, phase, loops). Pure value logic, so no strap/BLE seam is needed.
 final class BreathPacerTests: XCTestCase {
 
     // GOLDEN VECTOR A: 6.0 br/min, 0.4 inhale, 2 cycles.

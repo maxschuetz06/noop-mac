@@ -5,8 +5,7 @@ import Foundation
 // LabMarker.swift — the value type for ONE stored Lab Book reading, the richer
 // source-of-truth row behind the daily `metricSeries` projection.
 //
-// Per the Health Records design spec (2026-06-19-v5-health-records-design.md, §"New"):
-// a single calendar day can hold several readings; each reading carries a precise
+// A single calendar day can hold several readings; each reading carries a precise
 // `takenAt` instant and a `unit`; and free-text notes / qualitative ("valueText")
 // results don't fit a REAL-only `metricSeries` cell — so the book is its own table
 // (`labMarker`, WhoopStore v17) and the projection is how that book talks to the

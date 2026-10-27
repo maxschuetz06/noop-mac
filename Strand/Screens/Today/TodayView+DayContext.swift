@@ -126,11 +126,11 @@ extension TodayView {
     /// "On-device" (scored on THIS device from the raw strap stream); the imported strap source
     /// (`deviceId`, normally "my-whoop") reads "Whoop"; the Apple-Health source reads "Apple Health".
     /// Any other real source (Mi Band, Health Connect, nutrition) keeps its `FusionSource.displayName`
-    /// — still the genuine merge winner, never a blanket claim. Mirror EXACTLY in Kotlin.
+    /// — still the genuine merge winner, never a blanket claim.
     static func provenanceDisplayLabel(rawSource: String, deviceId: String) -> String {
-        if rawSource == deviceId + "-noop" { return "On-device" }
-        if rawSource == deviceId || rawSource == Repository.whoopSource { return "Whoop" }
-        if rawSource == Repository.appleHealthSource { return "Apple Health" }
+        if rawSource == deviceId + SourceID.computedSuffix { return "On-device" }
+        if rawSource == deviceId || rawSource == SourceID.whoop { return "Whoop" }
+        if rawSource == SourceID.appleHealth { return "Apple Health" }
         // Fall back to the FusionSource display name for any other known source; else the raw id.
         return FusionSource(rawValue: rawSource)?.displayName ?? rawSource
     }
@@ -147,12 +147,7 @@ extension TodayView {
 
     /// Parses a stored `yyyy-MM-dd` day key in the device-local zone (matching how DailyMetric.day
     /// is written) — local so a key never shifts a day under timezone conversion.
-    static let dayKeyParser: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    static let dayKeyParser = DayKey.makeFormatter()
     /// "d MMM" for a stored `yyyy-MM-dd` day key, used by the carried-over Charge caption (#543). Falls
     /// back to the raw key if it can't be parsed so the caption is never empty.
     ///

@@ -23,7 +23,7 @@ final class IntelligenceRhrFloorMeanTests: XCTestCase {
     }
 
     func testMeanRoundsToNearest() {
-        // 50,51,52,54 → 207/4 = 51.75 → rounds to 52 (banker-free .rounded()), matching Kotlin Math.round.
+        // 50,51,52,54 → 207/4 = 51.75 → rounds to 52 (banker-free .rounded()).
         let line = IE.rhrFloorMeanLogLine(day: "2026-06-13", floor: 50, inBedBpms: [50, 51, 52, 54])
         XCTAssertTrue(line.contains("floor=50 nightMean=52 inBedSamples=4"), line)
     }

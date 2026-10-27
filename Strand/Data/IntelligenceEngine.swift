@@ -10,18 +10,14 @@ import StrandAnalytics
 /// load). This is what makes NOOP independent of WHOOP's cloud — for any day the strap collected raw data
 /// with NOOP connected, NOOP scores it itself rather than relying on the values WHOOP computed in the
 /// imported CSV. The adapter owns scheduling (the `computing` lock, one-shot passes), the profile and
-/// settings snapshot, and publishing the results.
+/// settings snapshot, and refreshing the dashboard after a run.
 @MainActor
 final class IntelligenceEngine: ObservableObject {
     private let repo: Repository
     private let profile: ProfileStore
     private let deviceId: String
 
-    @Published var results: [Computed] = []      // newest first
     @Published var computing = false
-    @Published var note: String?
-
-    typealias Computed = RecomputedDay
 
     /// Optional sink for the per-day scoring diagnostic, fed line-by-line into the SAME shareable strap
     /// log the user already exports (PII-scrubbed by `LiveState.append(log:)`). Defaults to nil so the
@@ -62,9 +58,9 @@ final class IntelligenceEngine: ObservableObject {
         guard !UserDefaults.standard.bool(forKey: Self.effortRescoreFlagKey) else { return }
         await analyzeRecent(maxDays: historyDays)
         // Only mark done if the pass actually completed (wasn't skipped because another tick held the
-        // `computing` lock). `computing` is false here once analyzeRecent's `defer` has run; a skipped
-        // call returns with `note` unset by it. Use the lock state: if a concurrent run was in progress
-        // the flag stays unset so the next launch retries — cheap, and correctness over a one-time cost.
+        // `computing` lock). `computing` is false here once analyzeRecent's `defer` has run. If a
+        // concurrent run was in progress the flag stays unset so the next launch retries — cheap, and
+        // correctness over a one-time cost.
         if !computing { UserDefaults.standard.set(true, forKey: Self.effortRescoreFlagKey) }
     }
 
@@ -127,7 +123,7 @@ final class IntelligenceEngine: ObservableObject {
     /// under the computed ("-noop") source and refresh the dashboard. Skipped while a run is in progress.
     func analyzeRecent(maxDays: Int = 21) async {
         guard !computing else { return }
-        guard let store = await repo.storeHandle() else { note = "No on-device store yet."; return }
+        guard let store = await repo.storeHandle() else { return }
         computing = true
         defer { computing = false }
 
@@ -140,10 +136,6 @@ final class IntelligenceEngine: ObservableObject {
             profile.stepsCalibrationConfidence = steps.confidence
             profile.stepsCalibrationManual = steps.manual
         }
-        results = outcome.days
-        note = outcome.days.isEmpty
-            ? "No scored nights yet. Wear the strap with NOOP connected overnight and the engine will score your charge, effort and rest itself, no WHOOP cloud required."
-            : nil
 
         // Reload the dashboard caches so the freshly computed scores show up immediately.
         if !outcome.days.isEmpty { await repo.refresh() }

@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 
 /// Personal-baseline banding for the Health Monitor's vital tiles.
@@ -133,15 +134,12 @@ public enum VitalBands {
     /// Original Foundation implementation — fallback for non-canonical keys and the reference the
     /// equality tests compare the fast path against.
     static func calendarSeriesViaFoundation(_ rows: [(day: String, value: Double?)]) -> [Double?] {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
+        let f = DayKey.makeFormatter(timeZone: DayKey.utc)
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(secondsFromGMT: 0)!
         let dates = rows.compactMap { f.date(from: $0.day) }
         guard let first = dates.min(), let last = dates.max() else { return [] }
-        // Last write wins for a duplicated day key, matching the dictionary the Kotlin port builds.
+        // Last write wins for a duplicated day key.
         var byDay: [String: Double?] = [:]
         for r in rows where f.date(from: r.day) != nil { byDay[r.day] = r.value }
         var out: [Double?] = []

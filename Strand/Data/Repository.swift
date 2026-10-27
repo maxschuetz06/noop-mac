@@ -106,7 +106,7 @@ final class Repository: ObservableObject {
     /// Source id for on-device computed scores (recovery/strain/sleep derived from the raw strap
     /// streams by IntelligenceEngine). Merged UNDER the imported `deviceId` rows at read time, so a
     /// real WHOOP import always wins and the strap-only user still gets a populated dashboard.
-    private var computedDeviceId: String { deviceId + "-noop" }
+    private var computedDeviceId: String { deviceId + SourceID.computedSuffix }
     private var store: WhoopStore?
 
     /// Daily metrics (recovery/strain/sleep/HRV/RHR…) over the recent window, oldest→newest.
@@ -191,16 +191,6 @@ final class Repository: ObservableObject {
         vitalRows.isEmpty ? days.map { SourcedDailyMetric(metric: $0, source: .localCache) } : vitalRows
     }
 
-    /// Canonical source ids the resolver knows how to cross-reference. The strap's actual id is
-    /// `deviceId` (and its computed sibling `deviceId + "-noop"`); these are the FIXED ids.
-    static let whoopSource = "my-whoop"
-    static let appleHealthSource = "apple-health"
-    static let healthConnectSource = "health-connect"
-
-    /// `yyyy-MM-dd` in the device's local zone, matching how `DailyMetric.day` is stored.
-    private static let dayKeyFormatter: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX"); return f
-    }()
     /// Formatting a `Date` through `DateFormatter` is microseconds, and the Today / Sleep / Trends bodies ask
     /// for day keys dozens of times per pass (selected day, carry-over, window cutoffs). The key is a pure
     /// function of the whole second (and the system time zone), so results are memoized per epoch second.
@@ -208,7 +198,7 @@ final class Repository: ObservableObject {
     private static let dayKeyCache = DayKeyCache()
     static func localDayKey(_ date: Date) -> String {
         dayKeyCache.key(forSecond: Int(date.timeIntervalSince1970.rounded(.down))) {
-            dayKeyFormatter.string(from: date)
+            DayKey.string(from: date)
         }
     }
 
@@ -314,7 +304,7 @@ final class Repository: ObservableObject {
 
         let imported = (try? await store.dailyMetrics(deviceId: deviceId, from: fromDay, to: toDay)) ?? []
         let computed = (try? await store.dailyMetrics(deviceId: computedDeviceId, from: fromDay, to: toDay)) ?? []
-        let apple = (try? await store.dailyMetrics(deviceId: Self.appleHealthSource, from: fromDay, to: toDay)) ?? []
+        let apple = (try? await store.dailyMetrics(deviceId: SourceID.appleHealth, from: fromDay, to: toDay)) ?? []
         let impSleep = (try? await store.sleepSessions(deviceId: deviceId, from: lo, to: hi, limit: 4000)) ?? []
         let compSleep = (try? await store.sleepSessions(deviceId: computedDeviceId, from: lo, to: hi, limit: 4000)) ?? []
 
@@ -523,7 +513,7 @@ final class Repository: ObservableObject {
 
     /// The user's learned habitual midsleep (local time-of-day seconds), or nil under
     /// `SleepStageTotals.habitualMinDays` of history (cold-start). Computed EXACTLY as
-    /// `IntelligenceEngine.computeHabitualMidsleep` does — the SAME raw imported + computed ("-noop")
+    /// `RecomputePipeline.habitualMidsleep` does — the SAME raw imported + computed ("-noop")
     /// sleep-session union, one `HistoryBlock` per session (effective bounds, dayKey = the LOCAL calendar
     /// day of the midpoint), deferring to the SAME shared `SleepStageTotals.habitualMidsleepSec` pure
     /// function — so the Sleep tab's main-night pick aligns to the same value the analytics rollup used.
@@ -959,30 +949,30 @@ final class Repository: ObservableObject {
     ///  • any other source → itself only (nutrition/mood are single-source by design).
     static func sourceCandidates(forKey key: String, preferredSource: String,
                                  actualWhoopSource: String) -> [MetricSourceCandidate] {
-        let computedSource = actualWhoopSource + "-noop"
+        let computedSource = actualWhoopSource + SourceID.computedSuffix
         func uniqued(_ cs: [MetricSourceCandidate]) -> [MetricSourceCandidate] {
             var seen = Set<MetricSourceCandidate>(); var out: [MetricSourceCandidate] = []
             for c in cs where !seen.contains(c) { seen.insert(c); out.append(c) }
             return out
         }
 
-        if preferredSource == whoopSource || preferredSource == actualWhoopSource {
+        if preferredSource == SourceID.whoop || preferredSource == actualWhoopSource {
             var candidates = [
                 MetricSourceCandidate(source: actualWhoopSource, key: key),
                 MetricSourceCandidate(source: computedSource, key: key),
             ]
             if let appleKey = appleCompatibleKey(forWhoopKey: key) {
-                candidates.append(MetricSourceCandidate(source: appleHealthSource, key: appleKey))
+                candidates.append(MetricSourceCandidate(source: SourceID.appleHealth, key: appleKey))
             }
             return uniqued(candidates)
         }
-        if preferredSource == appleHealthSource {
-            var candidates = [MetricSourceCandidate(source: appleHealthSource, key: key)]
+        if preferredSource == SourceID.appleHealth {
+            var candidates = [MetricSourceCandidate(source: SourceID.appleHealth, key: key)]
             // Health Connect is an Apple-equivalent body-metric source (Android only — harmless no-op on
             // iOS/Mac, which never write a "health-connect" series). Kept here so the resolver is
             // byte-identical to Android's, where it makes a Health-Connect-only weight history resolve in
             // Compare (#443). A real Apple export still wins per day; HC fills the rest.
-            candidates.append(MetricSourceCandidate(source: healthConnectSource, key: key))
+            candidates.append(MetricSourceCandidate(source: SourceID.healthConnect, key: key))
             if noopComputedCanFillAppleMetric(key) {
                 candidates.append(MetricSourceCandidate(source: computedSource, key: key))
             }
@@ -1027,7 +1017,7 @@ final class Repository: ObservableObject {
     ///     extended to the full daily column set.
     /// Any OTHER source (apple-health / nutrition-csv / noop-mood) reads only its own series, unchanged.
     func exploreSeries(key: String, source: String, days: Int = 4000) async -> [(day: String, value: Double)] {
-        guard source == "my-whoop" else { return await series(key: key, source: source, days: days) }
+        guard source == SourceID.whoop else { return await series(key: key, source: source, days: days) }
         guard let store = await ensureStore() else { return [] }
         let now = Date()
         let from = Self.dayString(now.addingTimeInterval(-Double(days) * 86_400))
@@ -1186,7 +1176,7 @@ final class Repository: ObservableObject {
         let now = Int(Date().timeIntervalSince1970)
         let lo = now - days * 86_400, hi = now + 86_400
         var rows = (try? await store.workouts(deviceId: deviceId, from: lo, to: hi, limit: 5000)) ?? []
-        rows += (try? await store.workouts(deviceId: "apple-health", from: lo, to: hi, limit: 5000)) ?? []
+        rows += (try? await store.workouts(deviceId: SourceID.appleHealth, from: lo, to: hi, limit: 5000)) ?? []
         rows += (try? await store.workouts(deviceId: computedDeviceId, from: lo, to: hi, limit: 5000)) ?? []
         // Imported lifting sessions (Hevy / Liftosaur) live under their own "lifting" source.
         rows += (try? await store.workouts(deviceId: "lifting", from: lo, to: hi, limit: 5000)) ?? []
@@ -1216,7 +1206,7 @@ final class Repository: ObservableObject {
     /// Requires `minSamples` (~1 min) so stray samples can't fabricate an average, and caps the per-row
     /// HR reads so a huge history can't jank first paint. NEVER persisted — a read-time projection of the
     /// trace (the workout PK upsert would wipe it anyway), recomputed on every load so display == graph
-    /// == zones == effort by construction. Kotlin twin: `WhoopRepository.fillWorkoutHrFromStrap`.
+    /// == zones == effort by construction.
     private func reconcileWorkoutHrWithTrace(_ rows: [WorkoutRow], store: WhoopStore,
                                              minSamples: Int = 60, cap: Int = 300) async -> [WorkoutRow] {
         var budget = cap
@@ -1466,19 +1456,14 @@ final class Repository: ObservableObject {
         guard let store = await ensureStore() else { return [] }
         let now = Date()
         return (try? await store.appleDaily(
-            deviceId: "apple-health",
+            deviceId: SourceID.appleHealth,
             from: Self.dayString(now.addingTimeInterval(-Double(days) * 86_400)),
             to: Self.dayString(now.addingTimeInterval(86_400)))) ?? []
     }
 
     /// Shared formatter — created once. Hot read path (called per series window / refresh);
     /// allocating a DateFormatter per call was a measurable waste. Read-only use is thread-safe.
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    private static let dayFormatter = DayKey.makeFormatter()
 
     static func dayString(_ d: Date) -> String { dayFormatter.string(from: d) }
 

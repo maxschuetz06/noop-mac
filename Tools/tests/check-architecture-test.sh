@@ -57,6 +57,39 @@ let s = StrainScorer.strain(samples)
 SWIFT
 expect outside 0 ''
 
+fixture strap-allowed Strand/BLE/BLEManager+StrapCommands.swift <<'SWIFT'
+p.writeValue(Data(command.frame(seq: seq, payload: body)), for: ch, type: writeType)
+p.writeValue(Data(puffinCommandFrame(cmd: opcode, seq: seq, payload: body)), for: ch, type: writeType)
+SWIFT
+fixture strap-allowed Strand/BLE/BLEManager+PeripheralDelegate.swift <<'SWIFT'
+peripheral.writeValue(Data(bondFrame), for: c, type: .withResponse)
+SWIFT
+fixture strap-allowed Strand/BLE/BLEManager+Connection.swift <<'SWIFT'
+// Never call peripheral.writeValue(...) here; send() owns strap writes.
+log("writeValue(skipped)")
+let x = rewriteValue(a) + writeValues(b)
+SWIFT
+expect strap-allowed 0 ''
+
+fixture strap-violations Strand/BLE/BLEManager+Connection.swift <<'SWIFT'
+peripheral.writeValue(Data(frame), for: c, type: .withResponse)
+SWIFT
+fixture strap-violations Strand/Screens/DevicesView.swift <<'SWIFT'
+let hint = "\(p.writeValue (d, for: c, type: .withoutResponse))"
+SWIFT
+fixture strap-violations Packages/WhoopProtocol/Sources/WhoopProtocol/Probe.swift <<'SWIFT'
+func probe(_ p: CBPeripheral) { p.writeValue(d, for: descriptor) }
+SWIFT
+fixture strap-violations Strand/BLE/BLEManager+StrapCommands.swift <<'SWIFT'
+p.writeValue(Data(command.frame(seq: seq, payload: body)), for: ch, type: writeType)
+p.writeValue(Data(puffinCommandFrame(cmd: opcode, seq: seq, payload: body)), for: ch, type: writeType)
+p.writeValue(Data(raw), for: ch, type: .withoutResponse)
+SWIFT
+expect strap-violations 1 'Packages/WhoopProtocol/Sources/WhoopProtocol/Probe.swift:1: strapWrite: func probe(_ p: CBPeripheral) { p.writeValue(d, for: descriptor) }
+Strand/BLE/BLEManager+Connection.swift:1: strapWrite: peripheral.writeValue(Data(frame), for: c, type: .withResponse)
+Strand/BLE/BLEManager+StrapCommands.swift:3: strapWrite: p.writeValue(Data(raw), for: ch, type: .withoutResponse)
+Strand/Screens/DevicesView.swift:1: strapWrite: let hint = "\(p.writeValue (d, for: c, type: .withoutResponse))"'
+
 status=0
 "$check" "$work/missing" >/dev/null 2>&1 || status=$?
 [ "$status" -eq 2 ] || fail "missing root: exit $status, expected 2"

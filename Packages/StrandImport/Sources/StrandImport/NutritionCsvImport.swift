@@ -1,3 +1,4 @@
+import WhoopStore
 import Foundation
 
 // MARK: - Nutrition CSV import (source "nutrition-csv")
@@ -227,13 +228,5 @@ public enum NutritionCsvImporter {
         return candidate
     }
 
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.calendar = Calendar(identifier: .gregorian)
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        f.isLenient = false
-        return f
-    }()
+    private static let dayFormatter = DayKey.makeFormatter(timeZone: DayKey.utc)
 }

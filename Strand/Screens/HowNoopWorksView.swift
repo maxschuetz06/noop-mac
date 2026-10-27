@@ -3,8 +3,7 @@ import StrandDesign
 
 // MARK: - How NOOP works (primer)
 //
-// COMPONENT 5 of the Sleep & Recovery Guidance / Explainability layer
-// (docs/superpowers/specs/2026-06-20-sleep-guidance-explainability.md).
+// COMPONENT 5 of the Sleep & Recovery Guidance / Explainability layer.
 //
 // A short, skimmable, plain-English primer that answers the four "how does this
 // work?" questions people ask: how sleep is sorted, how scores + calibration work,
@@ -17,7 +16,7 @@ import StrandDesign
 //
 // All copy here is the single APPROVED source of truth (the spec's COMPONENT 5 text,
 // verbatim), shared word-for-word across macOS / iOS / Android. No fabricated values,
-// no jargon, no em-dashes. Kotlin's primer composable mirrors these four sections.
+// no jargon, no em-dashes.
 
 struct HowNoopWorksView: View {
     let onClose: () -> Void
@@ -106,14 +105,7 @@ struct HowNoopWorksView: View {
             Divider().overlay(StrandPalette.hairline)
             footerBar
         }
-        // Same sizing split as ScoringGuideView / WhatsNewView: a fixed window on macOS,
-        // fill the presented sheet on iOS so nothing runs off a narrow phone screen (#185).
-        #if os(macOS)
         .frame(width: 560, height: 640)
-        #else
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .noopSheetPresentation(largeFirst: true)
-        #endif
         .background(StrandPalette.surfaceBase)
     }
 

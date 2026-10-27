@@ -84,10 +84,6 @@ final class TodayDisplayRulesTests: XCTestCase {
     }
 
     func testCoachingCardsFlagMatchesPlatform() {
-        #if os(macOS)
         XCTAssertFalse(TodayDisplayRules.coachingCardsVisible)
-        #else
-        XCTAssertTrue(TodayDisplayRules.coachingCardsVisible)
-        #endif
     }
 }

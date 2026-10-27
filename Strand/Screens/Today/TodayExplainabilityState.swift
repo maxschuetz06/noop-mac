@@ -73,7 +73,7 @@ enum MetricTileState: Equatable {
     }
 
     /// PURE mapper (unit-testable) — the honest precedence behind every Today score/tile state, given
-    /// the engine outputs already computed on the view. Mirror EXACTLY in Kotlin (same order of checks):
+    /// the engine outputs already computed on the view. Checks run in this order:
     ///   1. today's own value exists            → `.scored`
     ///   2. still mid-calibration (today only)  → `.calibrating(nightsRemaining)`
     ///   3. a prior scored day to carry (#543)  → `.carriedLastNight(date)`
@@ -145,7 +145,6 @@ enum RecordingState: Equatable {
     /// NOT recording. Otherwise, if a last-sync time is known, reads "Last synced Xm ago"; else "Not
     /// recording". `lastSyncedAt` / `now` are unix seconds; the minute count clamps at >= 0 (strap-clock
     /// skew can't read negative) and uses ceil so a 30-second-old sync reads "1m ago" rather than "0m ago".
-    /// Mirror EXACTLY in Kotlin.
     static func resolve(connected: Bool,
                         heartRate: Int?,
                         lastSyncedAt: TimeInterval?,

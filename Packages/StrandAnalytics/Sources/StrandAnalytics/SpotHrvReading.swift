@@ -2,7 +2,7 @@ import Foundation
 
 /// On-demand "take an HRV reading now" — the single-value spot RMSSD path (#537).
 ///
-/// Swift parity twin of `android/.../analytics/SpotHrvReading.kt`. This wraps NOOP's canonical
+/// This wraps NOOP's canonical
 /// `HRVAnalyzer` for the LIVE, user-triggered HRV snapshot the Live screen captures over ~60 s of
 /// beat-to-beat (R-R) intervals. It exists so the spot value, its honesty gate, and its data-quality
 /// caveat live in ONE tested place rather than being re-derived in the view.

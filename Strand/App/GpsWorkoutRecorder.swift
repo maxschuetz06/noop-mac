@@ -278,12 +278,7 @@ enum RouteStore {
 /// distance/pace. The owning `AppModel` starts it when a distance-type sport is begun and reads the final
 /// route on End.
 ///
-/// Availability:
-///   • iOS — full GPS. (The Info.plist must carry `NSLocationWhenInUseUsageDescription`, and the iOS
-///     target's `UIBackgroundModes` should include `location` for the route to keep accruing while the
-///     screen is off, mirroring Android's foreground service. See the lane's notes.)
-///   • macOS — `CLLocationManager` exists but most Macs have no GPS; if no fixes arrive the route simply
-///     stays empty. Either way nothing crashes.
+/// Most Macs have no GPS: when no fixes arrive the route simply stays empty.
 ///
 /// `@MainActor` so its `@Published` live values drive SwiftUI directly. CoreLocation delivers its
 /// delegate callbacks on the run loop the manager was created on — here the main thread — so MainActor
@@ -314,14 +309,6 @@ final class GpsWorkoutRecorder: NSObject, ObservableObject {
         // ~5 m between callbacks; TrackFilter still gates on accuracy + speed. Matches the cadence intent
         // of Android's 2 s / 0 m platform request (let the filter, not the platform, do the gating).
         manager.distanceFilter = 5
-        #if os(iOS)
-        // Keep the route accruing while the screen is off, matching Android's foreground-service capture.
-        // Safe only because the iOS target declares the `location` UIBackgroundMode (project.yml); setting
-        // this without that mode would crash when updates start.
-        manager.allowsBackgroundLocationUpdates = true
-        manager.pausesLocationUpdatesAutomatically = false
-        manager.activityType = .fitness
-        #endif
     }
 
     /// Begin recording a fresh route for a workout started at `startMs` (unix milliseconds). Requests

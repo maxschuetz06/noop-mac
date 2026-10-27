@@ -122,12 +122,8 @@ enum TrendsReportData {
         // window matches TrendsView (Calendar-based, phone-local), then clamped to the
         // ISO string the engine compares on.
         let startDate = Calendar.current.date(byAdding: .day, value: -(n - 1), to: Date()) ?? Date()
-        // Local-zone "yyyy-MM-dd" matching Repository.localDayKey, but self-contained so this stays a
-        // nonisolated static (localDayKey is @MainActor-isolated and this runs off the main actor).
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        let start = f.string(from: startDate)
+        // DayKey, not Repository.localDayKey: that one is @MainActor-isolated and this runs off the main actor.
+        let start = DayKey.string(from: startDate)
         return (start, end)
     }
 
@@ -510,13 +506,10 @@ struct TrendsReportSheet: View {
         }
         .background(StrandPalette.surfaceBase)
         .frame(width: 460, height: 640)
-        #if os(iOS)
-        .noopSheetPresentation(largeFirst: true)
-        #endif
         // Load the stored daily stress series for the Stress row (#457). The same
         // "my-whoop" series the Stress screen prioritises; the report never re-derives it.
         .task {
-            let pts = await repo.series(key: "stress", source: "my-whoop")
+            let pts = await repo.series(key: "stress", source: SourceID.whoop)
             stressByDay = Dictionary(pts.map { ($0.day, $0.value) }, uniquingKeysWith: { _, b in b })
         }
     }
@@ -528,10 +521,8 @@ struct TrendsReportSheet: View {
         let name = "NOOP-trends-\(report.start)_to_\(report.end).pdf"
         TrendsReportRenderer.exportPDF(page: page(for: report), suggestedName: name)
         exporting = false
-        #if os(macOS)
         // macOS NSSavePanel is modal and has already returned by now, so closing the report sheet is fine.
         dismiss()
-        #endif
         // iOS (#455): do NOT dismiss here. The share sheet is presented ON TOP of this report sheet; calling
         // dismiss() would tear this sheet — and the share sheet with it — straight back down, so the user
         // saw nothing. Leave the report up; the share sheet sits over it and returns here when closed.
@@ -541,10 +532,7 @@ struct TrendsReportSheet: View {
 #if DEBUG
 @MainActor
 private func previewDays() -> [DailyMetric] {
-    let fmt = DateFormatter()
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    fmt.timeZone = TimeZone(identifier: "UTC")
-    fmt.dateFormat = "yyyy-MM-dd"
+    let fmt = DayKey.makeFormatter(timeZone: DayKey.utc)
     let cal = Calendar(identifier: .gregorian)
     var out: [DailyMetric] = []
     for i in stride(from: 119, through: 0, by: -1) {

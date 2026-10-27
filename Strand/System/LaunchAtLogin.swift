@@ -1,4 +1,3 @@
-#if os(macOS)
 import Foundation
 import ServiceManagement
 
@@ -44,4 +43,3 @@ final class LaunchAtLoginController: ObservableObject {
         SMAppService.openSystemSettingsLoginItems()
     }
 }
-#endif

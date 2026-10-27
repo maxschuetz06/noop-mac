@@ -24,9 +24,9 @@ final class AppModel: ObservableObject {
     }()
 
     /// Shared device id for both live capture (BLEManager) and imported history.
-    let deviceId = "my-whoop"
+    let deviceId = SourceID.whoop
     /// Source id for imported Apple Health data (stored beside Whoop for per-source pages + consensus).
-    let appleDeviceId = "apple-health"
+    let appleDeviceId = SourceID.appleHealth
     /// True inside the XCTest host: no strap engine, no launch work, no background services, and an
     /// in-memory store instead of the user's (see `AppRuntime`).
     let isTestHost: Bool
@@ -89,19 +89,20 @@ final class AppModel: ObservableObject {
         // Built first, as before the split: BLEManager.init restores `live.lastSyncedAt`, which the sync
         // sinks below must see as their initial (dropped) value.
         let engine = isTestHost
-            ? nil : BLEManager(state: live, deviceId: "my-whoop", rawFrameSink: RawPPGCapture.shared)
+            ? nil : BLEManager(state: live, deviceId: SourceID.whoop, rawFrameSink: RawPPGCapture.shared)
         self.engine = engine
         let buzz: (UInt8) -> Void = { loops in engine?.send(.runHapticsPattern, payload: [2, loops, 0, 0, 0]) }
         self.buzzStrap = buzz
-        let repo = Repository(deviceId: "my-whoop")
+        let repo = Repository(deviceId: SourceID.whoop)
         self.repo = repo
-        self.intelligence = IntelligenceEngine(repo: repo, profile: profile, deviceId: "my-whoop")
+        self.intelligence = IntelligenceEngine(repo: repo, profile: profile, deviceId: SourceID.whoop)
         // Route the engine's per-day scoring diagnostic into the SAME shareable strap log every other
         // subsystem writes to (PII-scrubbed by `live.append(log:)`), so a bug report ships proof of what
         // was computed per day. (Sleep overhaul §2.5.)
         self.intelligence.diagnosticSink = { [live] line in live.append(log: line) }
-        self.imports = DataSourceImportService(repo: repo, whoopDeviceId: "my-whoop", appleDeviceId: "apple-health")
-        self.workouts = ManualWorkoutController(repo: repo, deviceId: "my-whoop", profile: profile, buzz: buzz)
+        self.imports = DataSourceImportService(repo: repo, whoopDeviceId: SourceID.whoop,
+                                               appleDeviceId: SourceID.appleHealth)
+        self.workouts = ManualWorkoutController(repo: repo, deviceId: SourceID.whoop, profile: profile, buzz: buzz)
         let marks = MomentsStore(
             buzz: { buzz(1) },
             log: { [live] line in live.append(log: line) },

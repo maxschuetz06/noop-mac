@@ -66,7 +66,7 @@ extension AppModel {
         // Explicit pick → the pinned active strap's registry model → stored pick → last connected family →
         // the active row's registry model → 4.0. A paired strap's own row beats a possibly stale preference.
         let devices = deviceRegistry?.devices ?? []
-        let activeId = deviceRegistry?.activeDeviceId ?? "my-whoop"
+        let activeId = deviceRegistry?.activeDeviceId ?? SourceID.whoop
         engine?.connect(model: WhoopModel.resolveFromDefaults(
             explicit: model,
             pinnedRegistryModel: DeviceRegistry.pinnedModel(in: devices, activeDeviceId: activeId),

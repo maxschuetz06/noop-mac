@@ -19,24 +19,24 @@ extension TodayView {
     /// Trailing-window sparkline series for every Key Metric tile.
     func loadSparklines() async {
         // 14-day sparklines — Whoop.
-        sparks["recovery"]        = await sparkValues("recovery", source: "my-whoop", window: 14)
-        sparks["strain"]          = await sparkValues("strain", source: "my-whoop", window: 14)
-        sparks["sleep_total_min"] = await sparkValues("sleep_total_min", source: "my-whoop", window: 14)
-        sparks["hrv"]             = await sparkValues("hrv", source: "my-whoop", window: 14)
-        sparks["rhr"]             = await sparkValues("rhr", source: "my-whoop", window: 14)
-        sparks["spo2"]            = await sparkValues("spo2", source: "my-whoop", window: 14)
+        sparks["recovery"]        = await sparkValues("recovery", source: SourceID.whoop, window: 14)
+        sparks["strain"]          = await sparkValues("strain", source: SourceID.whoop, window: 14)
+        sparks["sleep_total_min"] = await sparkValues("sleep_total_min", source: SourceID.whoop, window: 14)
+        sparks["hrv"]             = await sparkValues("hrv", source: SourceID.whoop, window: 14)
+        sparks["rhr"]             = await sparkValues("rhr", source: SourceID.whoop, window: 14)
+        sparks["spo2"]            = await sparkValues("spo2", source: SourceID.whoop, window: 14)
 
         // 14-day sparklines — Apple Health.
-        sparks["resp_rate"]   = await sparkValues("resp_rate", source: "apple-health", window: 14)
-        sparks["steps"]       = await sparkValues("steps", source: "apple-health", window: 14)
+        sparks["resp_rate"]   = await sparkValues("resp_rate", source: SourceID.appleHealth, window: 14)
+        sparks["steps"]       = await sparkValues("steps", source: SourceID.appleHealth, window: 14)
         // Steps prefer the strap's own @57 daily total (no metricSeries — it lives on the daily row),
         // so a strap-only WHOOP 5/MG user gets a steps trend without Apple Health. Falls back to the
         // Apple Health series above when the strap supplied no steps (#276).
         let strapSteps = repo.days.suffix(14).compactMap { $0.steps.map(Double.init) }
         if !strapSteps.isEmpty { sparks["steps"] = strapSteps }
-        sparks["weight"]      = await sparkValues("weight", source: "apple-health", window: 90)
-        sparks["active_kcal"] = await sparkValues("active_kcal", source: "apple-health", window: 14)
-        sparks["energy_kcal"] = await sparkValues("energy_kcal", source: "my-whoop", window: 14)
+        sparks["weight"]      = await sparkValues("weight", source: SourceID.appleHealth, window: 90)
+        sparks["active_kcal"] = await sparkValues("active_kcal", source: SourceID.appleHealth, window: 14)
+        sparks["energy_kcal"] = await sparkValues("energy_kcal", source: SourceID.whoop, window: 14)
     }
 
     /// Imported per-day series values, the selected day's Rest score, step estimates and score provenance.
@@ -47,7 +47,7 @@ extension TodayView {
         // also fold in the on-device computed series and the `activeKcalEst` daily column, so a strap-only
         // day would show the HR-based estimate captioned "WHOOP total".
         for key in ["energy_kcal", "max_hr", "avg_hr"] {
-            let pts = await repo.series(key: key, source: Repository.whoopSource)
+            let pts = await repo.series(key: key, source: SourceID.whoop)
             imported[key] = Dictionary(pts.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
         }
         importedDayValues = imported
@@ -55,14 +55,14 @@ extension TodayView {
         // Rest SCORE for the logical day. `exploreSeries` already merges imported + computed
         // `sleep_performance` (imported-wins), so a Bluetooth-only user sees the on-device Rest
         // composite and an importer sees the export's figure — exactly like the Rest detail screen.
-        let restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+        let restSeries = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
 
         // Steps ESTIMATE per day (WHOOP 4.0 motion → calibrated steps). exploreSeries reads the computed
         // "-noop" metricSeries the IntelligenceEngine writes, exactly like the Explore "steps_est" metric.
         // Only consulted when a day has no REAL step count (see the .steps tile), so it never overrides a
         // measured value — it just fills the gap a 4.0 user would otherwise see as "—".
-        let stepsEstSeries = await repo.exploreSeries(key: "steps_est", source: "my-whoop")
+        let stepsEstSeries = await repo.exploreSeries(key: "steps_est", source: SourceID.whoop)
         stepsEstByDay = Dictionary(stepsEstSeries.map { ($0.day, Int($0.value.rounded())) },
                                    uniquingKeysWith: { _, last in last })
         // The selected day's Rest, falling back to the series tail only when today itself is selected —
@@ -75,11 +75,11 @@ extension TodayView {
         // provenance badge reflects the truth (computed vs imported), never a blanket "on-device". Keyed by
         // metric so the Charge ring and Rest tile each badge their own winner.
         var provenance: [String: String] = [:]
-        let recoveryResolved = await repo.resolvedSeries(key: "recovery", source: Repository.whoopSource)
+        let recoveryResolved = await repo.resolvedSeries(key: "recovery", source: SourceID.whoop)
         if let win = recoveryResolved.points.last(where: { $0.day == selectedDayKey })?.source {
             provenance["recovery"] = win
         }
-        let restResolved = await repo.resolvedSeries(key: "sleep_performance", source: Repository.whoopSource)
+        let restResolved = await repo.resolvedSeries(key: "sleep_performance", source: SourceID.whoop)
         if let win = restResolved.points.last(where: { $0.day == selectedDayKey })?.source {
             provenance["sleep_performance"] = win
         }
@@ -96,9 +96,9 @@ extension TodayView {
         xiaomiDays = Set(xSteps.map(\.day) + xSleep.map(\.day)).count
         // Your cards (#582 / Design Reset): latest Stress / Fitness age / Vitality for the pinned home
         // cards. Same merged exploreSeries reads their detail screens use; nil simply hides that card.
-        stressToday = (await repo.exploreSeries(key: "stress", source: "my-whoop")).last?.value
-        fitnessAgeToday = (await repo.exploreSeries(key: "fitness_age", source: "my-whoop")).last?.value
-        vitalityToday = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
+        stressToday = (await repo.exploreSeries(key: "stress", source: SourceID.whoop)).last?.value
+        fitnessAgeToday = (await repo.exploreSeries(key: "fitness_age", source: SourceID.whoop)).last?.value
+        vitalityToday = (await repo.exploreSeries(key: "vitality", source: SourceID.whoop)).last?.value
         // Hydration card (opt-in): today's stored total + the sex/Effort goal. Only loaded when the
         // feature is on, so a disabled feature does zero work and the card stays hidden.
         if hydrationEnabled {

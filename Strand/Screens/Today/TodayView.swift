@@ -91,7 +91,7 @@ struct TodayView: View {
     // returned (e.g. "my-whoop", "my-whoop-noop", "apple-health"). Resolved once per load via
     // `resolvedSeries` (the same imported-WHOOP > NOOP-computed > Apple-Health precedence the dashboard
     // merge uses), so a provenance badge reflects which source actually supplied that day's number rather
-    // than a blanket "on-device" claim. Absent until loaded / when a day has no value. (spec 2026-06-20)
+    // than a blanket "on-device" claim. Absent until loaded / when a day has no value.
     @State var provenanceByMetric: [String: String] = [:]
 
     // On-device steps ESTIMATE per day (key "steps_est", computed "-noop" source). The Steps tile
@@ -133,10 +133,7 @@ struct TodayView: View {
     // opens to an empty today (fresh install, or a strap mid-backfill whose newest banked day is older than
     // today). After the single auto-land the user can chevron freely without it snapping forward again.
     @State var didAutoLandLatest = false
-    // iOS top-bar state: the date-jump popover and the profile/settings sheet.
-    @State var showDayPicker = false
-    @State var showSettings = false
-    /// The Updates inbox sheet (opened by the header bell). Shared across both platforms.
+    /// The Updates inbox sheet (opened by the header bell).
     @State var showUpdatesInbox = false
 
     /// The NEWEST day-key (max yyyy-MM-dd in `repo.days`) announced to the inbox. Persisted (not @State)
@@ -206,18 +203,12 @@ struct TodayView: View {
                 derivedKey = todayInputKey
             }
         }
-        #if os(macOS)
-        // The Updates "ringer" on the trailing (top-right) edge of the window toolbar (iOS hosts it in
-        // the compact top bar instead).
+        // The Updates "ringer" on the trailing (top-right) edge of the window toolbar.
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 updateBell.help("Updates")
             }
         }
-        #else
-        // Profile/settings from the top-bar button.
-        .sheet(isPresented: $showSettings) { settingsSheet }
-        #endif
         // The scoring guide, opened at a specific score from its ⓘ.
         .sheet(item: $guideSection) { section in
             ScoringGuideView(initialSection: section, onClose: { guideSection = nil })
@@ -248,16 +239,9 @@ struct TodayView: View {
     /// The Day Details column: day navigation, prompts, the score hero and every section in order.
     var dashboard: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-            #if os(iOS)
-            // Compact top bar: profile/settings (left) · ‹ Today › day-nav (centre, bold) · strap
-            // battery (right). Replaces the big title + the full-width day-nav pill (WHOOP-style).
-            todayTopBar
-            HealthAlertBanner()
-            #else
             HealthAlertBanner()
             // Browse past days — chevrons + a date jump capped at today (no future days).
             DayNavBar(selectedOffset: selectedDayOffset) { selectedDayOffset = $0 }
-            #endif
             scoresBuildingPrompts
             // Design Reset: the "New here?" first-run card is off the dashboard for the clean WHOOP
             // look. The scoring guide stays reachable from the i on each score and in Settings.

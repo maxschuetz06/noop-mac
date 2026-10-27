@@ -1,3 +1,4 @@
+import WhoopStore
 import SwiftUI
 import StrandDesign
 import StrandAnalytics
@@ -183,10 +184,7 @@ struct HydrationView: View {
     /// The single-letter weekday for a yyyy-MM-dd key (M T W T F S S), or "·" when unparseable. Mirrors
     /// the Android `weekdayInitial` (EEE → first letter, US locale).
     private func weekdayInitial(_ dayKey: String) -> String {
-        let parse = DateFormatter()
-        parse.locale = Locale(identifier: "en_US_POSIX")
-        parse.dateFormat = "yyyy-MM-dd"
-        guard let date = parse.date(from: dayKey) else { return "·" }
+        guard let date = DayKey.date(from: dayKey) else { return "·" }
         let out = DateFormatter()
         out.locale = Locale(identifier: "en_US")
         out.dateFormat = "EEE"

@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import AppKit
 import StrandDesign
@@ -189,7 +188,7 @@ struct HomeView: View {
                 }
                 .padding(.top, 8)
                 Spacer(minLength: 6)
-                footer(Text(value.map(Self.chargeState) ?? "No value yet"),
+                footer(Text(value.map(HomeStateLabel.charge) ?? "No value yet"),
                        day?.recovery == nil && carried != nil ? Text("Last night")
                            : (avg.map { Text("Ø 7 d  \(Int($0.rounded())) %") } ?? Text(verbatim: "")))
             }
@@ -211,7 +210,7 @@ struct HomeView: View {
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("HRV over the last \(bars.count) nights"), bars,
                                                                   unit: Text(verbatim: "ms")))
                     .padding(.bottom, 12)
-                footer(Text(Self.relativeState(value, base: base, higherIsBetter: true)),
+                footer(Text(HomeStateLabel.relative(value, base: base, higherIsBetter: true)),
                        base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
             }
         }
@@ -231,7 +230,7 @@ struct HomeView: View {
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Resting pulse over the last \(line.count) nights"), line,
                                                                   unit: Text(verbatim: "bpm")))
-                footer(Text(Self.relativeState(value, base: base, higherIsBetter: false)),
+                footer(Text(HomeStateLabel.relative(value, base: base, higherIsBetter: false)),
                        base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
             }
         }
@@ -274,7 +273,7 @@ struct HomeView: View {
                     .accessibilityHidden(true)
                     .frame(height: 58).padding(.horizontal, 18).padding(.bottom, 10)
                     .opacity(value == nil ? 0.4 : 1)
-                footer(Text(value.map(Self.effortState) ?? "No value yet"),
+                footer(Text(value.map(HomeStateLabel.effort) ?? "No value yet"),
                        Text(verbatim: change.map { Self.signedPercent($0) } ?? ""))
             }
         }
@@ -455,16 +454,15 @@ struct HomeView: View {
     // MARK: Loading
 
     private func load() async {
-        let rest = await repo.exploreSeries(key: "sleep_performance", source: Repository.whoopSource)
+        let rest = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
         restByDay = Dictionary(rest.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        let est = await repo.exploreSeries(key: "steps_est", source: Repository.whoopSource)
+        let est = await repo.exploreSeries(key: "steps_est", source: SourceID.whoop)
         stepsEstByDay = Dictionary(est.map { ($0.day, Int($0.value.rounded())) }, uniquingKeysWith: { _, last in last })
         sleeps = await repo.allSleepSessions(days: offset + 40)
         workouts = await repo.workoutRows(days: offset + 3)
 
         let dayStart = Calendar.current.startOfDay(for: selectedDay)
-        let from = Int(dayStart.timeIntervalSince1970)
-        let to = offset == 0 ? Int(Date().timeIntervalSince1970) : from + 86_400
+        let (from, to) = HomeModel.hrWindow(dayStart: dayStart, isToday: offset == 0, now: Date())
         hrPoints = await repo.hrBuckets(from: from, to: to, bucketSeconds: 300)
             .map { TrendPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), value: $0.bpm) }
         if offset == 0 {
@@ -481,18 +479,6 @@ struct HomeView: View {
         let up = d >= 0
         return DeltaChip(text: "\(up ? "↑" : "↓") \(Int(abs(d).rounded()))\(unit)",
                          tint: up != invert ? StrandPalette.hueGreen : StrandPalette.hueRose)
-    }
-
-    static func chargeState(_ v: Double) -> LocalizedStringKey { v >= 67 ? "Optimal" : (v >= 34 ? "Medium" : "Low") }
-    static func effortState(_ v: Double) -> LocalizedStringKey { v >= 66 ? "High" : (v >= 33 ? "Medium" : "Low") }
-
-    /// "Normal" within ±8 % of the baseline, otherwise above/below phrased by whether higher is better.
-    static func relativeState(_ v: Double?, base: Double?, higherIsBetter: Bool) -> LocalizedStringKey {
-        guard let v, let base, base > 0 else { return v == nil ? "No value yet" : "Normal" }
-        let r = (v - base) / base
-        if abs(r) <= 0.08 { return higherIsBetter ? "Optimal" : "Normal" }
-        let above = r > 0
-        return above == higherIsBetter ? "Above average" : (higherIsBetter ? "Below average" : "Elevated")
     }
 
     static func destination(_ topic: HomeInsight.Topic) -> NavItem {
@@ -604,9 +590,7 @@ struct HomeTimelineBar: View {
         GeometryReader { geo in
             let w = geo.size.width
             let barY: CGFloat = 26
-            let x: (Date) -> CGFloat = { d in
-                CGFloat(min(max(d.timeIntervalSince(dayStart) / 86_400, 0), 1)) * w
-            }
+            let x: (Date) -> CGFloat = { d in CGFloat(HomeModel.dayFraction(d, dayStart: dayStart)) * w }
             ZStack(alignment: .topLeading) {
                 Capsule().fill(StrandPalette.surfaceInset).frame(width: w, height: 16).offset(y: barY)
                 ForEach(items) { item in
@@ -615,11 +599,11 @@ struct HomeTimelineBar: View {
                         .frame(width: x1 - x0, height: 16)
                         .offset(x: x0, y: barY)
                 }
-                ForEach(Array(stride(from: 0, through: 24, by: 3)), id: \.self) { h in
-                    Text(String(format: "%02d:00", h))
+                ForEach(HomeModel.hourTicks(dayStart: dayStart), id: \.hour) { tick in
+                    Text(String(format: "%02d:00", tick.hour))
                         .font(.system(size: 10).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize()
-                        .position(x: min(max(w * CGFloat(h) / 24, 16), w - 16), y: barY + 36)
+                        .position(x: min(max(w * CGFloat(tick.fraction), 16), w - 16), y: barY + 36)
                 }
                 if let now {
                     let nx = x(now)
@@ -636,4 +620,3 @@ struct HomeTimelineBar: View {
         }
     }
 }
-#endif

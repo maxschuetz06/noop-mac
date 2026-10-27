@@ -53,12 +53,6 @@ struct StorageView: View {
                     bytes: r.db,
                     tint: StrandPalette.accent)
                 Divider().overlay(StrandPalette.hairline)
-                row(icon: "tray.full",
-                    label: "Leftover import copies",
-                    bytes: r.inbox,
-                    tint: r.inbox > 0 ? StrandPalette.statusWarning : StrandPalette.textTertiary,
-                    note: r.inbox > 0 ? "Reclaimable" : nil)
-                Divider().overlay(StrandPalette.hairline)
                 row(icon: "clock.arrow.circlepath",
                     label: "Import temp files",
                     bytes: r.importTemp,
@@ -69,7 +63,7 @@ struct StorageView: View {
     }
 
     private func cleanUpCard(_ r: AppModel.StorageReport) -> some View {
-        let reclaimable = r.inbox + r.importTemp
+        let reclaimable = r.importTemp
         return StrandCard {
             VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 Text("Clean up")
@@ -149,9 +143,9 @@ struct StorageView: View {
     private func cleanUp() async {
         guard !cleaning else { return }
         cleaning = true
-        let before = (report?.inbox ?? 0) + (report?.importTemp ?? 0)
+        let before = report?.importTemp ?? 0
         let r = await model.cleanUpStorage()
-        let after = r.inbox + r.importTemp
+        let after = r.importTemp
         let freed = max(0, before - after)
         report = r
         lastCleanedSummary = freed > 0 ? "Reclaimed \(Self.format(freed))." : "Already clean."

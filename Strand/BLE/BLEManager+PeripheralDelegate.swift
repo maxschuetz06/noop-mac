@@ -50,8 +50,7 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                 cmdCharacteristic = c
                 // THE BONDING TRICK: one confirmed write triggers just-works bonding.
                 // GET_BATTERY_LEVEL is benign and what the Mac prototype uses.
-                seq = seq &+ 1
-                let bondFrame = WhoopCommand.getBatteryLevel.frame(seq: seq, payload: [0x00])
+                let bondFrame = WhoopCommand.getBatteryLevel.frame(seq: nextCommandSeq(), payload: [0x00])
                 log("Bonding: confirmed write GET_BATTERY_LEVEL to 61080002")
                 peripheral.writeValue(Data(bondFrame), for: c, type: .withResponse)
             case BLEManager.whoop5CmdWriteChar:

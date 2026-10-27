@@ -1,4 +1,3 @@
-#if os(macOS)
 import XCTest
 import UniformTypeIdentifiers
 @testable import Strand
@@ -98,4 +97,3 @@ final class ImportPanelConfigTests: XCTestCase {
         XCTAssertFalse(csv.allowedContentTypes.contains(zipType))
     }
 }
-#endif

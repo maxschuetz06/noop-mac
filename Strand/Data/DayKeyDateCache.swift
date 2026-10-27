@@ -1,4 +1,5 @@
 import Foundation
+import WhoopStore
 
 /// Memoized `yyyy-MM-dd` → `Date` parse (UTC midnight, en_US_POSIX) shared by the screens that turn the
 /// stored day keys of a whole history into chart points on every body pass.
@@ -10,18 +11,14 @@ import Foundation
 /// thread-safe) formatter, so the helper may be used off the main actor too.
 final class DayKeyDateCache: @unchecked Sendable {
     /// UTC / en_US_POSIX parser — the convention every history screen uses for day keys.
-    static let utc = DayKeyDateCache(timeZone: TimeZone(identifier: "UTC"))
+    static let utc = DayKeyDateCache(timeZone: DayKey.utc)
 
     private let lock = NSLock()
     private let formatter: DateFormatter
     private var parsed: [String: Date?] = [:]
 
     init(timeZone: TimeZone?) {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        if let timeZone { f.timeZone = timeZone }
-        f.dateFormat = "yyyy-MM-dd"
-        formatter = f
+        formatter = DayKey.makeFormatter(timeZone: timeZone)
     }
 
     func date(_ day: String) -> Date? {

@@ -31,12 +31,6 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    /// Decodes a persisted raw value. Unknown values — including the removed "Intelligence", "Coach" and
-    /// "Smart Alarm" sections — fall back to `.today`.
-    init(persistedRawValue: String) {
-        self = NavItem(rawValue: persistedRawValue) ?? .today
-    }
-
     /// Sections shown in the default (compact) sidebar, in display order.
     static let core: [NavItem] = main + tools
 

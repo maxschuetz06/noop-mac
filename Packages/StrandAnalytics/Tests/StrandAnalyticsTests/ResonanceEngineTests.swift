@@ -3,8 +3,7 @@ import XCTest
 
 /// Pins the L1 `ResonanceEngine`: synthetic R-R with a known RSA peak injected at one pace → the engine
 /// selects that pace; a too-few-beats pace → unscored; fewer than N scored paces → the honest "no lock"
-/// fallback to 5.5. These are the GOLDEN VECTORS the Kotlin `ResonanceEngineTest` mirrors.
-/// See docs/superpowers/specs/2026-06-19-v5-haptic-biofeedback-design.md (L1).
+/// fallback to 5.5.
 final class ResonanceEngineTests: XCTestCase {
 
     /// Generate a paced candidate's R-R: a steady baseline R-R with a once-per-breath-cycle sinusoid-like
