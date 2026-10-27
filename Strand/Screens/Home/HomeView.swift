@@ -188,7 +188,7 @@ struct HomeView: View {
                 }
                 .padding(.top, 8)
                 Spacer(minLength: 6)
-                footer(Text(value.map(Self.chargeState) ?? "No value yet"),
+                footer(Text(value.map(HomeStateLabel.charge) ?? "No value yet"),
                        day?.recovery == nil && carried != nil ? Text("Last night")
                            : (avg.map { Text("Ø 7 d  \(Int($0.rounded())) %") } ?? Text(verbatim: "")))
             }
@@ -210,7 +210,7 @@ struct HomeView: View {
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("HRV over the last \(bars.count) nights"), bars,
                                                                   unit: Text(verbatim: "ms")))
                     .padding(.bottom, 12)
-                footer(Text(Self.relativeState(value, base: base, higherIsBetter: true)),
+                footer(Text(HomeStateLabel.relative(value, base: base, higherIsBetter: true)),
                        base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
             }
         }
@@ -230,7 +230,7 @@ struct HomeView: View {
                     .accessibilityElement()
                     .accessibilityLabel(HomeFormat.seriesSummary(Text("Resting pulse over the last \(line.count) nights"), line,
                                                                   unit: Text(verbatim: "bpm")))
-                footer(Text(Self.relativeState(value, base: base, higherIsBetter: false)),
+                footer(Text(HomeStateLabel.relative(value, base: base, higherIsBetter: false)),
                        base.map { Text("Ø 30 d  \(Int($0.rounded()))") } ?? Text(verbatim: ""))
             }
         }
@@ -273,7 +273,7 @@ struct HomeView: View {
                     .accessibilityHidden(true)
                     .frame(height: 58).padding(.horizontal, 18).padding(.bottom, 10)
                     .opacity(value == nil ? 0.4 : 1)
-                footer(Text(value.map(Self.effortState) ?? "No value yet"),
+                footer(Text(value.map(HomeStateLabel.effort) ?? "No value yet"),
                        Text(verbatim: change.map { Self.signedPercent($0) } ?? ""))
             }
         }
@@ -479,18 +479,6 @@ struct HomeView: View {
         let up = d >= 0
         return DeltaChip(text: "\(up ? "↑" : "↓") \(Int(abs(d).rounded()))\(unit)",
                          tint: up != invert ? StrandPalette.hueGreen : StrandPalette.hueRose)
-    }
-
-    static func chargeState(_ v: Double) -> LocalizedStringKey { v >= 67 ? "Optimal" : (v >= 34 ? "Medium" : "Low") }
-    static func effortState(_ v: Double) -> LocalizedStringKey { v >= 66 ? "High" : (v >= 33 ? "Medium" : "Low") }
-
-    /// "Normal" within ±8 % of the baseline, otherwise above/below phrased by whether higher is better.
-    static func relativeState(_ v: Double?, base: Double?, higherIsBetter: Bool) -> LocalizedStringKey {
-        guard let v, let base, base > 0 else { return v == nil ? "No value yet" : "Normal" }
-        let r = (v - base) / base
-        if abs(r) <= 0.08 { return higherIsBetter ? "Optimal" : "Normal" }
-        let above = r > 0
-        return above == higherIsBetter ? "Above average" : (higherIsBetter ? "Below average" : "Elevated")
     }
 
     static func destination(_ topic: HomeInsight.Topic) -> NavItem {
