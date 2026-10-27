@@ -90,6 +90,15 @@ Strand/BLE/BLEManager+Connection.swift:1: strapWrite: peripheral.writeValue(Data
 Strand/BLE/BLEManager+StrapCommands.swift:3: strapWrite: p.writeValue(Data(raw), for: ch, type: .withoutResponse)
 Strand/Screens/DevicesView.swift:1: strapWrite: let hint = "\(p.writeValue (d, for: c, type: .withoutResponse))"'
 
+fixture strap-same-line Strand/BLE/BLEManager+StrapCommands.swift <<'SWIFT'
+p.writeValue(Data(a), for: ch, type: writeType); p.writeValue(Data(b), for: ch, type: writeType)
+SWIFT
+fixture strap-same-line Strand/BLE/BLEManager+PeripheralDelegate.swift <<'SWIFT'
+peripheral.writeValue(Data(bondFrame), for: c, type: .withResponse)
+peripheral.writeValue(Data(hello), for: c, type: .withResponse); peripheral.writeValue(Data(raw), for: c, type: .withResponse)
+SWIFT
+expect strap-same-line 1 'Strand/BLE/BLEManager+PeripheralDelegate.swift:2: strapWrite: peripheral.writeValue(Data(hello), for: c, type: .withResponse); peripheral.writeValue(Data(raw), for: c, type: .withResponse)'
+
 status=0
 "$check" "$work/missing" >/dev/null 2>&1 || status=$?
 [ "$status" -eq 2 ] || fail "missing root: exit $status, expected 2"

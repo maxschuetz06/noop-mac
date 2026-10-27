@@ -11,8 +11,9 @@
 #     SleepStager    sleep staging likewise (also matches SleepStagerV2)
 #   under Strand/ and Packages/
 #     strapWrite     a peripheral `writeValue(` outside the allowlist below, or more of them in an allowed
-#                    file than the allowlist names. Every strap write must pass StrapCommandPolicy
-#                    (BLEManager.send), so a new write path needs a review and an updated entry.
+#                    file than the allowlist names (each call counts, also several on one line). Every
+#                    strap write must pass StrapCommandPolicy (BLEManager.send), so a new write path
+#                    needs a review and an updated entry.
 #
 # strapWrite allowlist (file: allowed writeValue calls):
 #   Strand/BLE/BLEManager+StrapCommands.swift: 2   `send`, the single StrapCommandPolicy-gated command path
@@ -82,7 +83,10 @@ function report(rule, raw) {
 
 {
     code = codeOnly($0)
-    if (code ~ /(^|[^A-Za-z0-9_])writeValue[ \t]*\(/ && strapWritesLeft-- <= 0) report("strapWrite", $0)
+    rest = code; writes = 0
+    while (match(rest, /(^|[^A-Za-z0-9_])writeValue[ \t]*\(/)) { writes++; rest = substr(rest, RSTART + RLENGTH) }
+    strapWritesLeft -= writes
+    if (writes > 0 && strapWritesLeft < 0) report("strapWrite", $0)
     if (!isScreen) next
     if (code ~ /(^|[^A-Za-z0-9_])storeHandle([^A-Za-z0-9_]|$)/) report("storeHandle", $0)
     if (code ~ /(^|[^A-Za-z0-9_])StrainScorer([^A-Za-z0-9_]|$)/) report("StrainScorer", $0)
