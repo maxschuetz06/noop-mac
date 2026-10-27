@@ -463,8 +463,7 @@ struct HomeView: View {
         workouts = await repo.workoutRows(days: offset + 3)
 
         let dayStart = Calendar.current.startOfDay(for: selectedDay)
-        let from = Int(dayStart.timeIntervalSince1970)
-        let to = offset == 0 ? Int(Date().timeIntervalSince1970) : from + 86_400
+        let (from, to) = HomeModel.hrWindow(dayStart: dayStart, isToday: offset == 0, now: Date())
         hrPoints = await repo.hrBuckets(from: from, to: to, bucketSeconds: 300)
             .map { TrendPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), value: $0.bpm) }
         if offset == 0 {
@@ -604,9 +603,7 @@ struct HomeTimelineBar: View {
         GeometryReader { geo in
             let w = geo.size.width
             let barY: CGFloat = 26
-            let x: (Date) -> CGFloat = { d in
-                CGFloat(min(max(d.timeIntervalSince(dayStart) / 86_400, 0), 1)) * w
-            }
+            let x: (Date) -> CGFloat = { d in CGFloat(HomeModel.dayFraction(d, dayStart: dayStart)) * w }
             ZStack(alignment: .topLeading) {
                 Capsule().fill(StrandPalette.surfaceInset).frame(width: w, height: 16).offset(y: barY)
                 ForEach(items) { item in
@@ -615,11 +612,11 @@ struct HomeTimelineBar: View {
                         .frame(width: x1 - x0, height: 16)
                         .offset(x: x0, y: barY)
                 }
-                ForEach(Array(stride(from: 0, through: 24, by: 3)), id: \.self) { h in
-                    Text(String(format: "%02d:00", h))
+                ForEach(HomeModel.hourTicks(dayStart: dayStart), id: \.hour) { tick in
+                    Text(String(format: "%02d:00", tick.hour))
                         .font(.system(size: 10).monospacedDigit()).foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize()
-                        .position(x: min(max(w * CGFloat(h) / 24, 16), w - 16), y: barY + 36)
+                        .position(x: min(max(w * CGFloat(tick.fraction), 16), w - 16), y: barY + 36)
                 }
                 if let now {
                     let nx = x(now)

@@ -175,10 +175,40 @@ enum HomeModel {
 
     // MARK: Timeline
 
-    /// Sleep, naps and workouts overlapping `[dayStart, dayStart + 24h)`, sorted by start.
+    /// The next local midnight after `dayStart`: 23 or 25 hours later on a DST change, not a fixed 24.
+    static func dayEnd(_ dayStart: Date, calendar: Calendar = .current) -> Date {
+        calendar.dateInterval(of: .day, for: dayStart)?.end ?? dayStart.addingTimeInterval(86_400)
+    }
+
+    /// Where `date` falls on the bar of the local day starting at `dayStart`, clamped to 0…1.
+    static func dayFraction(_ date: Date, dayStart: Date, calendar: Calendar = .current) -> Double {
+        let length = dayEnd(dayStart, calendar: calendar).timeIntervalSince(dayStart)
+        return min(max(date.timeIntervalSince(dayStart) / length, 0), 1)
+    }
+
+    /// Bar positions of the clock labels 00:00, 03:00 … 24:00 for the local day starting at `dayStart`:
+    /// each label sits at its real wall-clock instant, so a DST day's extra or missing hour stays in place.
+    static func hourTicks(dayStart: Date, calendar: Calendar = .current) -> [(hour: Int, fraction: Double)] {
+        stride(from: 0, through: 24, by: 3).map { hour in
+            let instant = hour == 24 ? dayEnd(dayStart, calendar: calendar)
+                : calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dayStart) ?? dayStart
+            return (hour, dayFraction(instant, dayStart: dayStart, calendar: calendar))
+        }
+    }
+
+    /// Unix-second span of the HR chart for the local day starting at `dayStart`: today runs up to
+    /// `now`, a past day up to its next local midnight.
+    static func hrWindow(dayStart: Date, isToday: Bool, now: Date,
+                         calendar: Calendar = .current) -> (from: Int, to: Int) {
+        let end = isToday ? now : dayEnd(dayStart, calendar: calendar)
+        return (Int(dayStart.timeIntervalSince1970), Int(end.timeIntervalSince1970))
+    }
+
+    /// Sleep, naps and workouts overlapping the local day `[dayStart, dayEnd)`, sorted by start.
     static func timeline(dayStart: Date, sleeps: [CachedSleepSession], workouts: [WorkoutRow],
-                         now: Date) -> [HomeTimelineItem] {
-        let lo = Int(dayStart.timeIntervalSince1970), hi = lo + 86_400
+                         now: Date, calendar: Calendar = .current) -> [HomeTimelineItem] {
+        let lo = Int(dayStart.timeIntervalSince1970)
+        let hi = Int(dayEnd(dayStart, calendar: calendar).timeIntervalSince1970)
         let nowTs = Int(now.timeIntervalSince1970)
         var items: [HomeTimelineItem] = []
         for s in sleeps where s.endTs > lo && (s.startTsAdjusted ?? s.startTs) < hi {
