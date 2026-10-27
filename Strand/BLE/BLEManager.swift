@@ -253,7 +253,8 @@ public final class BLEManager: NSObject, ObservableObject {
     /// puffin-event streams, which used to fall through to the live UI parser and vanish). Counted and a
     /// few sampled; logged + stored raw (bounded) when a backfill ends.
     var unmappedTap = UnmappedFrameTap()
-    var seq: UInt8 = 0
+    /// Frame sequence number of the last strap write; advanced only through `nextCommandSeq()`.
+    private var seq: UInt8 = 0
     var didBond = false
     /// WHOOP 5/MG only: realtime HR has been armed (puffin TOGGLE_REALTIME_HR sent) once for this
     /// connection, so the post-bond callback re-firing on later `.withResponse` writes doesn't re-send it.
@@ -309,6 +310,12 @@ public final class BLEManager: NSObject, ObservableObject {
     var deviceId: String
     /// Captured (device↔wall) correlation from GET_CLOCK; nil until the response lands.
     var clockRef: ClockRef?
+
+    /// The sequence number for the next framed strap write (wraps at 255).
+    func nextCommandSeq() -> UInt8 {
+        seq &+= 1
+        return seq
+    }
 
     /// The strap's OWN clock extrapolated to right now (its RTC at the last GET_CLOCK + elapsed since).
     /// Used to judge live-gesture freshness in the strap's clock domain rather than wall time — so a

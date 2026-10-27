@@ -58,12 +58,11 @@ extension BLEManager {
         case .denied(let reason):
             log("send(\(command.label)) skipped — \(reason)")
         case .whoop4(let body):
-            seq = seq &+ 1
-            p.writeValue(Data(command.frame(seq: seq, payload: body)), for: ch, type: writeType)
+            p.writeValue(Data(command.frame(seq: nextCommandSeq(), payload: body)), for: ch, type: writeType)
             log("→ \(command.label) payload=\(hex(body))")
         case .puffin(let opcode, let body):
-            seq = seq &+ 1
-            p.writeValue(Data(puffinCommandFrame(cmd: opcode, seq: seq, payload: body)), for: ch, type: writeType)
+            p.writeValue(Data(puffinCommandFrame(cmd: opcode, seq: nextCommandSeq(), payload: body)),
+                         for: ch, type: writeType)
             if command == .historicalDataResult {
                 historicalAckLogCounter += 1
                 if historicalAckLogCounter == 1 || historicalAckLogCounter.isMultiple(of: 25) {

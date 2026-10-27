@@ -388,7 +388,10 @@ Workouts, Health, Stress, Apple Health, Data Sources, Notifications, Automations
 
 Screens bind to `Repository`'s published `days`/`sleeps` caches (refreshed on data change, not on the
 ~1 Hz stream) and reach the store only through named `Repository` methods: `Tools/check-architecture.sh`
-(run in CI) fails when `Strand/Screens/` calls `storeHandle()`, `StrainScorer` or `SleepStager`. They
+(run in CI) fails when `Strand/Screens/` calls `storeHandle()`, `StrainScorer` or `SleepStager`, and when
+any `writeValue(` to a peripheral appears outside `BLEManager+StrapCommands.swift` (the
+`StrapCommandPolicy`-gated `send`) and the bond/hello handshake in `BLEManager+PeripheralDelegate.swift`, or
+when either file gains a write beyond its pinned count. They
 render with `StrandDesign` components — `RecoveryRing`, `StrainGauge`, `Hypnogram`, `TrendChart`,
 `Sparkline`, `YearHeatStrip` — over the `StrandPalette` tokens. `AppModel` also hosts
 the opt-in, on-device behaviours (HR smoothing, illness/strain early-warning, stress nudges, HR-zone
