@@ -103,35 +103,6 @@ extension BLEManager {
         }
     }
 
-    /// Arm the strap's firmware alarm for `date` (UTC). The app has no wake alarm and nothing calls this
-    /// today; `WakeAlarmPolicy` keeps a WHOOP 5/MG from ever receiving SET_ALARM_TIME (it sends
-    /// DISABLE_ALARM instead).
-    ///
-    /// WHOOP 4.0 sequence: SET_CLOCK first to ensure the strap RTC is UTC-correct, then the rev-1
-    /// SET_ALARM_TIME. The strap buzzes at `date` even if the app is backgrounded or quit (event
-    /// STRAP_DRIVEN_ALARM_EXECUTED=57).
-    func armStrapAlarm(at date: Date) {
-        // Log the wake time in the user's LOCAL zone. `Date` prints in UTC by default, so an alarm
-        // for (say) 07:00 in New York logged as "11:00:00 +0000" reads like a timezone bug — but it
-        // isn't: SET_ALARM_TIME carries the absolute instant of the chosen local time, and the strap
-        // fires at that instant regardless of how its UTC RTC is labelled.
-        let localFmt = DateFormatter()
-        localFmt.dateFormat = "EEE HH:mm zzz"
-        guard WakeAlarmPolicy.mayArmFirmwareAlarm(family: selectedModel.deviceFamily) else {
-            // Never SET_ALARM_TIME on a 5/MG: its rev-4 body carries overallLoop 7, which made a real
-            // strap (fw 50.42.1.0) vibrate non-stop for ~20 min while ignoring every stop command.
-            // Clear whatever alarm the strap may still hold instead.
-            send(.disableAlarm, payload: AlarmPayload.disableRev2())
-            log("Alarm: refused to arm the 5/MG firmware alarm for \(localFmt.string(from: date)) (overallLoop-7 vibration incident) — sent DISABLE_ALARM rev2 instead")
-            return
-        }
-        // Clamp rather than trap: an out-of-range alarm date (pre-1970 / post-2106) must not crash.
-        let epochSec = UInt32(clamping: Int64(date.timeIntervalSince1970))
-        sendSetClockBothForms()
-        send(.setAlarmTime, payload: WhoopCommand.setAlarmPayload(epochSec: epochSec))
-        log("Alarm: armed for \(localFmt.string(from: date)) — your local wake time (sent as UTC epoch \(epochSec))")
-    }
-
     /// Disarm the currently-armed firmware alarm.
     func disableStrapAlarm() {
         if selectedModel.deviceFamily == .whoop5 {
@@ -142,13 +113,6 @@ extension BLEManager {
         }
         send(.disableAlarm, payload: [0x01])
         log("Alarm: disarmed")
-    }
-
-    /// Request the currently-armed alarm time from the strap (response arrives on cmd-notify char).
-    /// Parsing the reply is optional/bonus — the raw bytes will appear in the BLE log.
-    func getStrapAlarm() {
-        send(.getAlarmTime, payload: [0x01])
-        log("Alarm: requested current alarm time")
     }
 
     /// Stop any haptic pattern the strap is playing (STOP_HAPTICS 122, payload [0x00]) and disarm the

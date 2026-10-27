@@ -423,7 +423,7 @@ Only after re-reading [The BLE safety contract](#the-ble-safety-contract-read-th
 2. **Add the case to `WhoopCommand`** in `Strand/BLE/Commands.swift` with its on-wire raw value, a
    `label`, and a comment documenting the payload, what it does, why it's safe/reversible, and how it
    was verified on-device.
-3. **Add a payload builder if needed** (cf. `setAlarmPayload(epochSec:)`), keeping the byte layout
+3. **Add a payload builder if needed** (cf. `advertisingNamePayload(_:)`), keeping the byte layout
    documented.
 4. **Send it through the existing path** — `BLEManager.send(_:payload:writeType:)` — which frames the
    command (correct CRC8 + CRC32) and writes to the command characteristic. Don't build raw writes

@@ -367,7 +367,7 @@ public func frame(seq: UInt8, payload: [UInt8] = [0x00]) -> [UInt8] {
 
 **Payload builders** in `WhoopCommand`:
 
-- `setAlarmPayload(epochSec:)` → `[0x01] + epoch u32 LE + [0x00, 0x00]` (7 bytes).
+- `advertisingNamePayload(_:)` → `[0x00, 0x00] + UTF-8 name (≤ 24 bytes) + [0x00]`.
 - `BLEManager.setClockPayload(now:)` → `[secs u32 LE][0,0,0,0]` (8 bytes; subseconds in
   1/32768 s, zero is fine).
 
