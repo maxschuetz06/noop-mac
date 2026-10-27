@@ -66,7 +66,7 @@ struct StressView: View {
     }
 
     private func load() async {
-        storedSeries = await repo.series(key: "stress", source: "my-whoop")
+        storedSeries = await repo.series(key: "stress", source: SourceID.whoop)
         loaded = true
         rebuildModelIfNeeded()
         await loadDaytime()

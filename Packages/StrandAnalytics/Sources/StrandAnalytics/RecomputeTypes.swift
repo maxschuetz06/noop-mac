@@ -39,7 +39,7 @@ public struct RecomputeRequest: Sendable {
         self.profile = profile
     }
 
-    public var computedId: String { deviceId + "-noop" }
+    public var computedId: String { deviceId + SourceID.computedSuffix }
 
     /// Device wall-clock offset (seconds east of UTC) at `now`, for local-day keys and the stager's
     /// daytime false-sleep guard (#90). A DST boundary inside the window is a negligible edge case.

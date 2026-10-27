@@ -787,8 +787,8 @@ private struct FitnessAgeSection: View {
     /// "my-whoop" (the Repository merges the computed "-noop" rows under any real import). Takes the
     /// freshest point — the weekly value is keyed to the week's Saturday and refines through the week.
     private func load() async {
-        let faPts = await repo.exploreSeries(key: "fitness_age", source: "my-whoop")
-        let vo2Pts = await repo.exploreSeries(key: "vo2max_est", source: "my-whoop")
+        let faPts = await repo.exploreSeries(key: "fitness_age", source: SourceID.whoop)
+        let vo2Pts = await repo.exploreSeries(key: "vo2max_est", source: SourceID.whoop)
         fitnessAge = faPts.last?.value
         vo2max = vo2Pts.last?.value
         loaded = true
@@ -1026,8 +1026,8 @@ private struct VitalitySection: View {
     }
 
     private func load() async {
-        vitality = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
-        bodyAge = (await repo.exploreSeries(key: "body_age", source: "my-whoop")).last?.value
+        vitality = (await repo.exploreSeries(key: "vitality", source: SourceID.whoop)).last?.value
+        bodyAge = (await repo.exploreSeries(key: "body_age", source: SourceID.whoop)).last?.value
         loaded = true
     }
 }
@@ -1092,7 +1092,7 @@ private struct VitalsSection: View {
         }
         .task(id: repo.days.count) {
             skinAbsSeries = await repo.exploreSeries(key: OnDeviceNightlySeries.skinTempAbsKey,
-                                                     source: Repository.whoopSource, days: 60)
+                                                     source: SourceID.whoop, days: 60)
         }
     }
 }

@@ -29,7 +29,7 @@ enum FusedRecordBuilder {
         // IS the canonical source id, but the strap's real id is `deviceId`/`computed` — map explicitly.)
         let sources: [(FusionSource, String)] = [
             (.whoopImport, whoopDeviceId),
-            (.noopComputed, whoopDeviceId + "-noop"),
+            (.noopComputed, whoopDeviceId + SourceID.computedSuffix),
             (.appleHealth, appleDeviceId),
             (.xiaomiBand, FusionSource.xiaomiBand.rawValue),
         ]

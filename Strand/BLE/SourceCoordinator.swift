@@ -203,7 +203,7 @@ final class SourceCoordinator: ObservableObject {
     /// WHOOP path never calls `setActiveDeviceId`. Records `activeWhoopId` for future change detection.
     private func pointWhoop(at id: String, peripheralId: String?) {
         setWhoopPreferredPeripheral(peripheralId)
-        if id != "my-whoop" {
+        if id != SourceID.whoop {
             setWhoopActiveDeviceId(id)
         }
         activeWhoopId = id
@@ -388,13 +388,13 @@ final class SourceCoordinator: ObservableObject {
     /// "my-whoop", or the registry row's `brand` is "WHOOP" (case-insensitive). Unknown ids default
     /// to WHOOP so the coordinator stays dormant rather than ever stealing the WHOOP's BLE.
     private func isWhoop(_ id: String) -> Bool {
-        if id == "my-whoop" { return true }
+        if id == SourceID.whoop { return true }
         guard let device = registry.devices.first(where: { $0.id == id }) else { return true }
         return Self.isWhoop(device)
     }
 
     /// A device is WHOOP when its brand is "WHOOP" (the seeded `my-whoop` row's brand).
     static func isWhoop(_ device: PairedDevice) -> Bool {
-        device.id == "my-whoop" || device.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
+        device.id == SourceID.whoop || device.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
     }
 }

@@ -18,7 +18,7 @@ final class DeviceRegistry: ObservableObject {
     @Published private(set) var devices: [PairedDevice] = []
     /// The active device's id. Defaults to "my-whoop" so callers have a safe value before the
     /// first `reload()` and if the registry can't be read.
-    @Published private(set) var activeDeviceId: String = "my-whoop"
+    @Published private(set) var activeDeviceId: String = SourceID.whoop
 
     private let store: DeviceRegistryStore
 
@@ -97,7 +97,7 @@ final class DeviceRegistry: ObservableObject {
     /// selected model lives in the app's UserDefaults). No-op when it already matches. Best-effort.
     func reconcileWhoopModel(_ model: String) {
         guard let rows = try? store.all(),
-              let existing = rows.first(where: { $0.id == "my-whoop" }),
+              let existing = rows.first(where: { $0.id == SourceID.whoop }),
               existing.model != model else { return }
         var updated = existing
         updated.model = model
@@ -114,7 +114,7 @@ final class DeviceRegistry: ObservableObject {
                                                  activeDeviceId: String,
                                                  connectedPeripheralId: String?) -> PairedDevice? {
         func isWhoop(_ d: PairedDevice) -> Bool {
-            d.id == "my-whoop" || d.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
+            d.id == SourceID.whoop || d.brand.caseInsensitiveCompare("WHOOP") == .orderedSame
         }
         if let pid = connectedPeripheralId,
            let match = devices.first(where: { $0.peripheralId == pid }) {

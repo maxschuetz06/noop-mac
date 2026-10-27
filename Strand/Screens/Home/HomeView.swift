@@ -454,9 +454,9 @@ struct HomeView: View {
     // MARK: Loading
 
     private func load() async {
-        let rest = await repo.exploreSeries(key: "sleep_performance", source: Repository.whoopSource)
+        let rest = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
         restByDay = Dictionary(rest.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        let est = await repo.exploreSeries(key: "steps_est", source: Repository.whoopSource)
+        let est = await repo.exploreSeries(key: "steps_est", source: SourceID.whoop)
         stepsEstByDay = Dictionary(est.map { ($0.day, Int($0.value.rounded())) }, uniquingKeysWith: { _, last in last })
         sleeps = await repo.allSleepSessions(days: offset + 40)
         workouts = await repo.workoutRows(days: offset + 3)

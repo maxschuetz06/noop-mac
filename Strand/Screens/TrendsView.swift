@@ -259,7 +259,7 @@ struct TrendsView: View {
             }
         }
         .task(id: repo.refreshSeq) {
-            let series = await repo.exploreSeries(key: "sleep_performance", source: Repository.whoopSource)
+            let series = await repo.exploreSeries(key: "sleep_performance", source: SourceID.whoop)
             restByDay = Dictionary(series.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
         }
         // #436 — present the offline trends-report exporter (range picker + PDF export).

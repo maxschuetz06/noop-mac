@@ -51,7 +51,7 @@ private func metricAccent(_ m: MetricDescriptor) -> Color {
         return StrandPalette.metricAmber
     default:
         switch m.source {
-        case "apple-health": return StrandPalette.metricCyan
+        case SourceID.appleHealth: return StrandPalette.metricCyan
         case "xiaomi-band":  return StrandPalette.metricAmber
         default:             return StrandPalette.textPrimary
         }

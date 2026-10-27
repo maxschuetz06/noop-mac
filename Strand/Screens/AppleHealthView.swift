@@ -222,7 +222,7 @@ struct AppleHealthView: View {
 
         var fetched: [String: [(day: String, value: Double)]] = [:]
         for key in Self.seriesKeys {
-            fetched[key] = await repo.series(key: key, source: "apple-health")
+            fetched[key] = await repo.series(key: key, source: SourceID.appleHealth)
         }
 
         let loadedRows = await rows

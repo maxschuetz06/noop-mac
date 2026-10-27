@@ -10,7 +10,7 @@ import Foundation
 
 /// Where a fused number came from — a superset of the legacy `DailyMetricSource` (whoopImport /
 /// noopComputed / appleHealth / localCache), extended to every source the importers already write.
-/// The rawValue is the canonical source id (`Repository.whoopSource` etc.) so a `FusionSource` round-
+/// The rawValue is the canonical source id (`SourceID.whoop` etc.) so a `FusionSource` round-
 /// trips to/from the stored `deviceId` / source string without a lookup table.
 public enum FusionSource: String, Equatable, Sendable, CaseIterable, Codable {
     /// Imported WHOOP record (CSV/zip export under the strap's `deviceId`, e.g. "my-whoop").

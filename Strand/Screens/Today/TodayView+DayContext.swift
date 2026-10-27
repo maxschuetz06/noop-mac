@@ -128,9 +128,9 @@ extension TodayView {
     /// Any other real source (Mi Band, Health Connect, nutrition) keeps its `FusionSource.displayName`
     /// — still the genuine merge winner, never a blanket claim.
     static func provenanceDisplayLabel(rawSource: String, deviceId: String) -> String {
-        if rawSource == deviceId + "-noop" { return "On-device" }
-        if rawSource == deviceId || rawSource == Repository.whoopSource { return "Whoop" }
-        if rawSource == Repository.appleHealthSource { return "Apple Health" }
+        if rawSource == deviceId + SourceID.computedSuffix { return "On-device" }
+        if rawSource == deviceId || rawSource == SourceID.whoop { return "Whoop" }
+        if rawSource == SourceID.appleHealth { return "Apple Health" }
         // Fall back to the FusionSource display name for any other known source; else the raw id.
         return FusionSource(rawValue: rawSource)?.displayName ?? rawSource
     }

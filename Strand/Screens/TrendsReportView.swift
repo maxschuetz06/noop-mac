@@ -513,7 +513,7 @@ struct TrendsReportSheet: View {
         // Load the stored daily stress series for the Stress row (#457). The same
         // "my-whoop" series the Stress screen prioritises; the report never re-derives it.
         .task {
-            let pts = await repo.series(key: "stress", source: "my-whoop")
+            let pts = await repo.series(key: "stress", source: SourceID.whoop)
             stressByDay = Dictionary(pts.map { ($0.day, $0.value) }, uniquingKeysWith: { _, b in b })
         }
     }

@@ -29,7 +29,7 @@ enum CsvExport {
         let deviceId = repo.deviceId
         // The on-device computed source id (recovery/strain/sleep derived from raw streams). This
         // mirrors Repository.computedDeviceId, which is private — so we reconstruct the same string.
-        let computedId = deviceId + "-noop"
+        let computedId = deviceId + SourceID.computedSuffix
         let fromDay = "0000-01-01", toDay = "9999-12-31"
         let hi = Int(Date().timeIntervalSince1970) + 86_400
 
