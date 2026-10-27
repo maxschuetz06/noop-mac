@@ -173,6 +173,23 @@ swift run backfill
 
 Without `NOOP_DB_PATH` it targets the container of the default bundle id `com.noopapp.noop`.
 
+## 8. Versions and releases
+
+The fork's versions start at 8.0.0. For a release:
+
+1. In `project.yml`, set `MARKETING_VERSION` and raise `CFBundleVersion` (the app and the widget use
+   the same value).
+2. Add the release at the top of `AppChangelog.releases` in `Strand/System/AppChangelog.swift` and set
+   `AppChangelog.currentVersion`. Its strings are localized: add the German translations to
+   `Strand/Resources/Localizable.xcstrings` (`AppChangelogTests` fails without them).
+3. Add a section to `CHANGELOG.md` and tag the release `v<version>`; "Check for updates" reads the
+   tag of the latest GitHub release.
+
+"What's new" opens once for existing users whose last-seen version differs from
+`AppChangelog.currentVersion`, and the release is posted once to the Updates inbox. A new app version
+also re-runs the archived undecodable history frames through the decoder once
+(`RejectArchiveReplayGate`); that replay is idempotent.
+
 ## Pairing and BLE
 
 NOOP connects over CoreBluetooth (`Strand/BLE/BLEManager.swift`). WHOOP 4.0 uses the `61080001-…`

@@ -3,8 +3,8 @@ import WhoopProtocol
 
 /// User-initiated "Check for updates": one call to the project's PUBLIC releases API (GitHub),
 /// made ONLY when the user taps the button. No background polling and no auto-update — it just reads the latest version
-/// number and compares it to the installed one; nothing about the user is sent. (Uses the
-/// network-client entitlement, which is otherwise only for the opt-in, off-by-default AI Coach.)
+/// number and compares it to the installed one; nothing about the user is sent. (This is the only use
+/// of the network-client entitlement.)
 @MainActor
 final class UpdateChecker: ObservableObject {
 
@@ -36,7 +36,7 @@ final class UpdateChecker: ObservableObject {
                     state = .failed
                     return
                 }
-                let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+                let latest = Self.version(fromTag: tag)
                 let notes = Self.cleanNotes(json["body"] as? String ?? "")
                 state = VersionCheck.isNewer(latest, than: currentVersion)
                     ? .available(version: latest, url: url, notes: notes)
@@ -45,6 +45,13 @@ final class UpdateChecker: ObservableObject {
                 state = .failed
             }
         }
+    }
+
+    /// Release tags are `v<version>` (e.g. `v8.0.0`); a bare version is accepted too.
+    static func version(fromTag tag: String) -> String {
+        let trimmed = tag.trimmingCharacters(in: .whitespaces)
+        guard let first = trimmed.first, first == "v" || first == "V" else { return trimmed }
+        return String(trimmed.dropFirst())
     }
 
     /// Turn a GitHub release body into a short, readable "what's new" for an inline preview: drop the

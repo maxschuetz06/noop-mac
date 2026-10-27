@@ -98,17 +98,18 @@ struct WhatsNewView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     SourceBadge("v\(release.version)")
-                    Text(release.title).font(StrandFont.headline)
+                    Text(release.localizedTitle).font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
-                    Text(release.date).font(StrandFont.caption)
+                    Text(release.localizedDate).font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
-                ForEach(Array(release.items.enumerated()), id: \.offset) { _, item in
+                ForEach(Array(release.localizedItems.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .top, spacing: 8) {
                         Circle().fill(StrandPalette.accent).frame(width: 5, height: 5)
                             .padding(.top, 7)
-                        Text(item).font(StrandFont.subhead)
+                        // AttributedString renders the items' Markdown emphasis.
+                        Text(AttributedString(localized: item)).font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
